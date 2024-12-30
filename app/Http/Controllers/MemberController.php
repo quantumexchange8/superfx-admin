@@ -63,6 +63,99 @@ class MemberController extends Controller
         ]);
     }
 
+    public function getMemberListingPaginate(Request $request)
+    {
+        $query = User::with(['groupHasUser.group'])
+            ->whereNot('role', 'super-admin');
+
+        // Handle search functionality
+        $search = $request->input('search');
+        if ($search) {
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('email', 'like', '%' . $search . '%')
+                    ->orWhere('id_number', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($request->input('role')) {
+            $query->where('role', $request->input('role'));
+        }
+        
+        if ($request->input('group_id')) {
+            $query->whereHas('groupHasUser', function ($query) use ($request) {
+                $query->where('group_id', $request->input('group_id'));
+            });
+        }
+        
+        if ($request->input('upline_id')) {
+            $query->where('upline_id', $request->input('upline_id'));
+        }
+
+        if ($request->input('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        // Handle sorting
+        $sortField = $request->input('sortField', 'created_at'); // Default to 'created_at'
+        $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
+        $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
+
+        // Handle pagination
+        $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
+        $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
+        
+        // // Export logic
+        // if ($request->has('exportStatus') && $request->exportStatus == true) {
+        //     $members = $query; // Fetch all members for export
+        //     return Excel::download(new MemberListingExport($members), now() . '-report.xlsx');
+        // }
+
+        // Clone the query before modifying it for counting
+        $memberCount = (clone $query)->where('role', 'member')->count();
+        $agentCount = (clone $query)->where('role', 'agent')->count();
+
+        // Get paginated results
+        $users = $query
+            ->select([
+                'id',
+                'name',
+                'email',
+                'upline_id',
+                'role',
+                'id_number',
+                'hierarchyList',
+                'status',
+            ])
+            ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
+
+
+        // Transform only the data property while retaining pagination metadata
+        $users->getCollection()->transform(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'upline_id' => $user->upline_id,
+                'role' => $user->role,
+                'id_number' => $user->id_number,
+                'status' => $user->status,
+                'hierarchyList' => $user->hierarchyList ?? null,
+                'group_id' => $user->groupHasUser->group_id ?? null,
+                'group_name' => $user->groupHasUser->group->name ?? null,
+                'group_color' => $user->groupHasUser->group->color ?? null,
+                'profile_photo' => $user->getFirstMediaUrl('profile_photo'),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $users,
+            'total_members' => $memberCount,
+            'total_agents' => $agentCount,
+        ]);
+    }
+
     public function getFilterData()
     {
         return response()->json([

@@ -31,19 +31,22 @@ import { trans, wTrans } from "laravel-vue-i18n";
 import {generalFormat} from "@/Composables/index.js";
 import StatusBadge from "@/Components/StatusBadge.vue";
 import Empty from "@/Components/Empty.vue";
+import debounce from "lodash/debounce.js";
 
 const total_members = ref(999);
 const total_agents = ref(999);
 const total_users = ref(999);
+const totalRecords = ref(0);
+const rows = ref(10);
+const page = ref(0);
+const sortField = ref(null);  
+const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 const loading = ref(false);
 const dt = ref();
 const users = ref();
+const selectedBrand = ref(null);
 const counterDuration = ref(10);
 const { formatRgbaColor } = generalFormat();
-
-onMounted(() => {
-    getResults();
-})
 
 // data overview
 const dataOverviews = computed(() => [
@@ -64,23 +67,112 @@ const dataOverviews = computed(() => [
     },
 ]);
 
+const filters = ref({
+    global: '',
+    upline_id: null,
+    group_id: null,
+    role: [],
+    status: [],
+});
+
+const upline_id = ref(null)
+const group_id = ref(null)
+
+// Watch for changes on the entire 'filters' object and debounce the API call
+watch(filters, debounce(() => {
+    // Count active filters, excluding null, undefined, empty strings, and empty arrays
+    filterCount.value = Object.values(filters.value).filter(filter => {
+        if (Array.isArray(filter)) {
+            return filter.length > 0;  // Check if the array is not empty
+        }
+        return filter !== null && filter !== '';  // Check if the value is not null or an empty string
+    }).length;
+
+    page.value = 0; // Reset to first page when filters change
+    getResults(); // Call getResults function to fetch the data
+}, 1000), { deep: true });
+
+// Watch for individual changes in upline_id and group_id and apply them to filters
+watch([upline_id, group_id], ([newUplineId, newGroupId]) => {
+    if (newUplineId !== null) {
+        filters.value['upline_id'] = newUplineId.value;
+    }
+
+    if (newGroupId !== null) {
+        filters.value['group_id'] = newGroupId.value;
+    }
+
+    getResults(); // Trigger getResults after the changes
+});
+
 const getResults = async () => {
     loading.value = true;
-
     try {
-        const response = await axios.get('/member/getMemberListingData');
-        users.value = response.data.users;
-        total_members.value = users.value.filter(user => user.role === 'member').length;
-        total_agents.value = users.value.filter(user => user.role === 'agent').length;
-        total_users.value = users.value.length;
+        // Define the base URL
+        let url = `/member/getMemberListingPaginate?rows=${rows.value}&page=${page.value}`;
+
+        if (filters.value.global) {
+            url += `&search=${filters.value.global}`;
+        }
+
+        if (filters.value.role) {
+            url += `&role=${filters.value.role}`;
+        }
+
+        if (filters.value.upline_id) {
+            url += `&upline_id=${filters.value.upline_id}`;
+        }
+
+        if (filters.value.group_id) {
+            url += `&group_id=${filters.value.group_id}`;
+        }
+
+        if (filters.value.status) {
+            url += `&status=${filters.value.status}`;
+        }
+
+        if (sortField.value && sortOrder.value !== null) {
+            url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
+        }
+
+        // Make the API request
+        const response = await axios.get(url);
+        
+        // Update the data and total records with the response
+        users.value = response?.data?.data?.data;
+        totalRecords.value = response?.data?.data?.total;
+        total_members.value = response.data?.total_members;
+        total_agents.value = response.data?.total_agents;
+        total_users.value = response?.data?.data?.total;
 
         counterDuration.value = 1;
+        loading.value = false;
     } catch (error) {
-        console.error('Error changing locale:', error);
+        console.error('Error fetching leads data:', error);
+        members.value = [];
     } finally {
         loading.value = false;
     }
 };
+
+const onPage = async (event) => {
+    rows.value = event.rows;
+    page.value = event.page;
+
+    getResults();
+};
+
+const onSort = (event) => {
+    sortField.value = event.sortField;
+    sortOrder.value = event.sortOrder;  // Store ascending or descending order
+
+    getResults();
+};
+
+onMounted(() => {
+    getResults();
+});
+
 
 const getFilterData = async () => {
     try {
@@ -100,76 +192,33 @@ const exportCSV = () => {
     dt.value.exportCSV();
 };
 
-const filters = ref({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    upline_id: { value: null, matchMode: FilterMatchMode.EQUALS },
-    group_id: { value: null, matchMode: FilterMatchMode.EQUALS },
-    role: { value: null, matchMode: FilterMatchMode.EQUALS },
-    status: { value: null, matchMode: FilterMatchMode.EQUALS },
-});
-
 // overlay panel
 const op = ref();
 const uplines = ref()
 const groups = ref()
-const upline_id = ref(null)
-const group_id = ref(null)
 const filterCount = ref(0);
 
 const toggle = (event) => {
     op.value.toggle(event);
 }
 
-watch([upline_id, group_id], ([newUplineId, newGroupId]) => {
-    if (upline_id.value !== null) {
-        filters.value['upline_id'].value = newUplineId.value
-    }
-
-    if (group_id.value !== null) {
-        filters.value['group_id'].value = newGroupId.value
-    }
-})
-
-const recalculateTotals = () => {
-    const filteredUsers = users.value.filter(user => {
-        return (
-            (!filters.value.name.value || user.name.startsWith(filters.value.name.value)) &&
-            (!filters.value.upline_id.value || user.upline_id === filters.value.upline_id.value) &&
-            (!filters.value.group_id.value || user.group_id === filters.value.group_id.value) &&
-            (!filters.value.role.value || user.role === filters.value.role.value) &&
-            (!filters.value.status.value || user.status === filters.value.status.value)
-        );
-    });
-
-    total_members.value = filteredUsers.filter(user => user.role === 'member').length;
-    total_agents.value = filteredUsers.filter(user => user.role === 'agent').length;
-    total_users.value = filteredUsers.length;
-};
-
-watch(filters, () => {
-    recalculateTotals();
-
-    // Count active filters
-    filterCount.value = Object.values(filters.value).filter(filter => filter.value !== null).length;
-}, { deep: true });
 
 const clearFilter = () => {
     filters.value = {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-        upline_id: { value: null, matchMode: FilterMatchMode.EQUALS },
-        group_id: { value: null, matchMode: FilterMatchMode.EQUALS },
-        role: { value: null, matchMode: FilterMatchMode.EQUALS },
-        status: { value: null, matchMode: FilterMatchMode.EQUALS },
+        global: '',
+        upline_id: null,
+        group_id: null,
+        role: [],
+        status: [],
     };
 
     upline_id.value = null;
     group_id.value = null;
+
 };
 
 const clearFilterGlobal = () => {
-    filters.value['global'].value = null;
+    filters.value.global = null;
 }
 
 watchEffect(() => {
@@ -208,18 +257,21 @@ const paginator_caption = wTrans('public.paginator_caption');
             <!-- data table -->
             <div class="py-6 px-4 md:p-6 flex flex-col items-center justify-center self-stretch gap-6 border border-gray-200 bg-white shadow-table rounded-2xl">
                 <DataTable
-                    v-model:filters="filters"
                     :value="users"
                     :paginator="users?.length > 0 && total_users > 0"
+                    lazy
                     removableSort
-                    :rows="10"
+                    :rows="rows"
                     :rowsPerPageOptions="[10, 20, 50, 100]"
                     tableStyle="md:min-width: 50rem"
                     paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
                     :currentPageReportTemplate="paginator_caption"
-                    :globalFilterFields="['name']"
                     ref="dt"
+                    dataKey="id"
+                    :totalRecords="totalRecords"
                     :loading="loading"
+                    @page="onPage($event)"
+                    @sort="onSort($event)"
                 >
                     <template #header>
                         <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
@@ -227,9 +279,9 @@ const paginator_caption = wTrans('public.paginator_caption');
                                 <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                                     <IconSearch size="20" stroke-width="1.25" />
                                 </div>
-                                <InputText v-model="filters['global'].value" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
+                                <InputText v-model="filters['global']" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
                                 <div
-                                    v-if="filters['global'].value !== null"
+                                    v-if="filters['global'] !== null && filters['global'] !== ''"
                                     class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"
                                     @click="clearFilterGlobal"
                                 >
@@ -437,11 +489,11 @@ const paginator_caption = wTrans('public.paginator_caption');
                 </div>
                 <div class="flex flex-col gap-1 self-stretch">
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['role'].value" inputId="role_member" value="member" class="w-4 h-4" />
+                        <RadioButton v-model="filters['role']" inputId="role_member" value="member" class="w-4 h-4" />
                         <label for="role_member">{{ $t('public.member') }}</label>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['role'].value" inputId="role_agent" value="agent" class="w-4 h-4" />
+                        <RadioButton v-model="filters['role']" inputId="role_agent" value="agent" class="w-4 h-4" />
                         <label for="role_agent">{{ $t('public.agent') }}</label>
                     </div>
                 </div>
@@ -534,11 +586,11 @@ const paginator_caption = wTrans('public.paginator_caption');
                 </div>
                 <div class="flex flex-col gap-1 self-stretch">
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['status'].value" inputId="status_active" value="active" class="w-4 h-4" />
+                        <RadioButton v-model="filters['status']" inputId="status_active" value="active" class="w-4 h-4" />
                         <label for="status_active">{{ $t('public.active') }}</label>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['status'].value" inputId="status_inactive" value="inactive" class="w-4 h-4" />
+                        <RadioButton v-model="filters['status']" inputId="status_inactive" value="inactive" class="w-4 h-4" />
                         <label for="status_inactive">{{ $t('public.inactive') }}</label>
                     </div>
                 </div>

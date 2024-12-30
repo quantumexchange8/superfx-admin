@@ -58,6 +58,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         // listing
         Route::get('/listing', [MemberController::class, 'listing'])->name('member.listing');
         Route::get('/getMemberListingData', [MemberController::class, 'getMemberListingData'])->name('member.getMemberListingData');
+        Route::get('/getMemberListingPaginate', [MemberController::class, 'getMemberListingPaginate'])->name('member.getMemberListingPaginate');
         Route::get('/getFilterData', [MemberController::class, 'getFilterData'])->name('member.getFilterData');
         Route::get('/getAvailableUplines', [MemberController::class, 'getAvailableUplines'])->name('member.getAvailableUplines');
         Route::get('/getAvailableUplineData', [MemberController::class, 'getAvailableUplineData'])->name('member.getAvailableUplineData');
