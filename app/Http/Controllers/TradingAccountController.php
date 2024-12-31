@@ -3,20 +3,22 @@
 namespace App\Http\Controllers;
 
 // use App\Jobs\UpdateCTraderAccountJob;
-use App\Services\MetaFourService;
 use Carbon\Carbon;
 use Inertia\Inertia;
 use App\Models\TradingUser;
 use App\Models\Transaction;
-// use App\Services\CTraderService;
 use Illuminate\Http\Request;
+// use App\Services\CTraderService;
 use App\Models\TradingAccount;
+use App\Services\MetaFourService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Services\RunningNumberService;
+use App\Services\Data\UpdateTradingUser;
 use App\Services\ChangeTraderBalanceType;
 use Illuminate\Support\Facades\Validator;
+use App\Services\Data\UpdateTradingAccount;
 use Illuminate\Validation\ValidationException;
 
 class TradingAccountController extends Controller
@@ -115,8 +117,8 @@ class TradingAccountController extends Controller
 
     public function getAccountListingPaginate(Request $request)
     {
-        $test = (new MetaFourService)->getUser(12503);
-        dd($test);
+        // $test = (new MetaFourService)->getUser(12503);
+        // dd($test);
 
         $type = $request->type;
 
@@ -178,34 +180,34 @@ class TradingAccountController extends Controller
                 ->where('trading_users.acc_status', '!=', 'inactive')
                 ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
 
-            // // Iterate over each account on the current page and update the account status
-            // foreach ($accounts->items() as $account) {
-            //     try {
-            //         // Attempt to fetch user data
-            //         $accData = (new CTraderService())->getUser($account->meta_login);
+            // Iterate over each account on the current page and update the account status
+            foreach ($accounts->items() as $account) {
+                try {
+                    // Attempt to fetch user data
+                    $accData = (new MetaFourService)->getUser($account->meta_login);
 
-            //         // If no data is returned (null or empty), mark the account as inactive
-            //         if (empty($accData)) {
-            //             if ($account->acc_status !== 'inactive') {
-            //                 TradingUser::where('meta_login', $account->meta_login)
-            //                     ->update(['acc_status' => 'inactive']);
-            //             }
-            //         } else {
-            //             // If valid data is fetched, update account to active and proceed with further updates
-            //             if ($account->acc_status !== 'active') {
-            //                 TradingUser::where('meta_login', $account->meta_login)
-            //                     ->update(['acc_status' => 'active']);
-            //             }
+                    // If no data is returned (null or empty), mark the account as inactive
+                    if (empty($accData)) {
+                        if ($account->acc_status !== 'inactive') {
+                            TradingUser::where('meta_login', $account->meta_login)
+                                ->update(['acc_status' => 'inactive']);
+                        }
+                    } else {
+                        // If valid data is fetched, update account to active and proceed with further updates
+                        if ($account->acc_status !== 'active') {
+                            TradingUser::where('meta_login', $account->meta_login)
+                                ->update(['acc_status' => 'active']);
+                        }
 
-            //             // Proceed with updating account information
-            //             (new UpdateTradingUser)->execute($account->meta_login, $accData);
-            //             (new UpdateTradingAccount)->execute($account->meta_login, $accData);
-            //         }
-            //     } catch (\Exception $e) {
-            //         // Log the error if there was a failure (network issue, server error, etc.)
-            //         Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
-            //     }
-            // }
+                        // Proceed with updating account information
+                        (new UpdateTradingUser)->execute($account->meta_login, $accData);
+                        (new UpdateTradingAccount)->execute($account->meta_login, $accData);
+                    }
+                } catch (\Exception $e) {
+                    // Log the error if there was a failure (network issue, server error, etc.)
+                    Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
+                }
+            }
 
             // Now re-fetch the data after updating the statuses
             $accounts = $query->select([

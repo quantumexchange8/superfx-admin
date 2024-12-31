@@ -2,15 +2,16 @@
 
 namespace App\Services;
 
-use App\Services\Data\CreateTradingAccount;
-use App\Services\Data\CreateTradingUser;
-use App\Services\Data\UpdateTradingAccount;
-use App\Services\Data\UpdateTradingUser;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\User as UserModel;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+use App\Services\Data\CreateTradingUser;
+use App\Services\Data\UpdateTradingUser;
+use App\Services\Data\CreateTradingAccount;
+use App\Services\Data\UpdateTradingAccount;
+use Illuminate\Http\Client\ConnectionException;
 
 class MetaFourService {
     private string $port = "8443";
@@ -52,13 +53,23 @@ class MetaFourService {
         
         $jsonPayload = json_encode($payload);
     
-        $accountResponse = Http::acceptJson()
-            ->withHeaders([
-                'Authorization' => 'Bearer ' . $this->token,
-            ])
-            ->withBody($jsonPayload, 'application/json')
-            ->get($this->demoURL . "/getuser");
-
+        if (App::environment('production')) {
+            $accountResponse = Http::acceptJson()
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->withBody($jsonPayload, 'application/json')
+                ->get($this->demoURL . "/getuser");
+        } else {
+            $accountResponse = Http::withoutVerifying()
+                ->acceptJson()
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->withBody($jsonPayload, 'application/json')
+                ->get($this->demoURL . "/getuser");
+        }
+        
         return $accountResponse->json();
     }
 
