@@ -1,21 +1,23 @@
 <?php
 
-use App\Http\Controllers\BillboardController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PendingController;
-use App\Http\Controllers\TradingAccountController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\PammController;
+use App\Http\Controllers\ForumController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\RebateController;
+use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\NetworkController;
+use App\Http\Controllers\PendingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\BillboardController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AccountTypeController;
 use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\ForumController;
+use App\Http\Controllers\TradingAccountController;
 
 Route::get('locale/{locale}', function ($locale) {
     App::setLocale($locale);
@@ -34,6 +36,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/getAccountData', [DashboardController::class, 'getAccountData'])->name('dashboard.getAccountData');
     Route::get('/getPendingData', [DashboardController::class, 'getPendingData'])->name('dashboard.getPendingData');
     Route::get('/getAssetData', [DashboardController::class, 'getAssetData'])->name('dashboard.getAssetData');
+    Route::get('/getAccountTypes', [GeneralController::class, 'getAccountTypes'])->name('getAccountTypes');
 
     /**
      * ==============================
@@ -101,6 +104,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         // account listing
         Route::get('/account_listing', [TradingAccountController::class, 'index'])->name('member.account_listing');
         Route::get('/getAccountListingData', [TradingAccountController::class, 'getAccountListingData'])->name('member.getAccountListingData');
+        Route::get('/getAccountListingPaginate', [TradingAccountController::class, 'getAccountListingPaginate'])->name('member.getAccountListingPaginate');
         Route::get('/getTradingAccountData', [TradingAccountController::class, 'getTradingAccountData'])->name('member.getTradingAccountData');
 
         Route::post('/accountAdjustment', [TradingAccountController::class, 'accountAdjustment'])->name('member.accountAdjustment');

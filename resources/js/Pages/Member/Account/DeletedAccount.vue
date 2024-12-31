@@ -1,7 +1,7 @@
 <script setup>
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
-import {ref, watch, watchEffect} from "vue";
+import {ref, watch, watchEffect, onMounted} from "vue";
 import {FilterMatchMode} from "primevue/api";
 import Loader from "@/Components/Loader.vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
@@ -14,18 +14,40 @@ import {transactionFormat} from "@/Composables/index.js";
 import Dialog from "primevue/dialog";
 import {usePage} from "@inertiajs/vue3";
 import Calendar from "primevue/calendar";
+import debounce from "lodash/debounce.js";
+
+const props = defineProps({
+  loadResults: Boolean,
+});
 
 const accounts = ref([]);
+const totalRecords = ref(0);
+const rows = ref(10);
+const page = ref(0);
+const sortField = ref(null);  
+const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 const loading = ref(false);
 const {formatAmount, formatDate} = transactionFormat();
 const visible = ref(false);
 const selectedDate = ref([]);
 
+const filters = ref({
+    global: '',
+});
+
+const clearFilterGlobal = () => {
+    filters.value.global = '';
+}
+
 const getResults = async (selectedDate = []) => {
     loading.value = true;
 
     try {
-        let url = '/member/getAccountListingData?account_listing=deleted';
+        let url = `/member/getAccountListingPaginate?rows=${rows.value}&page=${page.value}`;
+
+        if (filters.value.global) {
+            url += `&search=${filters.value.global}`;
+        }
 
         if (selectedDate.length === 2) {
             const [startDate, endDate] = selectedDate;
@@ -35,8 +57,13 @@ const getResults = async (selectedDate = []) => {
             }
         }
 
+        if (sortField.value && sortOrder.value !== null) {
+            url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
+        }
+
         const response = await axios.get(url);
-        accounts.value = response.data.accounts;
+        accounts.value = response?.data?.data?.data;
+        totalRecords.value = response?.data?.data?.total;
     } catch (error) {
         console.error('Error changing locale:', error);
     } finally {
@@ -44,20 +71,30 @@ const getResults = async (selectedDate = []) => {
     }
 };
 
-getResults();
+const onPage = async (event) => {
+    rows.value = event.rows;
+    page.value = event.page;
 
-const clearFilterGlobal = () => {
-    filters.value['global'].value = null;
-}
+    getResults();
+};
+
+const onSort = (event) => {
+    sortField.value = event.sortField;
+    sortOrder.value = event.sortOrder;  // Store ascending or descending order
+
+    getResults();
+};
+
+// If the prop is passed initially as true, run getResults
+onMounted(() => {
+  if (props.loadResults) {
+    getResults();
+  }
+});
 
 const exportCSV = () => {
     dt.value.exportCSV();
 };
-
-const filters = ref({
-    global: {value: null, matchMode: FilterMatchMode.CONTAINS},
-});
-
 
 // Clear date selection
 const clearDate = () => {
@@ -95,20 +132,24 @@ watchEffect(() => {
 
 <template>
     <DataTable
-        v-model:filters="filters"
         :value="accounts"
         :paginator="accounts?.length > 0"
+        lazy
         removableSort
-        :rows="10"
+        :rows="rows"
         :rowsPerPageOptions="[10, 20, 50, 100]"
         tableStyle="md:min-width: 50rem"
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
         :currentPageReportTemplate="$t('public.paginator_caption')"
         :globalFilterFields="['user_name', 'user_email', 'meta_login']"
         ref="dt"
+        dataKey="id"
         selectionMode="single"
         @row-click="(event) => openDialog(event.data)"
+        :totalRecords="totalRecords"
         :loading="loading"
+        @page="onPage($event)"
+        @sort="onSort($event)"
     >
         <template #header>
             <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
@@ -248,7 +289,7 @@ watchEffect(() => {
                         }} ($)</span>
                 </template>
                 <template #body="slotProps">
-                    {{ formatAmount(slotProps.data.equity) }}
+                    {{ slotProps.data?.equity ? formatAmount(slotProps.data?.equity) : formatAmount(0) }}
                 </template>
             </Column>
             <Column class="md:hidden">
@@ -308,7 +349,7 @@ watchEffect(() => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.equity') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data.equity) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ data?.equity ? formatAmount(data?.equity) : formatAmount(0) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.credit') }}</span>

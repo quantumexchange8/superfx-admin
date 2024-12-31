@@ -553,4 +553,12 @@ return [
     "toast_permit_granted" => "Agent permit granted",
     "toast_permit_removed" => "Agent permit removed",
     "share_your_thoughts_here" => "Share your thoughts here...",
+    "ecn" => "ECN",
+    "standard" => "Standard",
+    "std5" => "STD5",
+    "std10" => "STD10",
+    "std15" => "STD15",
+    "std20" => "STD20",
+    "rebate_exceed_upline" => "Rebate is more than upline :name : :value",
+    "rebate_exceed_downline" => "Rebate is less than downline :name : :value",
 ];

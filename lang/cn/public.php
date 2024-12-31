@@ -551,4 +551,12 @@ return [
     "toast_permit_granted" => "已授予代理商发帖权限",
     "toast_permit_removed" => "已移除代理商发帖权限",
     "share_your_thoughts_here" => "在此分享您的想法...",
+    "ecn" => "ECN",
+    "standard" => "Standard",
+    "std5" => "STD5",
+    "std10" => "STD10",
+    "std15" => "STD15",
+    "std20" => "STD20",
+    "rebate_exceed_upline" => "返佣超过上线:name : :value",
+    "rebate_exceed_downline" => "返佣低于下线:name : :value",
 ];

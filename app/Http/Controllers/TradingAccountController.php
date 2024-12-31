@@ -3,20 +3,21 @@
 namespace App\Http\Controllers;
 
 // use App\Jobs\UpdateCTraderAccountJob;
-use App\Models\TradingAccount;
+use App\Services\MetaFourService;
+use Carbon\Carbon;
+use Inertia\Inertia;
 use App\Models\TradingUser;
 use App\Models\Transaction;
-use App\Services\ChangeTraderBalanceType;
 // use App\Services\CTraderService;
-use App\Services\RunningNumberService;
-use Carbon\Carbon;
-use DB;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\TradingAccount;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use App\Services\RunningNumberService;
+use App\Services\ChangeTraderBalanceType;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
 
 class TradingAccountController extends Controller
 {
@@ -110,6 +111,192 @@ class TradingAccountController extends Controller
         return response()->json([
             'accounts' => $accounts
         ]);
+    }
+
+    public function getAccountListingPaginate(Request $request)
+    {
+        $test = (new MetaFourService)->getUser(12503);
+        dd($test);
+
+        $type = $request->type;
+
+        if ($type === 'all') {
+            $query = TradingUser::query()
+            ->leftJoin('users', 'trading_users.user_id', '=', 'users.id') // Join users table
+            ->leftJoin('trading_accounts', 'trading_users.meta_login', '=', 'trading_accounts.meta_login') // Join trading accounts
+            ->leftJoin('account_types', 'trading_users.account_type_id', '=', 'account_types.id'); // Join account types
+
+            if ($request->last_logged_in_days) {
+                switch ($request->last_logged_in_days) {
+                    case 'greater_than_90_days':
+                        $query->whereDate('last_access', '<=', today()->subDays(90));
+                        break;
+
+                    default:
+                        $query->whereDate('last_access', '<=', today());
+                }
+            }
+            // Filters
+            // Handle search functionality
+            $search = $request->input('search');
+            if ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('users.name', 'like', '%' . $search . '%')
+                        ->orWhere('users.email', 'like', '%' . $search . '%')
+                        ->orWhere('trading_users.meta_login', 'like', '%' . $search . '%');
+                });
+                        }
+
+            if ($request->input('balance')) {
+                $query->where('trading_users.balance', $request->input('balance'));
+            }
+
+            // Handle sorting
+            $sortField = $request->input('sortField', 'last_access'); // Default to 'created_at'
+            $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
+            $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
+    
+            // Handle pagination
+            $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
+            $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
+    
+            // // Export logic
+            // if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
+            //     $accounts = $query->clone();
+            //     return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
+            // }
+
+            // Fetch the accounts with selected fields and pagination
+            $accounts = $query
+                ->select([
+                    'trading_users.id',
+                    'trading_users.user_id',
+                    'trading_users.meta_login',
+                    'users.name',
+                    'users.email',
+                ])
+                ->where('trading_users.acc_status', '!=', 'inactive')
+                ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
+
+            // // Iterate over each account on the current page and update the account status
+            // foreach ($accounts->items() as $account) {
+            //     try {
+            //         // Attempt to fetch user data
+            //         $accData = (new CTraderService())->getUser($account->meta_login);
+
+            //         // If no data is returned (null or empty), mark the account as inactive
+            //         if (empty($accData)) {
+            //             if ($account->acc_status !== 'inactive') {
+            //                 TradingUser::where('meta_login', $account->meta_login)
+            //                     ->update(['acc_status' => 'inactive']);
+            //             }
+            //         } else {
+            //             // If valid data is fetched, update account to active and proceed with further updates
+            //             if ($account->acc_status !== 'active') {
+            //                 TradingUser::where('meta_login', $account->meta_login)
+            //                     ->update(['acc_status' => 'active']);
+            //             }
+
+            //             // Proceed with updating account information
+            //             (new UpdateTradingUser)->execute($account->meta_login, $accData);
+            //             (new UpdateTradingAccount)->execute($account->meta_login, $accData);
+            //         }
+            //     } catch (\Exception $e) {
+            //         // Log the error if there was a failure (network issue, server error, etc.)
+            //         Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
+            //     }
+            // }
+
+            // Now re-fetch the data after updating the statuses
+            $accounts = $query->select([
+                'trading_users.id',
+                'trading_users.meta_login',
+                'users.name as user_name',
+                'users.email as user_email',
+                'trading_users.balance',
+                'trading_accounts.equity',
+                'trading_users.credit',
+                'trading_users.leverage',
+                'trading_users.deleted_at',
+                'trading_users.last_access as last_login',
+                DB::raw('DATEDIFF(CURRENT_DATE, trading_users.last_access) as last_login_days'), // Raw SQL for last login days
+            ])
+            ->where('trading_users.acc_status', '!=', 'inactive')
+            ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
+            
+            // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
+            foreach ($accounts as $account) {
+                $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
+            }
+                            
+            // After the status update, return the re-fetched paginated data
+            return response()->json([
+                'success' => true,
+                'data' => $accounts,
+            ]);
+        } else {
+            // Handle inactive accounts or other types
+            $query = TradingUser::onlyTrashed() // Only consider soft-deleted trading users
+                ->withTrashed(['user:id,name,email', 'trading_account:id,user_id,meta_login']) // Include soft-deleted related users and trading accounts
+                ->leftJoin('users', 'trading_users.user_id', '=', 'users.id') // Join users table
+                ->leftJoin('trading_accounts', 'trading_users.meta_login', '=', 'trading_accounts.meta_login') // Join trading accounts
+                ->leftJoin('account_types', 'trading_users.account_type_id', '=', 'account_types.id'); // Join account types
+        
+            // Filters
+            // Handle search functionality
+            $search = $request->input('search');
+            if ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('users.name', 'like', '%' . $search . '%')
+                        ->orWhere('users.email', 'like', '%' . $search . '%')
+                        ->orWhere('trading_users.meta_login', 'like', '%' . $search . '%');
+                });
+                        }
+
+            if ($request->input('balance')) {
+                $query->where('trading_users.balance', $request->input('balance'));
+            }
+
+            // Handle sorting
+            $sortField = $request->input('sortField', 'deleted_at'); // Default to 'created_at'
+            $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
+            $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
+    
+            // Handle pagination
+            $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
+            $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
+    
+            // // Export logic
+            // if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
+            //     $accounts = $query->clone();
+            //     return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
+            // }
+
+            $accounts = $query->select([
+                'trading_users.id',
+                'trading_users.meta_login',
+                'users.first_name as user_name',
+                'users.email as user_email',
+                'trading_users.balance',
+                'trading_accounts.equity',
+                'trading_users.credit',
+                'trading_users.leverage',
+                'trading_users.deleted_at',
+                'trading_users.last_access as last_login',
+            ])
+            ->where('trading_users.acc_status', '=', 'inactive')
+            ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
+            
+            // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
+            foreach ($accounts as $account) {
+                $account->user_profile_photo = optional($account->user->media->first())->getFirstMediaUrl('profile_photo');
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $accounts,
+            ]);
+        }
     }
 
     public function getTradingAccountData(Request $request)

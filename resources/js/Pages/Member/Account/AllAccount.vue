@@ -1,7 +1,7 @@
 <script setup>
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
-import {ref, watch, watchEffect} from "vue";
+import {ref, watch, watchEffect, onMounted} from "vue";
 import {FilterMatchMode} from "primevue/api";
 import Loader from "@/Components/Loader.vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
@@ -17,28 +17,84 @@ import RadioButton from "primevue/radiobutton";
 import {transactionFormat} from "@/Composables/index.js";
 import Dialog from "primevue/dialog";
 import {usePage} from "@inertiajs/vue3";
+import debounce from "lodash/debounce.js";
+
+const props = defineProps({
+  loadResults: Boolean,
+});
 
 // overlay panel
 const op = ref();
 const accounts = ref([]);
+const totalRecords = ref(0);
+const rows = ref(10);
+const page = ref(0);
+const sortField = ref(null);  
+const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 const loading = ref(false);
 const filterCount = ref(0);
-const selectedFilterLastLoggedIn = ref('');
 const {formatAmount} = transactionFormat();
 const visible = ref(false);
+
+const filters = ref({
+    global: '',
+    last_logged_in_days: '',
+    balance: ''
+});
+
+const clearFilterGlobal = () => {
+    filters.value.global = '';
+}
+
+const clearFilter = () => {
+    op.value.toggle(false);
+
+    filters.value = {
+        global: '',
+        last_logged_in_days: '',
+        balance: ''
+    };
+};
+
+// Watch for changes on the entire 'filters' object and debounce the API call
+watch(filters, debounce(() => {
+    // Count active filters, excluding null, undefined, empty strings, and empty arrays
+    filterCount.value = Object.values(filters.value).filter(filter => {
+        if (Array.isArray(filter)) {
+            return filter.length > 0;  // Check if the array is not empty
+        }
+        return filter !== null && filter !== '';  // Check if the value is not null or an empty string
+    }).length;
+
+    page.value = 0; // Reset to first page when filters change
+    getResults(); // Call getResults function to fetch the data
+}, 1000), { deep: true });
 
 const getResults = async () => {
     loading.value = true;
 
     try {
-        let url = '/member/getAccountListingData?account_listing=all';
+        let url = `/member/getAccountListingPaginate?type=all&rows=${rows.value}&page=${page.value}`;
 
-        if (selectedFilterLastLoggedIn.value) {
-            url += `&last_logged_in_days=${selectedFilterLastLoggedIn.value}`;
+        if (filters.value.global) {
+            url += `&search=${filters.value.global}`;
+        }
+
+        if (filters.value.last_logged_in_days) {
+            url += `&last_logged_in_days=${filters.value.last_logged_in_days}`;
+        }
+
+        if (filters.value.balance) {
+            url += `&balance=${filters.value.balance}`;
+        }
+
+        if (sortField.value && sortOrder.value !== null) {
+            url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
         }
 
         const response = await axios.get(url);
-        accounts.value = response.data.accounts;
+        accounts.value = response?.data?.data?.data;
+        totalRecords.value = response?.data?.data?.total;
     } catch (error) {
         console.error('Error changing locale:', error);
     } finally {
@@ -46,32 +102,30 @@ const getResults = async () => {
     }
 };
 
-getResults();
+const onPage = async (event) => {
+    rows.value = event.rows;
+    page.value = event.page;
 
-const clearFilterGlobal = () => {
-    filters.value['global'].value = null;
-}
+    getResults();
+};
+
+const onSort = (event) => {
+    sortField.value = event.sortField;
+    sortOrder.value = event.sortOrder;  // Store ascending or descending order
+
+    getResults();
+};
+
+// If the prop is passed initially as true, run getResults
+onMounted(() => {
+  if (props.loadResults) {
+    getResults();
+  }
+});
 
 const exportCSV = () => {
     dt.value.exportCSV();
 };
-
-const filters = ref({
-    global: {value: null, matchMode: FilterMatchMode.CONTAINS},
-    balance: {value: null, matchMode: FilterMatchMode.EQUALS},
-});
-
-watch(filters, () => {
-    filterCount.value = Object.values(filters.value).filter(filter => filter.value !== null).length;
-}, { deep: true });
-
-watch([selectedFilterLastLoggedIn], () => {
-    op.value.toggle(false);
-    getResults();
-
-    filterCount.value = Object.values(filters.value).filter(filter => filter.value !== null).length +
-        (selectedFilterLastLoggedIn.value ? 1 : 0);
-}, { deep: true });
 
 const toggle = (event) => {
     op.value.toggle(event);
@@ -83,17 +137,6 @@ const openDialog = (rowData) => {
     data.value = rowData;
 }
 
-const clearFilter = () => {
-    op.value.toggle(false);
-
-    filters.value = {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        balance: { value: null, matchMode: FilterMatchMode.EQUALS },
-    };
-
-    selectedFilterLastLoggedIn.value = '';
-};
-
 watchEffect(() => {
     if (usePage().props.toast !== null) {
         getResults();
@@ -103,20 +146,23 @@ watchEffect(() => {
 
 <template>
     <DataTable
-        v-model:filters="filters"
         :value="accounts"
         :paginator="accounts?.length > 0"
+        lazy
         removableSort
-        :rows="10"
+        :rows="rows"
         :rowsPerPageOptions="[10, 20, 50, 100]"
         tableStyle="md:min-width: 50rem"
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
         :currentPageReportTemplate="$t('public.paginator_caption')"
-        :globalFilterFields="['user_name', 'user_email', 'meta_login']"
         ref="dt"
+        dataKey="id"
         selectionMode="single"
         @row-click="(event) => openDialog(event.data)"
+        :totalRecords="totalRecords"
         :loading="loading"
+        @page="onPage($event)"
+        @sort="onSort($event)"
     >
         <template #header>
             <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
@@ -124,9 +170,9 @@ watchEffect(() => {
                     <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                         <IconSearch size="20" stroke-width="1.25" />
                     </div>
-                    <InputText v-model="filters['global'].value" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
+                    <InputText v-model="filters['global']" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
                     <div
-                        v-if="filters['global'].value !== null"
+                        v-if="filters['global'] !== null && filters['global'] !== ''"
                         class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"
                         @click="clearFilterGlobal"
                     >
@@ -179,7 +225,7 @@ watchEffect(() => {
                     <span class="hidden md:block max-w-[40px] md:max-w-[60px] lg:max-w-[100px] truncate">{{ $t('public.last_logged_in') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ dayjs(slotProps.data.last_login).format('YYYY/MM/DD HH:mm:ss') }}
+                    {{ dayjs(slotProps.data?.last_login).format('YYYY/MM/DD HH:mm:ss') }}
                 </template>
             </Column>
             <Column
@@ -191,8 +237,8 @@ watchEffect(() => {
                 <template #body="slotProps">
                     <div class="flex items-center gap-3">
                         <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
-                            <template v-if="slotProps.data.user_profile_photo">
-                                <img :src="slotProps.data.user_profile_photo" alt="profile_photo">
+                            <template v-if="slotProps.data?.user_profile_photo">
+                                <img :src="slotProps.data?.user_profile_photo" alt="profile_photo">
                             </template>
                             <template v-else>
                                 <DefaultProfilePhoto />
@@ -200,10 +246,10 @@ watchEffect(() => {
                         </div>
                         <div class="flex flex-col items-start">
                             <div class="font-medium max-w-[120px] lg:max-w-[160px] xl:max-w-[400px] truncate">
-                                {{ slotProps.data.user_name }}
+                                {{ slotProps.data?.user_name }}
                             </div>
                             <div class="text-gray-500 text-xs max-w-[120px] lg:max-w-[160px] xl:max-w-[400px] truncate">
-                                {{ slotProps.data.user_email }}
+                                {{ slotProps.data?.user_email }}
                             </div>
                         </div>
                     </div>
@@ -218,7 +264,7 @@ watchEffect(() => {
                     <span class="hidden md:block max-w-[40px] lg:max-w-[100px] truncate">{{ $t('public.account') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data.meta_login }}
+                    {{ slotProps.data?.meta_login }}
                 </template>
             </Column>
             <Column
@@ -230,7 +276,7 @@ watchEffect(() => {
                     <span class="hidden md:block max-w-[40px] lg:max-w-[100px] truncate">{{ $t('public.balance') }} ($)</span>
                 </template>
                 <template #body="slotProps">
-                    {{ formatAmount(slotProps.data.balance) }}
+                    {{ formatAmount(slotProps.data?.balance) }}
                 </template>
             </Column>
             <Column
@@ -242,7 +288,7 @@ watchEffect(() => {
                     <span class="hidden md:block max-w-[40px] lg:max-w-[100px] truncate">{{ $t('public.equity') }} ($)</span>
                 </template>
                 <template #body="slotProps">
-                    {{ formatAmount(slotProps.data.equity) }}
+                    {{ slotProps.data?.equity ? formatAmount(slotProps.data?.equity) : formatAmount(0) }}
                 </template>
             </Column>
             <Column
@@ -260,9 +306,9 @@ watchEffect(() => {
                 <template #body="slotProps">
                     <div class="flex items-center gap-2 self-stretch">
                         <div class="flex flex-col items-start w-full">
-                            <span class="text-sm text-gray-950 font-semibold">{{ slotProps.data.meta_login }}</span>
+                            <span class="text-sm text-gray-950 font-semibold">{{ slotProps.data?.meta_login }}</span>
                             <div class="text-xs">
-                                <span class="text-gray-500">{{ $t('public.last_logged_in') }}</span> <span class="text-gray-700 font-medium"> {{ dayjs(slotProps.data.last_login).format('YYYY/MM/DD HH:mm:ss') }}</span>
+                                <span class="text-gray-500">{{ $t('public.last_logged_in') }}</span> <span class="text-gray-700 font-medium"> {{ dayjs(slotProps.data?.last_login).format('YYYY/MM/DD HH:mm:ss') }}</span>
                             </div>
                         </div>
                         <AccountTableActions
@@ -285,7 +331,7 @@ watchEffect(() => {
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
-                                v-model="selectedFilterLastLoggedIn"
+                                v-model="filters['last_logged_in_days']"
                                 inputId="greater_than_90_days"
                                 value="greater_than_90_days"
                                 class="w-4 h-4"
@@ -305,7 +351,7 @@ watchEffect(() => {
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
-                                v-model="filters['balance'].value"
+                                v-model="filters['balance']"
                                 inputId="zero_balance"
                                 value="0.00"
                                 class="w-4 h-4"
@@ -338,16 +384,16 @@ watchEffect(() => {
         <div class="flex flex-col justify-center items-start pb-4 gap-3 self-stretch border-b border-gray-200 md:flex-row md:pt-4 md:justify-between">
             <div class="flex items-center gap-3 self-stretch">
                 <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
-                    <div v-if="data.user_profile_photo">
-                        <img :src="data.user_profile_photo" alt="Profile Photo" />
+                    <div v-if="data?.user_profile_photo">
+                        <img :src="data?.user_profile_photo" alt="Profile Photo" />
                     </div>
                     <div v-else>
                         <DefaultProfilePhoto />
                     </div>
                 </div>
                 <div class="flex flex-col items-start flex-grow">
-                    <span class="self-stretch overflow-hidden text-gray-950 text-ellipsis text-sm font-medium">{{ data.user_name }}</span>
-                    <span class="self-stretch overflow-hidden text-gray-500 text-ellipsis text-xs">{{ data.user_email }}</span>
+                    <span class="self-stretch overflow-hidden text-gray-950 text-ellipsis text-sm font-medium">{{ data?.user_name }}</span>
+                    <span class="self-stretch overflow-hidden text-gray-500 text-ellipsis text-xs">{{ data?.user_email }}</span>
                 </div>
             </div>
         </div>
@@ -355,30 +401,30 @@ watchEffect(() => {
         <div class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.account') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ data.meta_login }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ data?.meta_login }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.balance') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data.balance) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.balance) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.equity') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data.equity) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ data?.equity ? formatAmount(data?.equity) : formatAmount(0) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.credit') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data.credit) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.credit) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.leverage') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">1:{{ data.leverage }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">1:{{ data?.leverage }}</span>
             </div>
         </div>
 
         <div class="flex flex-col items-center py-4 gap-3 self-stretch">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:min-w-[140px] text-gray-500 text-xs">{{ $t('public.last_logged_in') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data.last_login).format('YYYY/MM/DD HH:mm:ss') }} ({{ dayjs().diff(dayjs(data.last_login), 'day') }} {{ $t('public.days') }})</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data?.last_login).format('YYYY/MM/DD HH:mm:ss') }} ({{ dayjs().diff(dayjs(data?.last_login), 'day') }} {{ $t('public.days') }})</span>
             </div>
         </div>
     </Dialog>

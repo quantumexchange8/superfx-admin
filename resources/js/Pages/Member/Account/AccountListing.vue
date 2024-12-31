@@ -2,17 +2,17 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
-import {h, ref, watch} from "vue";
+import { h, ref, watch, onMounted } from "vue";
 import AllAccount from "@/Pages/Member/Account/AllAccount.vue";
 import DeletedAccount from "@/Pages/Member/Account/DeletedAccount.vue";
-import Button from "@/Components/Button.vue"
-import {IconRefresh} from "@tabler/icons-vue"
-import {router} from "@inertiajs/vue3";
+import Button from "@/Components/Button.vue";
+import { IconRefresh } from "@tabler/icons-vue";
+import { router } from "@inertiajs/vue3";
 import dayjs from "dayjs";
 
 defineProps({
     last_refresh_datetime: Number
-})
+});
 
 const tabs = ref([
     {
@@ -30,6 +30,8 @@ const tabs = ref([
 const selectedType = ref('all_accounts');
 const activeIndex = ref(tabs.value.findIndex(tab => tab.type === selectedType.value));
 
+let firstRenderCompleted = ref(false); // Flag to check if first render is done
+
 // Watch for changes in selectedType and update the activeIndex accordingly
 watch(selectedType, (newType) => {
     const index = tabs.value.findIndex(tab => tab.type === newType);
@@ -38,14 +40,21 @@ watch(selectedType, (newType) => {
     }
 });
 
+// Update selectedType on tab change
 const updateType = (event) => {
     const selectedTab = tabs.value[event.index];
     selectedType.value = selectedTab.type;
-}
+};
 
+// Refresh all data when button is clicked
 const refreshAll = () => {
-    router.post(route('member.refreshAllAccount'))
-}
+    router.post(route('member.refreshAllAccount'));
+};
+
+// Check if it's the first time rendering after TabView loads
+onMounted(() => {
+    firstRenderCompleted.value = true;
+});
 </script>
 
 <template>
@@ -73,10 +82,15 @@ const refreshAll = () => {
                 >
                     <TabPanel
                         v-for="(tab, index) in tabs"
-                        :key="index"
+                        :key="tab.type"
                         :header="$t(`public.${tab.title}`)"
                     >
-                        <component :is="tabs[activeIndex]?.component" />
+                        <!-- Pass `loadResults` prop only once after first render -->
+                        <component 
+                            :is="tab.component" 
+                            v-if="activeIndex === index" 
+                            :loadResults="firstRenderCompleted"
+                        />
                     </TabPanel>
                 </TabView>
             </div>

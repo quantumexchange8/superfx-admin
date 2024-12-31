@@ -6,6 +6,10 @@ import {transactionFormat} from "@/Composables/index.js";
 import {usePage} from "@inertiajs/vue3";
 import RebateStructureTable from "@/Pages/RebateAllocate/Partials/RebateStructureTable.vue";
 
+const props = defineProps({
+    accountTypes: Array,
+})
+
 const accountType = ref(1)
 const companyProfile = ref();
 const rebateDetails = ref();
@@ -27,6 +31,11 @@ const getResults = async () => {
 };
 
 getResults();
+
+const handleAccountTypeChange = (newType) => {
+    accountType.value = newType
+    getResults();
+};
 
 watchEffect(() => {
     if (usePage().props.toast !== null) {
@@ -114,7 +123,7 @@ watchEffect(() => {
             </div>
 
             <!-- data table -->
-            <RebateStructureTable />
+            <RebateStructureTable :accountTypes="accountTypes" @update:accountType="handleAccountTypeChange" />
         </div>
     </AuthenticatedLayout>
 </template>

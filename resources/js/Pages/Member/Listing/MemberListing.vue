@@ -44,7 +44,6 @@ const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 const loading = ref(false);
 const dt = ref();
 const users = ref();
-const selectedBrand = ref(null);
 const counterDuration = ref(10);
 const { formatRgbaColor } = generalFormat();
 

@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RebateAllocation;
 use App\Models\User;
-use Auth;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
+use App\Models\RebateAllocation;
+use Illuminate\Support\Facades\Auth;
 
 class RebateController extends Controller
 {
     public function rebate_allocate()
     {
-        return Inertia::render('RebateAllocate/RebateAllocate');
+        return Inertia::render('RebateAllocate/RebateAllocate', [
+            'accountTypes' => (new GeneralController())->getAccountTypes(true),
+        ]);
     }
 
     public function getCompanyProfileData(Request $request)
@@ -150,10 +152,29 @@ class RebateController extends Controller
     public function getAgents(Request $request)
     {
         $type_id = $request->type_id;
+        $search = $request->search;  // Get the search term
 
-        //level 1 children
-        $lv1_agents = User::where('upline_id', 2)->where('role', 'agent')
-            ->get()->map(function($agent) {
+        // Start the query for agents
+        $query = User::where('role', 'agent');
+
+        // If there is no search term, filter by upline_id
+        if (empty($search)) {
+            $query->where('upline_id', 2);  // Only apply upline_id filter if no search term
+        } else {
+            // If there is a search term, search by name or email
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%$search%")
+                    ->orWhere('email', 'like', "%$search%")
+                    ->orWhere('id_number', 'like', "%$search%");
+            });
+        }
+        
+        // Get the level 1 agents based on the query
+        $lv1_agents = $query->get()
+            ->map(function ($agent) use ($search) {
+                // Determine the agent's level based on whether there's a search or not
+                $level = $search ? $this->calculateLevel($agent->hierarchyList) : 1;
+
                 return [
                     'id' => $agent->id,
                     'profile_photo' => $agent->getFirstMediaUrl('profile_photo'),
@@ -161,30 +182,44 @@ class RebateController extends Controller
                     'email' => $agent->email,
                     'hierarchy_list' => $agent->hierarchyList,
                     'upline_id' => $agent->upline_id,
-                    'level' => 1,
+                    'level' => $level,
                 ];
-            })->toArray();
+            })
+            ->toArray();
 
-        //level 1 children rebate
-        $lv1_rebate = $this->getRebateAllocate($lv1_agents[0]['id'], $type_id);
+        // Check if ID 2 exists and move it to the first position
+        $id_2_index = array_search(2, array_column($lv1_agents, 'id'));
+        if ($id_2_index !== false) {
+            $id_2_agent = $lv1_agents[$id_2_index];
+            unset($lv1_agents[$id_2_index]);
+            array_unshift($lv1_agents, $id_2_agent); // Add to the start
+        }
 
         $agents_array = [];
         $lv1_data = [];
 
-        // push lvl 1 agent & rebate
-        array_push($lv1_data, $lv1_agents, $lv1_rebate);
-        $agents_array[] = $lv1_data;
+        // Check if there are any agents found
+        if (!empty($lv1_agents)) {
+            // Get level 1 children rebate only if agents are found
+            $lv1_rebate = $this->getRebateAllocate($lv1_agents[0]['id'], $type_id);
 
-        // get getDirectAgents of first upline
-        $loop_flag = true;
-        $current_agent_id = $lv1_agents[0]['id'];
-        while ($loop_flag) {
-            $next_level = $this->getDirectAgents($current_agent_id, $type_id);
-            if ( !empty($next_level) ) {
-                $current_agent_id = $next_level[0][0]['id'];
-                $agents_array[] = $next_level;
-            } else {
-                $loop_flag = false;
+            // Push level 1 agent & rebate data
+            array_push($lv1_data, $lv1_agents, $lv1_rebate);
+            $agents_array[] = $lv1_data;
+
+            // Get direct agents of the first upline
+            $loop_flag = true;
+            $current_agent_id = $lv1_agents[0]['id'];
+            while ($loop_flag) {
+                $next_level = $this->getDirectAgents($current_agent_id, $type_id);
+
+                // If next level agents are found, continue the loop
+                if (!empty($next_level) && isset($next_level[0][0]['id'])) {
+                    $current_agent_id = $next_level[0][0]['id'];
+                    $agents_array[] = $next_level;
+                } else {
+                    $loop_flag = false; // Stop looping if no more agents
+                }
             }
         }
 

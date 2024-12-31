@@ -20,14 +20,13 @@ class UpdateTradingAccount
             ->first();
 
         $accountType = AccountType::query()
-            ->where('account_group', $data['groupName'])
+            ->where('account_group', $data['group'])
             ->first();
 
-        $tradingAccount->currency_digits = $data['moneyDigits'];
-        $tradingAccount->balance = $data['balance'] / 100;
-        $tradingAccount->credit = $data['nonWithdrawableBonus'] / 100;
-        $tradingAccount->margin_leverage = $data['leverageInCents'] / 100;
-        $tradingAccount->equity = $data['equity'] / 100;
+        $tradingAccount->balance = $data['balance'];
+        $tradingAccount->credit = $data['credit'];
+        $tradingAccount->margin_leverage = $data['leverage'];
+
         $tradingAccount->account_type_id = $accountType->id;
         DB::transaction(function () use ($tradingAccount) {
             $tradingAccount->save();

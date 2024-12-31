@@ -1,5 +1,5 @@
 <script setup>
-import {ref, watch} from "vue";
+import {ref, watch, watchEffect} from "vue";
 import InputText from 'primevue/inputtext';
 import Button from '@/Components/Button.vue';
 import {useForm, usePage} from '@inertiajs/vue3';
@@ -13,33 +13,50 @@ import {
     IconCircleXFilled,
     IconAdjustmentsHorizontal,
 } from '@tabler/icons-vue';
-import { wTrans } from "laravel-vue-i18n";
+import { wTrans, trans } from "laravel-vue-i18n";
 import AgentDropdown from '@/Pages/RebateAllocate/Partials/AgentDropdown.vue';
 import InputNumber from "primevue/inputnumber";
 import Dialog from "primevue/dialog";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
+import toast from '@/Composables/toast';
+import debounce from "lodash/debounce.js";
 
-const dropdownOptions = [
-    {
-        name: wTrans('public.standard_account'),
-        value: 1
-    },
-    {
-        name: wTrans('public.premium_account'),
-        value: 2
-    },
-]
+const props = defineProps({
+    accountTypes: Array,
+})
 
-const accountType = ref(dropdownOptions[0].value);
+// Emit event back to parent
+const emit = defineEmits(['update:accountType']);
+
+const accountTypes = ref();
+const search = ref(null);
+
+const clearSearch = () => {
+    search.value = null;
+}
+// Watch for changes in the accountTypes prop
+watch(() => props.accountTypes, (newAccountTypes) => {
+    accountTypes.value = newAccountTypes;
+}, { immediate: true }); // immediate: true will execute the watcher immediately on component mount
+
+const accountType = ref(accountTypes.value[0].value);
 const loading = ref(false);
 const dt = ref();
 const agents = ref();
 
-const getResults = async (type_id = 1) => {
+const getResults = async (type_id) => {
     loading.value = true;
 
     try {
-        const response = await axios.get(`/rebate_allocate/getAgents?type_id=${type_id}`);
+        let url = `/rebate_allocate/getAgents?type_id=${type_id}`;
+
+        if (search.value) {
+            url += `&search=${search.value}`;
+        }
+
+        // Make the API request
+        const response = await axios.get(url);
+
         agents.value = response.data;
     } catch (error) {
         console.error('Error get agents:', error);
@@ -48,50 +65,46 @@ const getResults = async (type_id = 1) => {
     }
 };
 
-getResults();
+// Fetch results initially using the current accountType
+getResults(accountType.value, search.value);
 
+// Watch for changes in accountType and fetch new results accordingly
 watch(accountType, (newValue) => {
-    getResults(newValue);
-})
+    emit('update:accountType', newValue);  // Emit the new value to the parent
+    getResults(newValue, search.value);
+});
+
+// Flag to temporarily disable the watcher
+let isChangingAgent = false;
+
+// Watch the search value with a debounced function directly in the watcher
+watch(search, debounce((newSearchValue) => {
+    // Prevent getResults from being called when changing agent
+    if (!isChangingAgent) {
+        getResults(accountType.value, newSearchValue); // Fetch with current account type and search query
+    }
+}, 1000)); // Debounce time (1000ms)
 
 const changeAgent = async (newAgent) => {
     loading.value = true;
 
     try {
+        // Temporarily disable the watcher to prevent getResults from running
+        isChangingAgent = true;
+
+        // Clear the search value to ensure it doesn't trigger a search
+        clearSearch();
+
         const response = await axios.get(`/rebate_allocate/changeAgents?id=${newAgent.id}&type_id=${accountType.value}`);
         agents.value = response.data;
     } catch (error) {
         console.error('Error get change:', error);
     } finally {
         loading.value = false;
+
+        // Re-enable the watcher after the agent change is complete
+        isChangingAgent = false;
     }
-}
-
-const filters = ref({
-    global: {value: null, matchMode: FilterMatchMode.CONTAINS},
-    name: {value: null, matchMode: FilterMatchMode.STARTS_WITH},
-    upline_id: {value: null, matchMode: FilterMatchMode.EQUALS},
-    level: {value: null, matchMode: FilterMatchMode.EQUALS},
-    role: {value: null, matchMode: FilterMatchMode.EQUALS},
-    status: {value: null, matchMode: FilterMatchMode.EQUALS},
-});
-
-const clearFilter = () => {
-    filters.value = {
-        global: {value: null, matchMode: FilterMatchMode.CONTAINS},
-        name: {value: null, matchMode: FilterMatchMode.STARTS_WITH},
-        upline_id: {value: null, matchMode: FilterMatchMode.EQUALS},
-        level: {value: null, matchMode: FilterMatchMode.EQUALS},
-        role: {value: null, matchMode: FilterMatchMode.EQUALS},
-        status: {value: null, matchMode: FilterMatchMode.EQUALS},
-    };
-
-    upline_id.value = null;
-    level.value = null;
-};
-
-const clearFilterGlobal = () => {
-    filters.value['global'].value = null;
 }
 
 const editingRows = ref([]);
@@ -110,22 +123,130 @@ const form = useForm({
 });
 
 const onRowEditSave = (event) => {
-    let {newData, index} = event;
+    let { newData, index } = event;
 
     agents.value[index] = newData;
 
-    form.rebates = agents.value[index][1];
-    form.post(route('rebate_allocate.updateRebateAmount'));
+    const data = agents.value[index][1];
+    
+    // Map the indexes (1, 2, 3, 4, 5) to the corresponding categories
+    const categories = [
+        { key: 1, name: 'forex' },
+        { key: 2, name: 'stocks' },
+        { key: 3, name: 'indices' },
+        { key: 4, name: 'commodities' },
+        { key: 5, name: 'cryptocurrency' }
+    ];
+
+    // Flag to track if the post should proceed
+    let canPost = true;
+
+    categories.forEach((category) => {
+        // Get the value for the category
+        const value = data[category.key];
+
+        // Retrieve the upline and downline values dynamically
+        const uplineMax = data[`upline_${category.name}`];
+        const downlineMax = data[`downline_${category.name}`];
+
+        // Prepare the messages by replacing the :name and :value placeholders
+        const exceedUplineMessage = wTrans('public.rebate_exceed_upline', { name: trans('public.' + category.name), value: uplineMax });
+        const exceedDownlineMessage = wTrans('public.rebate_exceed_downline', { name: trans('public.' + category.name), value: downlineMax });
+
+        // Check if the value exceeds the upline max or falls below the downline min
+        if (value > uplineMax) {
+            // Show a warning message for exceeding the upline
+            toast.add({ 
+                type: 'warning', 
+                title: exceedUplineMessage,
+            });
+            canPost = false; // Set flag to false, prevent form post
+        } else if (value < downlineMax) {
+            // Show a warning message for falling below the downline
+            toast.add({ 
+                type: 'warning', 
+                title: exceedDownlineMessage,
+            });
+            canPost = false; // Set flag to false, prevent form post
+        }
+    });
+
+    // Proceed with the form post only if all checks pass
+    if (canPost) {
+        form.rebates = agents.value[index][1];
+        form.post(route('rebate_allocate.updateRebateAmount'));
+    }
 };
 
 const submitForm = (submitData) => {
+    // Assign the submitData to form.rebates
     form.rebates = submitData;
-    form.post(route('rebate_allocate.updateRebateAmount'));
+
+    // Map the indexes (1, 2, 3, 4, 5) to the corresponding categories
+    const categories = [
+        { key: 1, name: 'forex' },
+        { key: 2, name: 'stocks' },
+        { key: 3, name: 'indices' },
+        { key: 4, name: 'commodities' },
+        { key: 5, name: 'cryptocurrency' }
+    ];
+
+    // Flag to track if the post should proceed
+    let canPost = true;
+
+    // Loop over the categories to validate each one
+    categories.forEach((category) => {
+        // Get the value for the category from the submitData
+        const value = submitData[category.key];
+
+        // Retrieve the upline and downline values dynamically from the submitData
+        const uplineMax = submitData[`upline_${category.name}`];
+        const downlineMax = submitData[`downline_${category.name}`];
+
+        // Prepare the messages by replacing the :name and :value placeholders
+        const exceedUplineMessage = wTrans('public.rebate_exceed_upline', { name: trans('public.' + category.name), value: uplineMax });
+        const exceedDownlineMessage = wTrans('public.rebate_exceed_downline', { name: trans('public.' + category.name), value: downlineMax });
+
+        // Check if the value exceeds the upline max or falls below the downline min
+        if (value > uplineMax) {
+            // Show a warning message for exceeding the upline
+            toast.add({ 
+                type: 'warning', 
+                title: exceedUplineMessage,
+            });
+            closeDialog();
+            canPost = false; // Set flag to false, prevent form post
+        } else if (value < downlineMax) {
+            // Show a warning message for falling below the downline
+            toast.add({ 
+                type: 'warning', 
+                title: exceedDownlineMessage,
+            });
+            closeDialog();
+            canPost = false; // Set flag to false, prevent form post
+        }
+    });
+
+    // Proceed with the form post only if all checks pass
+    if (canPost) {
+        form.post(route('rebate_allocate.updateRebateAmount'), {
+            onSuccess: () => {
+                closeDialog();
+                form.reset();
+            },
+        });
+    }
 };
 
 const closeDialog = () => {
     visible.value = false;
 }
+
+watchEffect(() => {
+    if (usePage().props.toast !== null) {
+        getResults(accountType.value);
+    }
+});
 </script>
 
 <template>
@@ -135,12 +256,12 @@ const closeDialog = () => {
             v-model:editingRows="editingRows"
             :value="agents"
             tableStyle="min-width: 50rem"
-            :globalFilterFields="['agent']"
+            :globalFilterFields="['name']"
             ref="dt"
             :loading="loading"
             table-style="min-width:fit-content"
             editMode="row"
-            :dataKey="agents ? agents[0].id : 'id'"
+            :dataKey="agents && agents.length ? agents[0].id : 'id'"
             @row-edit-save="onRowEditSave"
         >
             <template #header>
@@ -149,19 +270,18 @@ const closeDialog = () => {
                         <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                             <IconSearch size="20" stroke-width="1.25"/>
                         </div>
-                        <InputText v-model="filters['global'].value" :placeholder="$t('public.search_agent')"
-                                   class="font-normal pl-12 w-full md:w-60"/>
+                        <InputText v-model="search" :placeholder="$t('public.search_agent')" class="font-normal px-10 w-full md:w-60" />
                         <div
-                            v-if="filters['global'].value !== null"
+                            v-if="search !== null"
                             class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"
-                            @click="clearFilterGlobal"
+                            @click="clearSearch"
                         >
                             <IconCircleXFilled size="16"/>
                         </div>
                     </div>
                     <Dropdown
                         v-model="accountType"
-                        :options="dropdownOptions"
+                        :options="accountTypes"
                         optionLabel="name"
                         optionValue="value"
                         class="w-full md:w-52 font-normal"
@@ -207,8 +327,6 @@ const closeDialog = () => {
                 <template #editor="{ data, field }">
                     <InputNumber
                         v-model="data[1][field]"
-                        :min="data[1].downline_forex ? data[1].downline_forex : 0"
-                        :max="data[1].upline_forex"
                         :minFractionDigits="2"
                         fluid
                         size="sm"
@@ -226,8 +344,6 @@ const closeDialog = () => {
                 <template #editor="{ data, field }">
                     <InputNumber
                         v-model="data[1][field]"
-                        :min="data[1].downline_stocks ? data[1].downline_stocks : 0"
-                        :max="data[1].upline_stocks"
                         :minFractionDigits="2"
                         fluid
                         size="sm"
@@ -245,8 +361,6 @@ const closeDialog = () => {
                 <template #editor="{ data, field }">
                     <InputNumber
                         v-model="data[1][field]"
-                        :min="data[1].downline_indices ? data[1].downline_indices : 0"
-                        :max="data[1].upline_indices"
                         :minFractionDigits="2"
                         fluid
                         size="sm"
@@ -264,8 +378,6 @@ const closeDialog = () => {
                 <template #editor="{ data, field }">
                     <InputNumber
                         v-model="data[1][field]"
-                        :min="data[1].downline_commodities ? data[1].downline_commodities : 0"
-                        :max="data[1].upline_commodities"
                         :minFractionDigits="2"
                         fluid
                         size="sm"
@@ -283,8 +395,6 @@ const closeDialog = () => {
                 <template #editor="{ data, field }">
                     <InputNumber
                         v-model="data[1][field]"
-                        :min="data[1].downline_cryptocurrency ? data[1].downline_cryptocurrency : 0"
-                        :max="data[1].upline_cryptocurrency"
                         :minFractionDigits="2"
                         fluid
                         size="sm"
@@ -378,8 +488,6 @@ const closeDialog = () => {
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
                                 v-model="productDetails['1']"
-                                :min="productDetails.downline_forex ? productDetails.downline_forex : 0"
-                                :max="productDetails.upline_forex"
                                 :minFractionDigits="2"
                                 fluid
                                 size="sm"
@@ -397,8 +505,6 @@ const closeDialog = () => {
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
                                 v-model="productDetails['2']"
-                                :min="productDetails.downline_stocks ? productDetails.downline_stocks : 0"
-                                :max="productDetails.upline_stocks"
                                 :minFractionDigits="2"
                                 fluid
                                 size="sm"
@@ -416,8 +522,6 @@ const closeDialog = () => {
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
                                 v-model="productDetails['3']"
-                                :min="productDetails.downline_indices ? productDetails.downline_indices : 0"
-                                :max="productDetails.upline_indices"
                                 :minFractionDigits="2"
                                 fluid
                                 size="sm"
@@ -435,8 +539,6 @@ const closeDialog = () => {
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
                                 v-model="productDetails['4']"
-                                :min="productDetails.downline_commodities ? productDetails.downline_commodities : 0"
-                                :max="productDetails.upline_commodities"
                                 :minFractionDigits="2"
                                 fluid
                                 size="sm"
@@ -454,8 +556,6 @@ const closeDialog = () => {
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
                                 v-model="productDetails['5']"
-                                :min="productDetails.downline_cryptocurrency ? productDetails.downline_cryptocurrency : 0"
-                                :max="productDetails.upline_cryptocurrency"
                                 :minFractionDigits="2"
                                 fluid
                                 size="sm"
