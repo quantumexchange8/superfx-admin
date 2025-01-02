@@ -87,9 +87,7 @@ const onSort = (event) => {
 
 // If the prop is passed initially as true, run getResults
 onMounted(() => {
-  if (props.loadResults) {
     getResults();
-  }
 });
 
 const exportCSV = () => {

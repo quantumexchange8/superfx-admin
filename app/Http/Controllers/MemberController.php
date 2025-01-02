@@ -837,7 +837,18 @@ class MemberController extends Controller
         $user->tradingAccounts()->delete();
         $user->tradingUsers()->delete();
         $user->paymentAccounts()->delete();
+        $user->groupHasUser()->delete();
         $user->rebateAllocations()->delete();
+        $user->rebate_wallet()->delete();
+        $user->bonus_wallet()->delete();
+        // Remove roles and permissions
+        if ($user->roles()->exists()) {
+            $user->roles()->detach(); // Detach all roles
+        }
+
+        if ($user->permissions()->exists()) {
+            $user->permissions()->detach(); // Detach all permissions
+        }        
         $user->delete();
 
         return redirect()->back()->with('toast', [

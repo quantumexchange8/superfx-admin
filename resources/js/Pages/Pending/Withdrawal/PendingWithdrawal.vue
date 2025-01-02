@@ -348,6 +348,7 @@ const handleFilter = (e) => {
                     variant="error-flat"
                     class="w-full md:w-[120px]"
                     @click="handleApproval('reject')"
+                    :disabled="form.processing"
                 >
                     {{ $t('public.reject') }}
                 </Button>
@@ -355,6 +356,7 @@ const handleFilter = (e) => {
                     variant="success-flat"
                     class="w-full md:w-[120px]"
                     @click="handleApproval('approve')"
+                    :disabled="form.processing"
                 >
                     {{ $t('public.approve') }}
                 </Button>

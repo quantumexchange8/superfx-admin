@@ -38,6 +38,13 @@ const getNetwork = async (filterUplineId = upline_id.value, filterParentId = par
         upline.value = response.data.upline;
         parent.value = response.data.parent;
         children.value = response.data.direct_children;
+        if (upline.value) {
+            upline_id.value = upline.value.id;
+        }
+        if (parent_id.value) {
+            parent_id.value = parent.value.id; 
+        }
+
     } catch (error) {
         console.error('Error get network:', error);
     } finally {
@@ -56,6 +63,7 @@ watch(search,
 const selectDownline = (downlineId) => {
     upline_id.value = parent.value.id;
     parent_id.value = downlineId;
+    search.value = '';
 
     getNetwork(upline_id.value, parent_id.value)
 }
@@ -63,6 +71,7 @@ const selectDownline = (downlineId) => {
 const collapseAll = () => {
     upline_id.value = null;
     parent_id.value = null;
+    search.value = '';
     getNetwork()
 }
 
@@ -70,10 +79,12 @@ const backToUpline = (parentLevel) => {
     if (parentLevel === 1) {
         upline_id.value = null;
         parent_id.value = null;
+        search.value = '';
         getNetwork()
     } else {
         parent_id.value = parent.value.upline_id;
         upline_id.value = parent.value.upper_upline_id;
+        search.value = '';
         getNetwork(upline_id.value, parent_id.value)
     }
 }

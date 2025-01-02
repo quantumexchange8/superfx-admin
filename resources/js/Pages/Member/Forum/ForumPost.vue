@@ -98,6 +98,61 @@ const requireConfirmation = (action_type, postId) => {
     });
 };
 
+const isEnlarged = ref(false); // Track if image is enlarged
+const imageStyle = ref({
+  transform: 'scale(1) translate3d(0, 0, 0)', // Initial transform
+  transition: 'transform 0.3s ease', // Transition applied directly
+  transformOrigin: 'center center', // Initial transform origin
+});
+
+const scaleFactor = 3; // Scale factor for the image
+
+// Toggle enlarged state of the image
+const toggleEnlarged = (event) => {
+  isEnlarged.value = !isEnlarged.value;
+
+  // Prevent triggering the preview callback by stopping the event
+  event.stopImmediatePropagation(); // Prevent the image preview action
+
+  const rect = event.target.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+
+  if (isEnlarged.value) {
+    // Adjust transform-origin to focus on the clicked position
+    imageStyle.value.transformOrigin = `${(mouseX / rect.width) * 100}% ${(mouseY / rect.height) * 100}%`;
+
+    // Apply the scale transform
+    imageStyle.value.transform = `scale(${scaleFactor}) translate3d(0, 0, 0)`;
+  } else {
+    // Reset transform when not enlarged
+    imageStyle.value.transform = 'scale(1) translate3d(0, 0, 0)';
+    imageStyle.value.transformOrigin = 'center center'; // Reset transform origin to center
+  }
+};
+
+// Handle the mouse-follow behavior when enlarged
+const followMouse = (event) => {
+  if (isEnlarged.value) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    // Amplify the translation values to make the movement more noticeable
+    const translateX = ((mouseX / rect.width) - 0.5) * -100 / scaleFactor;
+    const translateY = ((mouseY / rect.height) - 0.5) * -100 / scaleFactor;
+
+    imageStyle.value.transform = `scale(${scaleFactor}) translate3d(${translateX}%, ${translateY}%, 0)`;
+  }
+};
+
+// Reset the image transform to its original state
+const resetImageTransform = () => {
+  isEnlarged.value = false;
+  imageStyle.value.transform = 'scale(1) translate3d(0, 0, 0)';
+  imageStyle.value.transformOrigin = 'center center';
+};
+
 </script>
 
 <template>
@@ -185,7 +240,26 @@ const requireConfirmation = (action_type, postId) => {
                     alt="Image"
                     image-class="w-[250px] h-[160px] object-contain"
                     preview
-                />
+                    :pt="{
+                        toolbar: 'hidden',
+                    }"
+                    @click="resetImageTransform()"
+                >
+                <!-- Preview image template with click event -->
+                    <template #preview>
+                        <img
+                            :src="post.post_attachment"
+                            alt="Image"
+                            class="max-h-full object-contain"
+                            :class="[isEnlarged ? 'cursor-zoom-out' : 'cursor-zoom-in']"
+                            @click="toggleEnlarged($event)"
+                            @mousemove="followMouse"
+                            :style="imageStyle"
+                            data-pc-section="preview"
+                        />
+                    </template>
+                </Image>
+
                 <div class="flex flex-col gap-3 items-start self-stretch text-sm text-gray-950">
                     <span class="font-semibold">{{ post.subject }}</span>
                     <div

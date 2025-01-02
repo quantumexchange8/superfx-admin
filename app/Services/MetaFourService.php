@@ -104,6 +104,45 @@ class MetaFourService {
         return $accountResponse;
     }
 
+    public function createTrade($meta_login, $amount, $comment, $type)
+    {
+        $payload = [
+            'meta_login' => $meta_login,
+            'amount' => $amount,
+            'comment' => $comment,
+            'type' => $type,
+        ];
+    
+        // Add expiration date for credit type only
+        if ($type === 'credit') {
+            $payload['expiration_date'] = "2030-12-31";  // Set expiration date for credit transactions
+        } else {
+            $payload['expiration_date'] = '';  // Empty expiration date for balance transactions
+        }
+    
+        $jsonPayload = json_encode($payload);
+    
+        if (App::environment('production')) {
+            $accountResponse = Http::acceptJson()
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->withBody($jsonPayload, 'application/json')
+                ->post($this->demoURL . "/transaction");
+        } else {
+            $accountResponse = Http::withoutVerifying()
+                ->acceptJson()
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->withBody($jsonPayload, 'application/json')
+                ->post($this->demoURL . "/transaction");
+        }
+    
+        // Return the JSON response from the API
+        return $accountResponse->json();
+    }
+    
     // public function createDeal($meta_login, $amount, $comment, $type)
     // {
     //     $dealResponse = Http::acceptJson()->post($this->baseURL . "/conduct_deal", [
@@ -220,4 +259,12 @@ class passwordType
 {
     const MAIN = false;
     const INVESTOR = true;
+}
+
+class ChangeTraderBalanceType
+{
+    const DEPOSIT = "balance";
+    const WITHDRAW = "balance";
+    const CREDIT_IN = "credit";
+    const CREDIT_OUT = "credit";
 }

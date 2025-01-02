@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Services\RunningNumberService;
 use App\Services\ChangeTraderBalanceType;
+use App\Services\MetaFourService;
 use Illuminate\Validation\ValidationException;
 
 class PendingController extends Controller
@@ -36,24 +37,38 @@ class PendingController extends Controller
             ->latest()
             ->get()
             ->map(function ($transaction) {
+                // Check if from_meta_login exists and fetch the latest balance
+                if ($transaction->from_meta_login) {
+                    // Only call getUserInfo in production
+                    if (app()->environment('production')) {
+                        // Call getUserInfo to ensure the balance is up to date
+                        (new MetaFourService())->getUserInfo($transaction->from_meta_login); // Pass the from_meta_login object
+                    }
+                    
+                    // After calling getUserInfo, fetch the latest balance
+                    $balance = $transaction->from_meta_login ? $transaction->fromMetaLogin->balance : 0;
+                } else {
+                    // Fallback to using the wallet balance if from_meta_login is not available
+                    $balance = $transaction->from_wallet ? $transaction->from_wallet->balance : 0;
+                }
+    
                 return [
                     'id' => $transaction->id,
                     'created_at' => $transaction->created_at,
                     'user_name' => $transaction->user->name,
                     'user_email' => $transaction->user->email,
-                    'user_profile_photo' => $transaction->user->getFirstMediaUrl('profile_photo'),
-                    'from' => $transaction->category == 'trading_account' ? $transaction->from_meta_login : 'rebate_wallet',
-                    'balance' => $transaction->category == 'trading_account' ? $transaction->from_meta_login->balance : $transaction->from_wallet->balance,
+                    'from' => $transaction->from_meta_login ? $transaction->from_meta_login : 'rebate_wallet',
+                    'balance' => $balance, // Get balance after ensuring it's updated
                     'amount' => $transaction->amount,
                     'transaction_charges' => $transaction->transaction_charges,
                     'transaction_amount' => $transaction->transaction_amount,
-                    'wallet_name' => $transaction->payment_account->payment_account_name,
-                    'wallet_address' => $transaction->payment_account->account_no,
+                    'wallet_name' => $transaction->payment_account?->payment_account_name,
+                    'wallet_address' => $transaction->payment_account?->account_no,
                 ];
             });
-
+    
         $totalAmount = $pendingWithdrawals->sum('amount');
-
+    
         return response()->json([
             'pendingWithdrawals' => $pendingWithdrawals,
             'totalAmount' => $totalAmount,
@@ -112,24 +127,29 @@ class PendingController extends Controller
 
             if ($transaction->category == 'trading_account') {
 
-                // try {
-                //     $trade = (new CTraderService)->createTrade($transaction->from_meta_login, $transaction->amount, $transaction->remarks, ChangeTraderBalanceType::DEPOSIT);
+                try {
+                    $trade = (new MetaFourService)->createTrade($transaction->from_meta_login, (float) $transaction->amount, $transaction->remarks, ChangeTraderBalanceType::DEPOSIT);
 
-                //     $transaction->update([
-                //         'ticket' => $trade->getTicket(),
-                //     ]);
-                // } catch (\Throwable $e) {
-                //     if ($e->getMessage() == "Not found") {
-                //         TradingUser::firstWhere('meta_login', $transaction->from_meta_login)->update(['acc_status' => 'Inactive']);
-                //     } else {
-                //         Log::error($e->getMessage());
-                //     }
-                //     return back()
-                //         ->with('toast', [
-                //             'title' => 'Trading account error',
-                //             'type' => 'error'
-                //         ]);
-                // }
+                    $transaction->update([
+                        'ticket' => $trade['ticket'],
+                    ]);
+                } catch (\Throwable $e) {
+                    // Log the main error
+                    Log::error('Error creating trade: ' . $e->getMessage());
+
+                    // Attempt to get the account and mark account as inactive if not found
+                    $account = (new MetaFourService())->getUser($transaction->meta_login);
+                    if (!$account) {
+                        TradingUser::where('meta_login', $transaction->meta_login)
+                            ->update(['acc_status' => 'inactive']);
+                    }
+
+                    return back()
+                        ->with('toast', [
+                            'title' => 'Trading account error',
+                            'type' => 'error'
+                        ]);
+                }
             }
 
             return redirect()->back()->with('toast', [
@@ -182,15 +202,6 @@ class PendingController extends Controller
             'remarks' => 'required|string|max:255',
         ]);
 
-        // // Check connection status
-        // $conn = (new CTraderService)->connectionStatus();
-        // if ($conn['code'] != 0) {
-        //     return back()->with('toast', [
-        //         'title' => 'Connection Error',
-        //         'type' => 'error'
-        //     ]);
-        // }
-
         // Find the AssetRevoke record or fail
         $assetRevoke = AssetRevoke::findOrFail($request->id);
 
@@ -209,38 +220,42 @@ class PendingController extends Controller
             'revoked_at' => now(),
         ]);
 
-        // // Create a trade using CTraderService
-        // try {
-        //     $trade = (new CTraderService)->createTrade($assetRevoke->meta_login,$assetRevoke->penalty_fee,$request->remarks,ChangeTraderBalanceType::WITHDRAW);
+        // Create a trade using MetaFourService
+        try {
+            $trade = (new MetaFourService())->createTrade((int) $assetRevoke->meta_login,(float) -abs($assetRevoke->penalty_fee),$request->remarks,ChangeTraderBalanceType::WITHDRAW);
 
-        //     // Create a new Transaction record
-        //     Transaction::create([
-        //         'user_id' => $assetRevoke->user_id,
-        //         'category' => 'trading_account',
-        //         'transaction_type' => 'penalty_fee',
-        //         'from_meta_login' => $assetRevoke->meta_login,
-        //         'ticket' => $trade->getTicket(),
-        //         'transaction_number' => RunningNumberService::getID('transaction'),
-        //         'amount' => $assetRevoke->penalty_fee,
-        //         'transaction_amount' => $assetRevoke->penalty_fee,
-        //         'status' => 'successful',
-        //         'remarks' => 'System Approval',
-        //         'approved_at' => now(),
-        //         'handle_by' => Auth::id(),
-        //     ]);
+            // Create a new Transaction record
+            Transaction::create([
+                'user_id' => $assetRevoke->user_id,
+                'category' => 'trading_account',
+                'transaction_type' => 'penalty_fee',
+                'from_meta_login' => $assetRevoke->meta_login,
+                'ticket' => $trade['ticket'],
+                'transaction_number' => RunningNumberService::getID('transaction'),
+                'amount' => $assetRevoke->penalty_fee,
+                'transaction_amount' => $assetRevoke->penalty_fee,
+                'status' => 'successful',
+                'remarks' => 'System Approval',
+                'approved_at' => now(),
+                'handle_by' => Auth::id(),
+            ]);
 
-        // } catch (\Throwable $e) {
-        //     if ($e->getMessage() == "Not found") {
-        //         TradingUser::firstWhere('meta_login', $assetRevoke->meta_login)->update(['acc_status' => 'Inactive']);
-        //     } else {
-        //         Log::error('Error creating trade or transaction: ' . $e->getMessage());
-        //     }
+        } catch (\Throwable $e) {
+            // Log the main error
+            Log::error('Error creating trade: ' . $e->getMessage());
 
-        //     return back()->with('toast', [
-        //         'title' => 'Trading account error',
-        //         'type' => 'error'
-        //     ]);
-        // }
+            // Attempt to get the account and mark account as inactive if not found
+            $account = (new MetaFourService())->getUser($assetRevoke->meta_login);
+            if (!$account) {
+                TradingUser::where('meta_login', $assetRevoke->meta_login)
+                    ->update(['acc_status' => 'inactive']);
+            }
+
+            return back()->with('toast', [
+                'title' => 'Trading account error',
+                'type' => 'error'
+            ]);
+        }
 
         // Return a success response
         return redirect()->back()->with('toast', [

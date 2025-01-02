@@ -21,7 +21,8 @@ class NetworkController extends Controller
         if ($request->filled('search')) {
             $search = '%' . $request->input('search') . '%';
             $parent = User::whereIn('role', ['agent', 'member'])
-                ->where('id_number', 'LIKE', $search)
+                ->where('name', 'LIKE', $search)
+                ->orWhere('id_number', 'LIKE', $search)
                 ->orWhere('email', 'LIKE', $search)
                 ->first();
 
@@ -29,19 +30,22 @@ class NetworkController extends Controller
             $upline_id = $parent->upline_id;
         }
 
-        $parent = User::with(['directChildren:id,name,id_number,upline_id,role,hierarchyList'])
+        $parent = User::with(['directChildren:id,name,email,id_number,upline_id,role,hierarchyList'])
             ->whereIn('role', ['agent', 'member'])
-            ->select('id', 'name', 'id_number', 'upline_id', 'role', 'hierarchyList')
+            ->select('id', 'name', 'email', 'id_number', 'upline_id', 'role', 'hierarchyList')
             ->find($parent_id);
 
-        $upline = $upline_id ? User::select('id', 'name', 'id_number', 'upline_id', 'role', 'hierarchyList')->find($upline_id) : null;
+        $upline = $upline_id ? User::select('id', 'name', 'email', 'id_number', 'upline_id', 'role', 'hierarchyList')->find($upline_id) : null;
 
         $parent_data = $this->formatUserData($parent);
         $upline_data = $upline ? $this->formatUserData($upline) : null;
 
-        $direct_children = $parent->directChildren->map(function ($child) {
-            return $this->formatUserData($child);
-        });
+        $direct_children = [];
+        foreach ($parent->directChildren as $child) {
+            if (in_array($child->role, ['agent', 'member'])) {
+                $direct_children[] = $this->formatUserData($child);
+            }
+        }
 
         return response()->json([
             'upline' => $upline_data,
@@ -57,8 +61,10 @@ class NetworkController extends Controller
         }
 
         return array_merge(
-            $user->only(['id', 'name', 'id_number', 'upline_id', 'role']),
+            $user->only(['id', 'name', 'email', 'id_number', 'upline_id', 'role']),
             [
+                'name' => $user->name,
+                'email' => $user->email,
                 'profile_photo' => $user->getFirstMediaUrl('profile_photo'),
                 'upper_upline_id' => $upper_upline->id ?? null,
                 'level' => $this->calculateLevel($user->hierarchyList),

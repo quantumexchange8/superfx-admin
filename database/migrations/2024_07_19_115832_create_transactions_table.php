@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->string('ticket')->nullable();
             $table->string('transaction_number')->nullable();
             $table->unsignedBigInteger('payment_account_id')->nullable();
+            $table->unsignedBigInteger('payment_gateway_id')->nullable();
             $table->string('from_wallet_address')->nullable();
             $table->string('to_wallet_address')->nullable();
             $table->string('txn_hash')->nullable();
@@ -59,6 +60,12 @@ return new class extends Migration {
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
 
+            $table->foreign('payment_gateway_id')
+                ->references('id')
+                ->on('payment_gateways')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+    
             $table->foreign('handle_by')
                 ->references('id')
                 ->on('users')

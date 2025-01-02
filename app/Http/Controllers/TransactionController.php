@@ -222,7 +222,7 @@ class TransactionController extends Controller
 
     public function getTransactionMonths()
     {
-        $transactionMonths = (new DropdownOptionService())->getTransactionMonths();
+        $transactionMonths = (new GeneralController())->getTransactionMonths(true);
 
         return response()->json($transactionMonths);
     }

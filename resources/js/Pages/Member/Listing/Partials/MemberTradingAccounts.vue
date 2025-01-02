@@ -5,6 +5,7 @@ import Empty from '@/Components/Empty.vue';
 import { generalFormat, transactionFormat } from "@/Composables/index.js";
 import { usePage } from "@inertiajs/vue3";
 import MemberAccountActions from "@/Pages/Member/Listing/Partials/MemberAccountActions.vue";
+import Loader from '@/Components/Loader.vue';
 
 const props = defineProps({
     user_id: Number
@@ -13,8 +14,10 @@ const props = defineProps({
 const { formatAmount } = transactionFormat();
 const { formatRgbaColor } = generalFormat()
 const tradingAccounts = ref();
+const isLoading = ref(false);
 
 const getTradingAccounts = async () => {
+    isLoading.value = true;
     try {
         const response = await axios.get(`/member/getTradingAccounts?id=${props.user_id}`);
 
@@ -22,6 +25,8 @@ const getTradingAccounts = async () => {
         // console.log(tradingAccounts);
     } catch (error) {
         console.error('Error get trading accounts:', error);
+    } finally {
+        isLoading.value = false;
     }
 };
 getTradingAccounts();
@@ -51,7 +56,11 @@ watchEffect(() => {
 </script>
 
 <template>
-    <div v-if="tradingAccounts?.length <= 0">
+    <div v-if="isLoading" class="flex flex-col gap-2 items-center justify-center">
+        <Loader />
+    </div>
+
+    <div v-if="!isLoading && tradingAccounts?.length <= 0">
         <Empty message="No Trading Account Yet" />
     </div>
     <div v-else class="grid md:grid-cols-2 gap-5">
@@ -83,17 +92,17 @@ watchEffect(() => {
             <div class="grid grid-cols-2 gap-2 self-stretch">
                 <div class="w-full flex items-center gap-1 flex-grow">
                     <span class="text-gray-500 text-xs w-16">{{ $t('public.balance') }}:</span>
-                    <span class="text-gray-950 text-xs font-medium">$ {{ formatAmount(tradingAccount.balance) }}</span>
+                    <span class="text-gray-950 text-xs font-medium">$ {{ tradingAccount.balance ? formatAmount(tradingAccount.balance) : formatAmount(0) }}</span>
                 </div>
                 <div class="w-full flex items-center gap-1 flex-grow">
                     <span class="text-gray-500 text-xs w-16">{{ $t('public.equity') }}:</span>
-                    <span class="text-gray-950 text-xs font-medium">$ {{ formatAmount(tradingAccount.equity) }}</span>
+                    <span class="text-gray-950 text-xs font-medium">$ {{ tradingAccount.equity ? formatAmount(tradingAccount.equity) : formatAmount(0) }}</span>
                 </div>
                 <div class="w-full flex items-center gap-1 flex-grow">
                     <span class="text-gray-500 text-xs w-16">{{ tradingAccount.account_type === 'premium_account' ? $t('public.pamm') : $t('public.credit') }}:</span>
                     <div class="text-gray-950 text-xs font-medium">
                         <span v-if="tradingAccount.account_type === 'premium_account'">{{ tradingAccount.asset_master_name ?? '-' }}</span>
-                        <span v-else>$ {{ formatAmount(tradingAccount.credit) }}</span>
+                        <span v-else>$ {{ tradingAccount.credit ? formatAmount(tradingAccount.credit) : formatAmount(0) }}</span>
                     </div>
                 </div>
                 <div class="w-full flex items-center gap-1 flex-grow">

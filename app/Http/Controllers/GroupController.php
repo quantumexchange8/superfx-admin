@@ -394,6 +394,9 @@ class GroupController extends Controller
     {
         Group::destroy($id);
 
+        // Delete the related GroupSettlement records
+        GroupSettlement::where('team_id', $id)->delete();
+
         GroupHasUser::where('group_id', $id)->delete();
 
         return back()->with('toast', [

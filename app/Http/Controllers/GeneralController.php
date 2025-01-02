@@ -131,36 +131,66 @@ class GeneralController extends Controller
         ]);
     }
 
+    // public function getTransactionMonths($returnAsArray = false)
+    // {
+    //     $transactionDates = Transaction::pluck('created_at');
+    //     $months = $transactionDates
+    //         ->map(function ($date) {
+    //             // Extract only the "F Y" format for uniqueness
+    //             return Carbon::parse($date)->format('F Y');
+    //         })
+    //         ->unique()
+    //         ->map(function ($month) {
+    //             // Reformat the unique months to include "01" in front
+    //             return '01 ' . $month;
+    //         })
+    //         ->values();
+    
+    //     // Add the current month at the end if it's not already in the list
+    //     $currentMonth = '01 ' . Carbon::now()->format('F Y');
+    //     if (!$months->contains($currentMonth)) {
+    //         $months->push($currentMonth);
+    //     }
+    
+    //     if ($returnAsArray) {
+    //         return $months;
+    //     }
+    
+    //     return response()->json([
+    //         'months' => $months,
+    //     ]);
+    // }
+    
     public function getTransactionMonths($returnAsArray = false)
     {
+        // Fetch the created_at dates of all transactions
         $transactionDates = Transaction::pluck('created_at');
+
+        // Map the dates to the desired format (m/Y) and remove duplicates
         $months = $transactionDates
             ->map(function ($date) {
-                // Extract only the "F Y" format for uniqueness
-                return Carbon::parse($date)->format('F Y');
+                return Carbon::parse($date)->format('m/Y');
             })
             ->unique()
-            ->map(function ($month) {
-                // Reformat the unique months to include "01" in front
-                return '01 ' . $month;
-            })
             ->values();
-    
+
         // Add the current month at the end if it's not already in the list
-        $currentMonth = '01 ' . Carbon::now()->format('F Y');
+        $currentMonth = Carbon::now()->format('m/Y');
         if (!$months->contains($currentMonth)) {
             $months->push($currentMonth);
         }
-    
+
+        // Return as an array if requested
         if ($returnAsArray) {
             return $months;
         }
-    
+
+        // Return as JSON response by default
         return response()->json([
             'months' => $months,
         ]);
     }
-    
+
     // public function getIncentiveMonths($returnAsArray = false)
     // {
     //     $incentiveDates = LeaderboardBonus::pluck('created_at');
@@ -264,7 +294,7 @@ class GeneralController extends Controller
             ->map(function ($user) {
                 return [
                     'value' => $user->id,
-                    'name' => $user->first_name,
+                    'name' => $user->name,
                     'email' => $user->email,
                     // 'profile_photo' => $user->getFirstMediaUrl('profile_photo')
                 ];

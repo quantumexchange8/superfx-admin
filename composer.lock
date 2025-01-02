@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c516d136af476bff83a72db1d9f70b35",
+    "content-hash": "82f446add825164cc023e01e75b2d5be",
     "packages": [
         {
             "name": "aleedhillon/meta-five",
@@ -2946,16 +2946,16 @@
         },
         {
             "name": "opcodesio/log-viewer",
-            "version": "v3.10.1",
+            "version": "v3.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/opcodesio/log-viewer.git",
-                "reference": "d0d1e9429a0a3a59ac8d525bfb8415b1041b30ca"
+                "reference": "fddafd54fb02e45db12a220c556103825fae4dcb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/opcodesio/log-viewer/zipball/d0d1e9429a0a3a59ac8d525bfb8415b1041b30ca",
-                "reference": "d0d1e9429a0a3a59ac8d525bfb8415b1041b30ca",
+                "url": "https://api.github.com/repos/opcodesio/log-viewer/zipball/fddafd54fb02e45db12a220c556103825fae4dcb",
+                "reference": "fddafd54fb02e45db12a220c556103825fae4dcb",
                 "shasum": ""
             },
             "require": {
@@ -2982,12 +2982,12 @@
             "type": "library",
             "extra": {
                 "laravel": {
-                    "providers": [
-                        "Opcodes\\LogViewer\\LogViewerServiceProvider"
-                    ],
                     "aliases": {
                         "LogViewer": "Opcodes\\LogViewer\\Facades\\LogViewer"
-                    }
+                    },
+                    "providers": [
+                        "Opcodes\\LogViewer\\LogViewerServiceProvider"
+                    ]
                 }
             },
             "autoload": {
@@ -3018,7 +3018,7 @@
             ],
             "support": {
                 "issues": "https://github.com/opcodesio/log-viewer/issues",
-                "source": "https://github.com/opcodesio/log-viewer/tree/v3.10.1"
+                "source": "https://github.com/opcodesio/log-viewer/tree/v3.10.0"
             },
             "funding": [
                 {
@@ -3030,7 +3030,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-05-20T15:11:50+00:00"
+            "time": "2024-05-17T08:02:49+00:00"
         },
         {
             "name": "opcodesio/mail-parser",
@@ -9400,12 +9400,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": [],
+    "platform-dev": {},
     "plugin-api-version": "2.6.0"
 }

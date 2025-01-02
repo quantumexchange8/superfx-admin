@@ -2,7 +2,7 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Button from '@/Components/Button.vue';
 import { IconChevronRight } from '@tabler/icons-vue';
-import {ref, h, watchEffect} from "vue";
+import {ref, h, watch, watchEffect} from "vue";
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import {usePage} from '@inertiajs/vue3';
@@ -42,18 +42,35 @@ watchEffect(() => {
 
 const tabs = ref([
       {
-          title: wTrans('public.financial_info'),
+          title: 'financial_info',
           component: h(MemberFinancialInfo, {user_id: props.user.id}),
       },
       {
-          title: wTrans('public.trading_accounts'),
+          title: 'trading_accounts',
           component: h(MemberTradingAccounts, {user_id: props.user.id}),
       },
       {
-          title: wTrans('public.adjustment_history'),
+          title: 'adjustment_history',
           component: h(AdjustmentHistory, {user_id: props.user.id}),
       },
 ]);
+
+const selectedType = ref('financial_info');
+const activeIndex = ref(tabs.value.findIndex(tab => tab.title === selectedType.value));
+
+// Watch for changes in selectedType and update the activeIndex accordingly
+watch(selectedType, (newType) => {
+    const index = tabs.value.findIndex(tab => tab.title === newType);
+    if (index >= 0) {
+        activeIndex.value = index;
+    }
+});
+
+// Update selectedType on tab change
+const updateType = (event) => {
+    const selectedTab = tabs.value[event.index];
+    selectedType.value = selectedTab.title;
+};
 </script>
 
 <template>
@@ -94,9 +111,13 @@ const tabs = ref([
                 </div>
             </div>
 
-            <TabView class="flex flex-col gap-5">
-                <TabPanel v-for="(tab, index) in tabs" :key="index" :header="tab.title">
-                    <component :is="tab.component" />
+            <TabView
+                class="flex flex-col gap-5"
+                :activeIndex="activeIndex"
+                @tab-change="updateType"
+            >
+                <TabPanel v-for="(tab, index) in tabs" :key="index" :header="$t(`public.${tab.title}`)">
+                    <component :is="tab.component" v-if="activeIndex === index" />
                 </TabPanel>
             </TabView>
         </div>

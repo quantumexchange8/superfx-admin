@@ -18,6 +18,9 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             SettingLeverageSeeder::class,
             RunningNumberSeeder::class,
+            AccountTypeSeeder::class,
+            PermissionSeeder::class,
+            PaymentGateWaySeeder::class,
         ]);
     }
 }

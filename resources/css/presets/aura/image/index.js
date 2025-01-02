@@ -197,6 +197,20 @@ export default {
     closeicon: {
         class: 'w-6 h-6'
     },
+    previewcontainer: {
+        class: 'flex justify-center items-center px-5 w-full h-full relative overflow-auto', // Allow scrolling if image overflows
+    },
+    preview: {
+        class: [
+            'flex',
+        ],
+        style: {
+            transformOrigin: 'center', // Scale from the center of the image
+            objectFit: 'contain', // Ensure the image fits in the container without distortion
+            maxHeight: '100vh', // Prevent image from growing larger than the container's height
+            overflow: 'auto', // Ensure overflow is hidden within the container
+        },
+    },
     transition: {
         enterFromClass: 'opacity-0 scale-75',
         enterActiveClass: 'transition-all duration-150 ease-in-out',

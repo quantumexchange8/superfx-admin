@@ -270,7 +270,7 @@ watchEffect(() => {
                         <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                             <IconSearch size="20" stroke-width="1.25"/>
                         </div>
-                        <InputText v-model="search" :placeholder="$t('public.search_agent')" class="font-normal px-10 w-full md:w-60" />
+                        <InputText v-model="search" :placeholder="$t('public.search_agent')" class="font-normal pl-10 pr-10 w-full md:w-60" />
                         <div
                             v-if="search !== null"
                             class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"

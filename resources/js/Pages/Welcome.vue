@@ -65,7 +65,7 @@ const selectedCity = ref();
                 tableStyle="min-width: 50rem"
                 paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-                :globalFilterFields="['first_name']"
+                :globalFilterFields="['name']"
                 ref="dt"
             >
                 <template #header>
@@ -87,7 +87,7 @@ const selectedCity = ref();
                         MID00000{{ slotProps.data.id }}
                     </template>
                 </Column>
-                <Column field="first_name" sortable header="Name" style="width: 25%">
+                <Column field="name" sortable header="Name" style="width: 25%">
                     <template #body="slotProps">
                         <div class="flex items-center gap-3">
                             <div class="w-7 h-7 rounded-full overflow-hidden">
@@ -95,7 +95,7 @@ const selectedCity = ref();
                             </div>
                             <div class="flex flex-col items-start">
                                 <div class="font-medium">
-                                    {{ slotProps.data.first_name }}
+                                    {{ slotProps.data.name }}
                                 </div>
                                 <div class="text-gray-500 text-xs">
                                     {{ slotProps.data.email }}

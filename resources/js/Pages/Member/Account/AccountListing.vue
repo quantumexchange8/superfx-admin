@@ -30,15 +30,13 @@ const tabs = ref([
 const selectedType = ref('all_accounts');
 const activeIndex = ref(tabs.value.findIndex(tab => tab.type === selectedType.value));
 
-let firstRenderCompleted = ref(false); // Flag to check if first render is done
-
 // Watch for changes in selectedType and update the activeIndex accordingly
 watch(selectedType, (newType) => {
     const index = tabs.value.findIndex(tab => tab.type === newType);
     if (index >= 0) {
         activeIndex.value = index;
     }
-});
+}, { immediate: true });
 
 // Update selectedType on tab change
 const updateType = (event) => {
@@ -51,10 +49,6 @@ const refreshAll = () => {
     router.post(route('member.refreshAllAccount'));
 };
 
-// Check if it's the first time rendering after TabView loads
-onMounted(() => {
-    firstRenderCompleted.value = true;
-});
 </script>
 
 <template>
@@ -89,7 +83,6 @@ onMounted(() => {
                         <component 
                             :is="tab.component" 
                             v-if="activeIndex === index" 
-                            :loadResults="firstRenderCompleted"
                         />
                     </TabPanel>
                 </TabView>

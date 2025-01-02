@@ -117,9 +117,6 @@ class TradingAccountController extends Controller
 
     public function getAccountListingPaginate(Request $request)
     {
-        // $test = (new MetaFourService)->getUser(12503);
-        // dd($test);
-
         $type = $request->type;
 
         if ($type === 'all') {
@@ -277,7 +274,7 @@ class TradingAccountController extends Controller
             $accounts = $query->select([
                 'trading_users.id',
                 'trading_users.meta_login',
-                'users.first_name as user_name',
+                'users.name as user_name',
                 'users.email as user_email',
                 'trading_users.balance',
                 'trading_accounts.equity',
@@ -303,31 +300,35 @@ class TradingAccountController extends Controller
 
     public function getTradingAccountData(Request $request)
     {
-        // $conn = (new CTraderService)->connectionStatus();
-        // if ($conn['code'] != 0) {
-        //     return back()
-        //         ->with('toast', [
-        //             'title' => 'Connection Error',
-        //             'type' => 'error'
-        //         ]);
-        // }
-
-        $account = TradingAccount::where('meta_login', $request->meta_login)->first();
-
-        // try {
-        //     (new CTraderService)->getUserInfo($account->meta_login);
-        // } catch (\Throwable $e) {
-        //     Log::error($e->getMessage());
-        // }
-
-        return response()->json([
-            'currentAmount' => [
-                'account_balance' => $account->balance,
-                'account_credit' => $account->credit
-            ],
-        ]);
+        try {
+            // Fetch and update user info using MetaFourService
+            (new MetaFourService)->getUserInfo((int) $request->meta_login);
+    
+            // Retrieve the updated account data
+            $account = TradingAccount::where('meta_login', $request->meta_login)->first();
+    
+            if (!$account) {
+                return response()->json([
+                    'message' => 'Account not found.',
+                ], 404);
+            }
+    
+            return response()->json([
+                'currentAmount' => [
+                    'account_balance' => $account->balance,
+                    'account_credit' => $account->credit,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            // Log any errors during the process
+            Log::error("Error updating account {$request->meta_login}: {$e->getMessage()}");
+    
+            return response()->json([
+                'message' => 'An error occurred while fetching account data.',
+            ], 500);
+        }
     }
-
+    
     public function accountAdjustment(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -341,28 +342,30 @@ class TradingAccountController extends Controller
         ]);
         $validator->validate();
 
-        // $cTraderService = (new CTraderService);
-
-        // $conn = $cTraderService->connectionStatus();
-        // if ($conn['code'] != 0) {
-        //     return back()
-        //         ->with('toast', [
-        //             'title' => 'Connection Error',
-        //             'type' => 'error'
-        //         ]);
-        // }
-
-        // try {
-        //     $cTraderService->getUserInfo($request->meta_login);
-        // } catch (\Throwable $e) {
-        //     Log::error($e->getMessage());
-
-        //     return back()
-        //         ->with('toast', [
-        //             'title' => 'No Account Found',
-        //             'type' => 'error'
-        //         ]);
-        // }
+        try {
+            // Fetch and update user info using MetaFourService
+            (new MetaFourService)->getUserInfo((int) $request->meta_login);
+    
+            // Retrieve the updated account data
+            $account = TradingAccount::where('meta_login', $request->meta_login)->first();
+    
+            if (!$account) {
+                return back()
+                    ->with('toast', [
+                        'title' => 'No Account Found',
+                        'type' => 'error'
+                    ]);
+            }
+        } catch (\Throwable $e) {
+            // Log any errors during the process
+            Log::error("Error updating account {$request->meta_login}: {$e->getMessage()}");
+    
+            return back()
+                    ->with('toast', [
+                        'title' => 'No Account Found',
+                        'type' => 'error'
+                    ]);
+        }
 
         $trading_account = TradingAccount::where('meta_login', $request->meta_login)->first();
         $action = $request->action;
@@ -391,53 +394,60 @@ class TradingAccountController extends Controller
             'handle_by' => Auth::id(),
         ]);
 
-        // $changeType = match($type) {
-        //     'account_balance' => match($action) {
-        //         'balance_in' => ChangeTraderBalanceType::DEPOSIT,
-        //         'balance_out' => ChangeTraderBalanceType::WITHDRAW,
-        //         default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
-        //     },
-        //     'account_credit' => match($action) {
-        //         'credit_in' => ChangeTraderBalanceType::DEPOSIT_NONWITHDRAWABLE_BONUS,
-        //         'credit_out' => ChangeTraderBalanceType::WITHDRAW_NONWITHDRAWABLE_BONUS,
-        //         default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
-        //     },
-        //     default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
-        // };
+        $changeType = match($type) {
+            'account_balance' => match($action) {
+                'balance_in' => ChangeTraderBalanceType::DEPOSIT,
+                'balance_out' => ChangeTraderBalanceType::WITHDRAW,
+                default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
+            },
+            'account_credit' => match($action) {
+                'credit_in' => ChangeTraderBalanceType::CREDIT_IN,
+                'credit_out' => ChangeTraderBalanceType::CREDIT_OUT,
+                default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
+            },
+            default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
+        };
 
-        // try {
-        //     $trade = (new CTraderService)->createTrade($trading_account->meta_login, $amount, $transaction->remarks, $changeType);
+        if (($action === 'balance_out' || $action === 'credit_out')) {
+            $amount = -abs($amount);
+        }
 
-        //     $transaction->update([
-        //         'ticket' => $trade->getTicket(),
-        //         'approved_at' => now(),
-        //         'status' => 'successful',
-        //     ]);
+        try {
+            $trade = (new MetaFourService())->createTrade($trading_account->meta_login, $amount, $transaction->remarks, $changeType);
 
-        //     return redirect()->back()->with('toast', [
-        //         'title' => $type == 'account_balance' ? trans('public.toast_balance_adjustment_success') : trans('public.toast_credit_adjustment_success'),
-        //         'type' => 'success'
-        //     ]);
-        // } catch (\Throwable $e) {
-        //     // Update transaction status to failed on error
-        //     $transaction->update([
-        //         'approved_at' => now(),
-        //         'status' => 'failed'
-        //     ]);
+            $transaction->update([
+                'ticket' => $trade['ticket'],
+                'approved_at' => now(),
+                'status' => 'successful',
+            ]);
 
-        //     // Handle specific error cases
-        //     if ($e->getMessage() == "Not found") {
-        //         TradingUser::firstWhere('meta_login', $trading_account->meta_login)->update(['acc_status' => 'Inactive']);
-        //     } else {
-        //         Log::error($e->getMessage());
-        //     }
+            return redirect()->back()->with('toast', [
+                'title' => $type == 'account_balance' ? trans('public.toast_balance_adjustment_success') : trans('public.toast_credit_adjustment_success'),
+                'type' => 'success'
+            ]);
+        } catch (\Throwable $e) {
+            // Update transaction status to failed on error
+            $transaction->update([
+                'approved_at' => now(),
+                'status' => 'failed'
+            ]);
 
-        //     return back()
-        //         ->with('toast', [
-        //             'title' => 'Adjustment failed',
-        //             'type' => 'error'
-        //         ]);
-        // }
+            // Log the main error
+            Log::error('Error creating trade: ' . $e->getMessage());
+
+            // Attempt to get the account and mark account as inactive if not found
+            $account = (new MetaFourService())->getUser($trading_account->meta_login);
+            if (!$account) {
+                TradingUser::where('meta_login', $trading_account->meta_login)
+                    ->update(['acc_status' => 'inactive']);
+            }
+
+            return back()
+                ->with('toast', [
+                    'title' => 'Adjustment failed',
+                    'type' => 'error'
+                ]);
+        }
     }
 
     public function accountDelete(Request $request)
