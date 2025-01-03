@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use App\Models\TradingUser;
 use App\Models\User as UserModel;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -53,22 +54,20 @@ class MetaFourService {
         
         $jsonPayload = json_encode($payload);
     
-        if (App::environment('production') || App::environment('staging')) {
-            $accountResponse = Http::acceptJson()
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
-                ])
-                ->withBody($jsonPayload, 'application/json')
-                ->get($this->baseURL . "/getuser");
+        $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
+
+        if ($tradingUser && $tradingUser->category === 'live') {
+            $url = $this->baseURL;
         } else {
-            $accountResponse = Http::withoutVerifying()
-                ->acceptJson()
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
-                ])
-                ->withBody($jsonPayload, 'application/json')
-                ->get($this->demoURL . "/getuser");
+            $url = $this->demoURL;
         }
+    
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->get($url . "/getuser");
         
         return $accountResponse->json();
     }
@@ -83,41 +82,26 @@ class MetaFourService {
         }
     }
 
-    public function createUser(UserModel $user, $group, $leverage, $mainPassword, $investorPassword)
-    {
-        if (App::environment('production') || App::environment('staging')) {
-            $accountResponse = Http::acceptJson()
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
-                ])
-                ->post($this->baseURL . "/createuser", [
-                    'master_password' => $mainPassword,
-                    'investor_password' => $investorPassword,
-                    'name' => $user->name,
-                    'group' => $group,
-                    'leverage' => $leverage,
-                    'email' => $user->email,
-                ]);
-        } else {
-            $accountResponse = Http::acceptJson()
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
-                ])
-                ->post($this->demoURL . "/createuser", [
-                    'master_password' => $mainPassword,
-                    'investor_password' => $investorPassword,
-                    'name' => $user->name,
-                    'group' => $group,
-                    'leverage' => $leverage,
-                    'email' => $user->email,
-                ]);
-        }
-        $accountResponse = $accountResponse->json();
+    // public function createUser(UserModel $user, $group, $leverage, $mainPassword, $investorPassword)
+    // {
+    //     $accountResponse = Http::acceptJson()
+    //         ->withHeaders([
+    //             'Authorization' => 'Bearer ' . $this->token,
+    //         ])
+    //         ->post($this->baseURL . "/createuser", [
+    //             'master_password' => $mainPassword,
+    //             'investor_password' => $investorPassword,
+    //             'name' => $user->name,
+    //             'group' => $group,
+    //             'leverage' => $leverage,
+    //             'email' => $user->email,
+    //         ]);
+    //     $accountResponse = $accountResponse->json();
 
-        (new CreateTradingAccount)->execute($user, $accountResponse, $group);
-        (new CreateTradingUser)->execute($user, $accountResponse, $group);
-        return $accountResponse;
-    }
+    //     (new CreateTradingAccount)->execute($user, $accountResponse, $group);
+    //     (new CreateTradingUser)->execute($user, $accountResponse, $group);
+    //     return $accountResponse;
+    // }
 
     public function createTrade($meta_login, $amount, $comment, $type)
     {
@@ -137,22 +121,20 @@ class MetaFourService {
     
         $jsonPayload = json_encode($payload);
     
-        if (App::environment('production') || App::environment('staging')) {
-            $accountResponse = Http::acceptJson()
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
-                ])
-                ->withBody($jsonPayload, 'application/json')
-                ->post($this->baseURL . "/transaction");
+        $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
+
+        if ($tradingUser && $tradingUser->category === 'live') {
+            $url = $this->baseURL;
         } else {
-            $accountResponse = Http::withoutVerifying()
-                ->acceptJson()
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->token,
-                ])
-                ->withBody($jsonPayload, 'application/json')
-                ->post($this->demoURL . "/transaction");
+            $url = $this->demoURL;
         }
+    
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->post($$url . "/transaction");
     
         // Return the JSON response from the API
         return $accountResponse->json();

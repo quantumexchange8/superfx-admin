@@ -14,7 +14,7 @@ import { IconX } from '@tabler/icons-vue';
                     v-show="sidebarState.isOpen || sidebarState.isHovered"
                     class="text-lg font-bold text-gray-800 w-full"
                 >
-                    Superfx.
+                    SuperForex.
                 </div>
             </div>
         </Link>
