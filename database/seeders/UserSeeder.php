@@ -52,11 +52,11 @@ class UserSeeder extends Seeder
             'state_id' => 1949,
             'city_id' => 76497,
             'referral_code' => 'MOSx555666',
-            'id_number' => 'AID00002',
+            'id_number' => 'IB00000',
         ]);
         // Assign ib role
         $superfxCompany->assignRole('ib');
-        
+
         // Create a rebate wallet for Superfx
         Wallet::create([
             'user_id' => $superfxCompany->id,
@@ -79,7 +79,7 @@ class UserSeeder extends Seeder
             'state_id' => 1949,
             'city_id' => 76497,
             'referral_code' => 'MOSx555555',
-            'id_number' => 'MID00003',
+            'id_number' => 'MB00003',
         ]);
         // Assign member role
         $testMember->assignRole('member');

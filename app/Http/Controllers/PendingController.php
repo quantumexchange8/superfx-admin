@@ -40,18 +40,15 @@ class PendingController extends Controller
                 // Check if from_meta_login exists and fetch the latest balance
                 if ($transaction->from_meta_login) {
                     // Only call getUserInfo in production
-                    if (app()->environment('production')) {
-                        // Call getUserInfo to ensure the balance is up to date
-                        (new MetaFourService())->getUserInfo($transaction->from_meta_login); // Pass the from_meta_login object
-                    }
-                    
+                    (new MetaFourService())->getUserInfo($transaction->from_meta_login);
+
                     // After calling getUserInfo, fetch the latest balance
                     $balance = $transaction->from_meta_login ? $transaction->fromMetaLogin->balance : 0;
                 } else {
                     // Fallback to using the wallet balance if from_meta_login is not available
                     $balance = $transaction->from_wallet ? $transaction->from_wallet->balance : 0;
                 }
-    
+
                 return [
                     'id' => $transaction->id,
                     'created_at' => $transaction->created_at,
@@ -66,9 +63,9 @@ class PendingController extends Controller
                     'wallet_address' => $transaction->payment_account?->account_no,
                 ];
             });
-    
+
         $totalAmount = $pendingWithdrawals->sum('amount');
-    
+
         return response()->json([
             'pendingWithdrawals' => $pendingWithdrawals,
             'totalAmount' => $totalAmount,
