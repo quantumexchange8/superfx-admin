@@ -61,7 +61,7 @@ class UserSeeder extends Seeder
         Wallet::create([
             'user_id' => $superfxCompany->id,
             'type' => 'rebate_wallet',
-            'address' => str_replace('AID', 'RB', $superfxCompany->id_number),
+            'address' => str_replace('IB', 'RB', $superfxCompany->id_number),
             'balance' => 0
         ]);
 
