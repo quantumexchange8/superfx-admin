@@ -287,11 +287,13 @@ class RebateController extends Controller
             $rebate[2]->symbol_group_id => floatval($rebate[2]->amount),
             $rebate[3]->symbol_group_id => floatval($rebate[3]->amount),
             $rebate[4]->symbol_group_id => floatval($rebate[4]->amount),
+            $rebate[5]->symbol_group_id => floatval($rebate[5]->amount),
             'upline_forex' => floatval($upline_rebate[0]->amount),
-            'upline_stocks' => floatval($upline_rebate[1]->amount),
-            'upline_indices' => floatval($upline_rebate[2]->amount),
-            'upline_commodities' => floatval($upline_rebate[3]->amount),
+            'upline_indexes' => floatval($upline_rebate[1]->amount),
+            'upline_commodities' => floatval($upline_rebate[2]->amount),
+            'upline_metals' => floatval($upline_rebate[3]->amount),
             'upline_cryptocurrency' => floatval($upline_rebate[4]->amount),
+            'upline_shares' => floatval($upline_rebate[5]->amount),
         ];
 
         $downline = $user->directChildren()->where('role', 'ib')->first();
@@ -302,10 +304,11 @@ class RebateController extends Controller
             if (!$downline_rebate->isEmpty()) {
                 $rebates += [
                     'downline_forex' => floatval($downline_rebate[0]->amount),
-                    'downline_stocks' => floatval($downline_rebate[1]->amount),
-                    'downline_indices' => floatval($downline_rebate[2]->amount),
-                    'downline_commodities' => floatval($downline_rebate[3]->amount),
+                    'downline_indexes' => floatval($downline_rebate[1]->amount),
+                    'downline_commodities' => floatval($downline_rebate[2]->amount),
+                    'downline_metals' => floatval($downline_rebate[3]->amount),
                     'downline_cryptocurrency' => floatval($downline_rebate[4]->amount),
+                    'downline_shares' => floatval($downline_rebate[5]->amount),
                 ];
             }
         }

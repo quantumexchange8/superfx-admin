@@ -59,6 +59,7 @@ const Tag = !props.external ? Link : 'a'
                 v-if="pendingCounts > 0 && (sidebarState.isOpen || sidebarState.isHovered)"
                 class="text-xs text-white"
                 :pill="true"
+                variant="error"
             >
                 {{ pendingCounts }}
             </Badge>

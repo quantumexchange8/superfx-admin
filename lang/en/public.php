@@ -236,7 +236,9 @@ return [
     "total" => "Total",
     "forex" => "Forex",
     "stocks" => "Stocks",
-    "indices" => "Indices",
+    "indexes" => "Indexes",
+    "metals" => "Metals",
+    "shares" => "Shares",
     "commodities" => "Commodities",
     "cryptocurrency" => "Cryptocurrency",
     "update_rebate_success_alert" => "You've successfully updated the rebate details.",
@@ -562,5 +564,5 @@ return [
     "std20" => "STD20",
     "rebate_exceed_upline" => "Rebate is more than upline :name : :value",
     "rebate_exceed_downline" => "Rebate is less than downline :name : :value",
-    "ib" => "IB",
+    "empty_rebate_title" => "No Rebate Found",
 ];

@@ -237,7 +237,9 @@ return [
     "total" => "總額",
     "forex" => "貨幣對",
     "stocks" => "歐美股票",
-    "indices" => "歐美指數",
+    "indexes" => "歐美指數",
+    "metals" => "金屬",
+    "shares" => "股票",
     "commodities" => "期貨商品",
     "cryptocurrency" => "加密貨幣",
     "update_rebate_success_alert" => "您已成功更新返傭架構!",
@@ -560,5 +562,5 @@ return [
     "std20" => "STD20",
     "rebate_exceed_upline" => "返傭超過上線:name : :value",
     "rebate_exceed_downline" => "返傭低於下線:name : :value",
-    "ib" => "IB",
+    "empty_rebate_title" => "尚未有返傭紀錄",
 ];

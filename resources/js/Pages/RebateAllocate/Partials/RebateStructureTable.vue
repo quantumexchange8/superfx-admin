@@ -132,10 +132,11 @@ const onRowEditSave = (event) => {
     // Map the indexes (1, 2, 3, 4, 5) to the corresponding categories
     const categories = [
         { key: 1, name: 'forex' },
-        { key: 2, name: 'stocks' },
-        { key: 3, name: 'indices' },
-        { key: 4, name: 'commodities' },
-        { key: 5, name: 'cryptocurrency' }
+        { key: 2, name: 'indexes' },
+        { key: 3, name: 'commodities' },
+        { key: 4, name: 'metals' },
+        { key: 5, name: 'cryptocurrency' },
+        { key: 6, name: 'shares' }
     ];
 
     // Flag to track if the post should proceed
@@ -185,10 +186,11 @@ const submitForm = (submitData) => {
     // Map the indexes (1, 2, 3, 4, 5) to the corresponding categories
     const categories = [
         { key: 1, name: 'forex' },
-        { key: 2, name: 'stocks' },
-        { key: 3, name: 'indices' },
-        { key: 4, name: 'commodities' },
-        { key: 5, name: 'cryptocurrency' }
+        { key: 2, name: 'indexes' },
+        { key: 3, name: 'commodities' },
+        { key: 4, name: 'metals' },
+        { key: 5, name: 'cryptocurrency' },
+        { key: 5, name: 'shares' }
     ];
 
     // Flag to track if the post should proceed
@@ -288,7 +290,7 @@ watchEffect(() => {
                     />
                 </div>
             </template>
-            <template #empty> {{ $t('public.no_user_header') }}</template>
+            <template #empty> {{ $t('public.empty_rebate_title') }}</template>
             <template #loading>
                 <div class="flex flex-col gap-2 items-center justify-center">
                     <Loader/>
@@ -319,7 +321,7 @@ watchEffect(() => {
             </Column>
             <Column field="1" class="hidden md:table-cell" style="width:10%;">
                 <template #header>
-                    <span>{{ $t('public.forex') }}</span>
+                    <span class="w-12 truncate lg:w-auto">{{ $t('public.forex') }}</span>
                 </template>
                 <template #body="slotProps">
                     {{ slotProps.data[1]['1'] }}
@@ -336,7 +338,7 @@ watchEffect(() => {
             </Column>
             <Column field="2" class="hidden md:table-cell" style="width:10%;">
                 <template #header>
-                    <span>{{ $t('public.stocks') }}</span>
+                    <span class="w-12 truncate lg:w-auto">{{ $t('public.indexes') }}</span>
                 </template>
                 <template #body="slotProps">
                     {{ slotProps.data[1]['2'] }}
@@ -353,7 +355,7 @@ watchEffect(() => {
             </Column>
             <Column field="3" class="hidden md:table-cell" style="width:10%;">
                 <template #header>
-                    <span>{{ $t('public.indices') }}</span>
+                    <span class="w-12 truncate lg:w-auto">{{ $t('public.commodities') }}</span>
                 </template>
                 <template #body="slotProps">
                     {{ slotProps.data[1]['3'] }}
@@ -370,7 +372,7 @@ watchEffect(() => {
             </Column>
             <Column field="4" class="hidden md:table-cell" style="width:10%;">
                 <template #header>
-                    <span class="w-12 truncate lg:w-auto">{{ $t('public.commodities') }}</span>
+                    <span class="w-12 truncate lg:w-auto">{{ $t('public.metals') }}</span>
                 </template>
                 <template #body="slotProps">
                     {{ slotProps.data[1]['4'] }}
@@ -391,6 +393,23 @@ watchEffect(() => {
                 </template>
                 <template #body="slotProps">
                     {{ slotProps.data[1]['5'] }}
+                </template>
+                <template #editor="{ data, field }">
+                    <InputNumber
+                        v-model="data[1][field]"
+                        :minFractionDigits="2"
+                        fluid
+                        size="sm"
+                        inputClass="py-2 px-4 w-20"
+                    />
+                </template>
+            </Column>
+            <Column field="6" class="hidden md:table-cell" style="width:10%;">
+                <template #header>
+                    <span class="w-12 truncate lg:w-auto">{{ $t('public.shares') }}</span>
+                </template>
+                <template #body="slotProps">
+                    {{ slotProps.data[1]['6'] }}
                 </template>
                 <template #editor="{ data, field }">
                     <InputNumber
@@ -497,10 +516,10 @@ watchEffect(() => {
                     </div>
                     <div class="flex justify-between py-1 items-center self-stretch h-10 text-gray-950">
                         <div class="px-2 w-full max-w-[104px]">
-                            {{ $t('public.stocks') }}
+                            {{ $t('public.indexes') }}
                         </div>
                         <div class="px-2 w-full max-w-[64px]">
-                            {{ productDetails.upline_stocks }}
+                            {{ productDetails.upline_indexes }}
                         </div>
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
@@ -514,10 +533,10 @@ watchEffect(() => {
                     </div>
                     <div class="flex justify-between py-1 items-center self-stretch h-10 text-gray-950">
                         <div class="px-2 w-full max-w-[104px]">
-                            {{ $t('public.indices') }}
+                            {{ $t('public.commodities') }}
                         </div>
                         <div class="px-2 w-full max-w-[64px]">
-                            {{ productDetails.upline_indices }}
+                            {{ productDetails.upline_commodities }}
                         </div>
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
@@ -531,10 +550,10 @@ watchEffect(() => {
                     </div>
                     <div class="flex justify-between py-1 items-center self-stretch h-10 text-gray-950">
                         <div class="px-2 w-full max-w-[104px] truncate">
-                            {{ $t('public.commodities') }}
+                            {{ $t('public.metals') }}
                         </div>
                         <div class="px-2 w-full max-w-[64px]">
-                            {{ productDetails.upline_commodities }}
+                            {{ productDetails.upline_metals }}
                         </div>
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
@@ -556,6 +575,23 @@ watchEffect(() => {
                         <div class="px-2 w-full max-w-[72px]">
                             <InputNumber
                                 v-model="productDetails['5']"
+                                :minFractionDigits="2"
+                                fluid
+                                size="sm"
+                                inputClass="p-2 max-w-[64px]"
+                            />
+                        </div>
+                    </div>
+                    <div class="flex justify-between py-1 items-center self-stretch h-10 text-gray-950">
+                        <div class="px-2 w-full max-w-[104px] truncate">
+                            {{ $t('public.shares') }}
+                        </div>
+                        <div class="px-2 w-full max-w-[64px]">
+                            {{ productDetails.upline_shares }}
+                        </div>
+                        <div class="px-2 w-full max-w-[72px]">
+                            <InputNumber
+                                v-model="productDetails['6']"
                                 :minFractionDigits="2"
                                 fluid
                                 size="sm"

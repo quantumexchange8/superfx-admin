@@ -10,7 +10,7 @@ const profile_photo = usePage().props.auth.profile_photo;
         <div v-if="profile_photo">
             <img :src="profile_photo" alt="profile_picture" class="rounded-full" />
         </div>
-        <div v-else class="bg-primary-100 rounded-full w-full h-full grow-0 shrink-0 flex justify-center items-center p-1">
+        <div v-else class="bg-gray-300 rounded-full w-full h-full grow-0 shrink-0 flex justify-center items-center p-1">
             <NoProfileIcon />
         </div>
     </div>

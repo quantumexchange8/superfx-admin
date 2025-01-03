@@ -53,13 +53,13 @@ class MetaFourService {
         
         $jsonPayload = json_encode($payload);
     
-        if (App::environment('production')) {
+        if (App::environment('production') || App::environment('staging')) {
             $accountResponse = Http::acceptJson()
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->token,
                 ])
                 ->withBody($jsonPayload, 'application/json')
-                ->get($this->demoURL . "/getuser");
+                ->get($this->baseURL . "/getuser");
         } else {
             $accountResponse = Http::withoutVerifying()
                 ->acceptJson()
@@ -85,18 +85,33 @@ class MetaFourService {
 
     public function createUser(UserModel $user, $group, $leverage, $mainPassword, $investorPassword)
     {
-        $accountResponse = Http::acceptJson()
-        ->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])
-        ->post($this->demoURL . "/createuser", [
-            'master_password' => $mainPassword,
-            'investor_password' => $investorPassword,
-            'name' => $user->name,
-            'group' => $group,
-            'leverage' => $leverage,
-            'email' => $user->email,
-        ]);
+        if (App::environment('production') || App::environment('staging')) {
+            $accountResponse = Http::acceptJson()
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->post($this->baseURL . "/createuser", [
+                    'master_password' => $mainPassword,
+                    'investor_password' => $investorPassword,
+                    'name' => $user->name,
+                    'group' => $group,
+                    'leverage' => $leverage,
+                    'email' => $user->email,
+                ]);
+        } else {
+            $accountResponse = Http::acceptJson()
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
+                ->post($this->demoURL . "/createuser", [
+                    'master_password' => $mainPassword,
+                    'investor_password' => $investorPassword,
+                    'name' => $user->name,
+                    'group' => $group,
+                    'leverage' => $leverage,
+                    'email' => $user->email,
+                ]);
+        }
         $accountResponse = $accountResponse->json();
 
         (new CreateTradingAccount)->execute($user, $accountResponse, $group);
@@ -122,13 +137,13 @@ class MetaFourService {
     
         $jsonPayload = json_encode($payload);
     
-        if (App::environment('production')) {
+        if (App::environment('production') || App::environment('staging')) {
             $accountResponse = Http::acceptJson()
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $this->token,
                 ])
                 ->withBody($jsonPayload, 'application/json')
-                ->post($this->demoURL . "/transaction");
+                ->post($this->baseURL . "/transaction");
         } else {
             $accountResponse = Http::withoutVerifying()
                 ->acceptJson()

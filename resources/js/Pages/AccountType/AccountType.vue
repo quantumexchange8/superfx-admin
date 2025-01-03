@@ -8,7 +8,7 @@ import Column from 'primevue/column';
 import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
 import { usePage } from '@inertiajs/vue3';
-import AccountTypeSetting from '@/Pages/AccountType/Partials/AccountTypeSetting.vue';
+import AccountTypeAction from '@/Pages/AccountType/Partials/AccountTypeAction.vue';
 import Dialog from 'primevue/dialog';
 import AccountTypeStatus from '@/Pages/AccountType/Partials/AccountTypeStatus.vue';
 
@@ -119,11 +119,7 @@ const rowClicked = (data) => {
                         <Column field="action" style="width: 15%">
                             <template #body="slotProps">
                                 <div class="py-2 px-3 flex justify-center items-center gap-2 flex-1">
-                                    <AccountTypeStatus :accountTypeId="slotProps.data.id"/>
-
-                                    <div class="hidden md:inline-flex">
-                                        <AccountTypeSetting :accountTypeId="slotProps.data.id"/>
-                                    </div>
+                                    <AccountTypeAction :accountType="slotProps.data"/>
                                 </div>
                             </template>
                         </Column>
@@ -132,72 +128,4 @@ const rowClicked = (data) => {
             </div>
         </div>
     </AuthenticatedLayout>
-
-    <Dialog
-        v-model:visible="visibleDetails"
-        modal
-        :header="$t('public.account_type_details')"
-        class="dialog-xs"
-    >
-        <div class="flex flex-col items-center gap-3 self-stretch">
-            <div class="flex flex-col items-start gap-1 self-stretch">
-                <div class="self-stretch text-gray-500 text-xs font-medium">
-                    {{ $t('public.account_type_name') }}
-                </div>
-                <div class="self-stretch text-sm font-medium text-gray-950">
-                    {{ selected_row.name }}
-                </div>
-            </div>
-
-            <div class="flex flex-col items-start gap-1 self-stretch">
-                <div class="self-stretch text-gray-500 text-xs font-medium">
-                    {{ $t('public.description') }}
-                </div>
-                <div class="self-stretch text-sm font-medium text-gray-950">
-                    {{ selected_row.description_locale }}
-                </div>
-            </div>
-
-            <div class="flex flex-col items-start gap-1 self-stretch">
-                <div class="self-stretch text-gray-500 text-xs font-medium">
-                    {{ $t('public.leverage') }}
-                </div>
-                <div class="self-stretch text-sm font-medium text-gray-950">
-                    {{ selected_row.leverage === 0 ? 'Free' : `1:${selected_row.leverage}` }}
-                </div>
-            </div>
-
-            <div class="flex flex-col items-start gap-1 self-stretch">
-                <div class="self-stretch text-gray-500 text-xs font-medium">
-                    {{ $t('public.trade_delay_duration') }}
-                </div>
-                <div class="self-stretch text-sm font-medium text-gray-950">
-                    {{ selected_row.trade_delay }}
-                </div>
-            </div>
-
-            <div class="flex flex-col items-start gap-1 self-stretch">
-                <div class="self-stretch text-gray-500 text-xs font-medium">
-                    {{ $t('public.maximum_account_creation') }}
-                </div>
-                <div class="self-stretch text-sm font-medium text-gray-950">
-                    {{ selected_row.maximum_account_number }}
-                </div>
-            </div>
-
-            <div class="flex flex-col items-start gap-1 self-stretch">
-                <div class="self-stretch text-gray-500 text-xs font-medium">
-                    {{ $t('public.total_account') }}
-                </div>
-                <div class="self-stretch text-sm font-medium text-gray-950">
-                    {{ selected_row.total_account }}
-                </div>
-            </div>
-        </div>
-
-        <div class="pt-5">
-            <AccountTypeSetting :accountTypeId="selected_row.id" buttonText="Setting"
-                                @detailsVisible="visibleDetails = $event"/>
-        </div>
-    </Dialog>
 </template>

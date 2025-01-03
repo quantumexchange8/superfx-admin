@@ -237,7 +237,9 @@ return [
     "total" => "总额",
     "forex" => "货币对",
     "stocks" => "欧美股票",
-    "indices" => "欧美指数",
+    "indexes" => "欧美指数",
+    "metals" => "金属",
+    "shares" => "股票",
     "commodities" => "期货商品",
     "cryptocurrency" => "加密货币",
     "update_rebate_success_alert" => "您已成功更新返佣架构!",
@@ -560,5 +562,5 @@ return [
     "std20" => "STD20",
     "rebate_exceed_upline" => "返佣超过上线:name : :value",
     "rebate_exceed_downline" => "返佣低于下线:name : :value",
-    "ib" => "IB",
+    "empty_rebate_title" => "尚未有返佣纪录",
 ];
