@@ -71,7 +71,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::post('/addNewMember', [MemberController::class, 'addNewMember'])->name('member.addNewMember');
         Route::post('/updateMemberStatus', [MemberController::class, 'updateMemberStatus'])->name('member.updateMemberStatus');
         Route::post('/transferUpline', [MemberController::class, 'transferUpline'])->name('member.transferUpline');
-        Route::post('/upgradeAgent', [MemberController::class, 'upgradeAgent'])->name('member.upgradeAgent');
+        Route::post('/upgradeIB', [MemberController::class, 'upgradeIB'])->name('member.upgradeIB');
         Route::post('/resetPassword', [MemberController::class, 'resetPassword'])->name('member.resetPassword');
         Route::post('/uploadKyc', [MemberController::class, 'uploadKyc'])->name('member.uploadKyc');
 
@@ -96,7 +96,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         // forum
         Route::get('/forum', [ForumController::class, 'index'])->name('member.forum');
         Route::get('/getPosts', [ForumController::class, 'getPosts'])->name('member.getPosts');
-        Route::get('/getAgents', [ForumController::class, 'getAgents'])->name('member.getAgents');
+        Route::get('/getIBs', [ForumController::class, 'getIBs'])->name('member.getIBs');
 
         Route::post('/createPost', [ForumController::class, 'createPost'])->name('member.createPost');
         Route::post('/updatePostPermission', [ForumController::class, 'updatePostPermission'])->name('member.updatePostPermission');
@@ -121,7 +121,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::prefix('group')->group(function () {
         Route::get('/', [GroupController::class, 'show'])->name('group');
         Route::get('/getGroups', [GroupController::class, 'getGroups'])->name('group.getGroups');
-        Route::get('/getAgents', [GroupController::class, 'getAgents'])->name('group.getAgents');
+        Route::get('/getIBs', [GroupController::class, 'getIBs'])->name('group.getIBs');
         Route::get('/getGroupTransaction', [GroupController::class, 'getGroupTransaction'])->name('group.getGroupTransaction');
         Route::get('/refreshGroup', [GroupController::class, 'refreshGroup'])->name('group.refreshGroup');
         Route::get('/getSettlementReport', [GroupController::class, 'getSettlementReport'])->name('group.getSettlementReport');
@@ -168,8 +168,8 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::get('/', [RebateController::class, 'rebate_allocate'])->name('rebate_allocate');
         Route::get('/getCompanyProfileData', [RebateController::class, 'getCompanyProfileData'])->name('rebate_allocate.getCompanyProfileData');
         Route::get('/getRebateStructureData', [RebateController::class, 'getRebateStructureData'])->name('rebate_allocate.getRebateStructureData');
-        Route::get('/getAgents', [RebateController::class, 'getAgents'])->name('rebate_allocate.getAgents');
-        Route::get('/changeAgents', [RebateController::class, 'changeAgents'])->name('rebate_allocate.changeAgents');
+        Route::get('/getIBs', [RebateController::class, 'getIBs'])->name('rebate_allocate.getIBs');
+        Route::get('/changeIBs', [RebateController::class, 'changeIBs'])->name('rebate_allocate.changeIBs');
 
         Route::post('/updateRebateAllocation', [RebateController::class, 'updateRebateAllocation'])->name('rebate_allocate.updateRebateAllocation');
         Route::post('/updateRebateAmount', [RebateController::class, 'updateRebateAmount'])->name('rebate_allocate.updateRebateAmount');
@@ -183,7 +183,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::prefix('billboard')->group(function () {
         Route::get('/', [BillboardController::class, 'index'])->name('billboard');
         Route::get('/getBonusProfiles', [BillboardController::class, 'getBonusProfiles'])->name('billboard.getBonusProfiles');
-        Route::get('/getAgents', [BillboardController::class, 'getAgents'])->name('billboard.getAgents');
+        Route::get('/getIBs', [BillboardController::class, 'getIBs'])->name('billboard.getIBs');
         Route::get('/getBonusWithdrawalData', [BillboardController::class, 'getBonusWithdrawalData'])->name('billboard.getBonusWithdrawalData');
         Route::get('/getStatementData', [BillboardController::class, 'getStatementData'])->name('billboard.getStatementData');
         Route::get('/getBonusWithdrawalHistories', [BillboardController::class, 'getBonusWithdrawalHistories'])->name('billboard.getBonusWithdrawalHistories');

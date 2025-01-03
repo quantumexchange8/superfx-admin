@@ -2,7 +2,7 @@
 import {computed, onMounted, ref, watch, watchEffect} from "vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import AddMember from "@/Pages/Member/Listing/Partials/AddMember.vue";
-import { MemberIcon, AgentIcon, UserIcon, } from '@/Components/Icons/solid';
+import { MemberIcon, IBIcon, UserIcon, } from '@/Components/Icons/solid';
 import InputText from 'primevue/inputtext';
 import RadioButton from 'primevue/radiobutton';
 import Button from '@/Components/Button.vue';
@@ -34,7 +34,7 @@ import Empty from "@/Components/Empty.vue";
 import debounce from "lodash/debounce.js";
 
 const total_members = ref(999);
-const total_agents = ref(999);
+const total_ibs = ref(999);
 const total_users = ref(999);
 const totalRecords = ref(0);
 const rows = ref(10);
@@ -55,9 +55,9 @@ const dataOverviews = computed(() => [
         label: trans('public.total_members'),
     },
     {
-        icon: AgentIcon,
-        total: total_agents.value,
-        label: trans('public.total_agents'),
+        icon: IBIcon,
+        total: total_ibs.value,
+        label: trans('public.total_ibs'),
     },
     {
         icon: UserIcon,
@@ -141,7 +141,7 @@ const getResults = async () => {
         users.value = response?.data?.data?.data;
         totalRecords.value = response?.data?.data?.total;
         total_members.value = response.data?.total_members;
-        total_agents.value = response.data?.total_agents;
+        total_ibs.value = response.data?.total_ibs;
         total_users.value = response?.data?.data?.total;
 
         counterDuration.value = 1;
@@ -492,8 +492,8 @@ const paginator_caption = wTrans('public.paginator_caption');
                         <label for="role_member">{{ $t('public.member') }}</label>
                     </div>
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['role']" inputId="role_agent" value="agent" class="w-4 h-4" />
-                        <label for="role_agent">{{ $t('public.agent') }}</label>
+                        <RadioButton v-model="filters['role']" inputId="role_ib" value="ib" class="w-4 h-4" />
+                        <label for="role_ib">{{ $t('public.ib') }}</label>
                     </div>
                 </div>
             </div>

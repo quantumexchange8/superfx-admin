@@ -226,9 +226,9 @@ class BillboardController extends Controller
         ]);
     }
 
-    public function getAgents()
+    public function getIBs()
     {
-        $users = User::where('role', 'agent')
+        $users = User::where('role', 'ib')
             ->where('status', 'active')
             ->select('id', 'name')
             ->get()
@@ -248,7 +248,7 @@ class BillboardController extends Controller
     public function createBonusProfile(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'agent' => ['required'],
+            'ib' => ['required'],
             'sales_calculation_mode' => ['required'],
             'sales_category' => ['required'],
             'target_amount' => ['required'],
@@ -256,7 +256,7 @@ class BillboardController extends Controller
             'bonus_calculation_threshold' => ['required'],
             'bonus_calculation_period' => ['required'],
         ])->setAttributeNames([
-            'agent' => trans('public.agent'),
+            'ib' => trans('public.ib'),
             'sales_calculation_mode' => trans('public.sales_calculation_mode'),
             'sales_category' => trans('public.sales_category'),
             'target_amount' => trans('public.set_target_amount'),
@@ -267,7 +267,7 @@ class BillboardController extends Controller
         $validator->validate();
 
         $billboard_profile = BillboardProfile::create([
-            'user_id' => $request->agent['value'],
+            'user_id' => $request->ib['value'],
             'sales_calculation_mode' => $request->sales_calculation_mode,
             'sales_category' => $request->sales_category,
             'target_amount' => $request->target_amount,

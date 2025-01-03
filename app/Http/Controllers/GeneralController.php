@@ -289,7 +289,7 @@ class GeneralController extends Controller
 
     public function getUplines($returnAsArray = false)
     {
-        $uplines = User::whereIn('role', ['agent', 'member'])
+        $uplines = User::whereIn('role', ['ib', 'member'])
             ->get()
             ->map(function ($user) {
                 return [

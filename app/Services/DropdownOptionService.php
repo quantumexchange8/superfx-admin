@@ -14,7 +14,7 @@ class DropdownOptionService
 {
     public function getUplines(): Collection
     {
-        return User::whereIn('role', ['agent', 'member'])
+        return User::whereIn('role', ['ib', 'member'])
             ->select('id', 'name')
             ->get()
             ->map(function ($user) {
@@ -63,11 +63,11 @@ class DropdownOptionService
         return $leverages;
     }
 
-    public function getAgents(): Collection
+    public function getIBs(): Collection
     {
         $has_group = GroupHasUser::pluck('user_id');
 
-        $users = User::where('role', 'agent')
+        $users = User::where('role', 'ib')
             ->whereNotIn('id', $has_group)
             ->select('id', 'name')
             ->get()

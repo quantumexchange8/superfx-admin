@@ -4,21 +4,21 @@ import Dropdown from "primevue/dropdown";
 import { ref, watch } from "vue";
 
 const props = defineProps({
-    agents: Array,
+    ibs: Array,
 })
 
-const selectedAgent = ref(props.agents[0]);
+const selectedib = ref(props.ibs[0]);
 
-watch(()=>props.agents, () => {
-    selectedAgent.value = props.agents[0];
+watch(()=>props.ibs, () => {
+    selectedib.value = props.ibs[0];
 })
 </script>
 
 <template>
     <Dropdown
-        v-if="agents.length > 1"
-        v-model="selectedAgent"
-        :options="agents"
+        v-if="ibs.length > 1"
+        v-model="selectedib"
+        :options="ibs"
         filter
         :filterFields="['name']"
         optionLabel="name"
@@ -59,15 +59,15 @@ watch(()=>props.agents, () => {
         class="flex items-center gap-3 w-full"
     >
         <div class="w-5 h-5 rounded-full overflow-hidden">
-            <template v-if="agents[0].profile_photo">
-                <img :src="agents[0].profile_photo" alt="profile_picture" />
+            <template v-if="ibs[0].profile_photo">
+                <img :src="ibs[0].profile_photo" alt="profile_picture" />
             </template>
             <template v-else>
                 <DefaultProfilePhoto />
             </template>
         </div>
         <div class="w-28 xl:w-auto truncate text-gray-950 text-sm">
-            {{ agents[0].name }}
+            {{ ibs[0].name }}
         </div>
     </div>
 </template>

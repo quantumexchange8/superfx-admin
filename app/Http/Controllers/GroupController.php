@@ -281,31 +281,31 @@ class GroupController extends Controller
         ]);
     }
 
-    public function getAgents()
+    public function getIBs()
     {
-        $users = (new DropdownOptionService())->getAgents();
+        $users = (new DropdownOptionService())->getIBs();
 
         return response()->json($users);
     }
 
     public function createGroup(GroupRequest $request)
     {
-        $agent_id = $request->agent['value'];
+        $ib_id = $request->ib['value'];
         $group = Group::create([
             'name' => $request->group_name,
             'fee_charges' => $request->fee_charges,
             'color' => $request->color,
-            'group_leader_id' => $agent_id,
+            'group_leader_id' => $ib_id,
             'edited_by' => Auth::id(),
         ]);
 
         $group_id = $group->id;
         GroupHasUser::create([
             'group_id' => $group_id,
-            'user_id' => $agent_id
+            'user_id' => $ib_id
         ]);
 
-        $children_ids = User::find($agent_id)->getChildrenIds();
+        $children_ids = User::find($ib_id)->getChildrenIds();
         User::whereIn('id', $children_ids)->chunk(500, function($users) use ($group_id) {
             $users->each->assignedGroup($group_id);
         });
@@ -322,7 +322,7 @@ class GroupController extends Controller
         $group->name = $request->group_name;
         $group->fee_charges = $request->fee_charges;
         $group->color = $request->color;
-        $group->group_leader_id = $request->agent['value'];
+        $group->group_leader_id = $request->ib['value'];
         $group->edited_by = Auth::id();
         $group->save();
 

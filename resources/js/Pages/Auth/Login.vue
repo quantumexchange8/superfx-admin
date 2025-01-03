@@ -40,8 +40,8 @@ const submit = () => {
 
         <div class="w-full flex flex-col justify-center items-center gap-8">
             <div class="w-full flex flex-col items-center gap-6 self-stretch">
-                <div class="rounded-lg bg-logo w-16 h-16 p-2 flex items-center justify-center">
-                    <ApplicationLogo class="w-12 h-12 fill-white" />
+                <div class="rounded-lg flex items-center justify-center">
+                    <ApplicationLogo class="w-16 h-16 fill-white" />
 
                 </div>
                 <div class="w-full flex flex-col items-start gap-3 self-stretch">

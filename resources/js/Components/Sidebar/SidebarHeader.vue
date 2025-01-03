@@ -9,9 +9,7 @@ import { IconX } from '@tabler/icons-vue';
     <div class="flex gap-2 pr-2 lg:pr-5 px-5 py-[18px] w-full">
         <Link :href="route('dashboard')" class="w-full flex items-center">
             <div class="flex items-center self-stretch gap-2">
-                <div class="px-2">
-                    <ApplicationLogo aria-hidden="true" class="w-7 h-7 fill-logo" />
-                </div>
+                <ApplicationLogo aria-hidden="true" class="w-7 h-7 fill-logo" />
                 <div
                     v-show="sidebarState.isOpen || sidebarState.isHovered"
                     class="text-lg font-bold text-gray-800 w-full"

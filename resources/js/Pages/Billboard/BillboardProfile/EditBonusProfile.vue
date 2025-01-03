@@ -63,7 +63,7 @@ const submitForm = () => {
     <form>
         <div class="flex flex-col gap-8 items-center self-stretch">
             <div class="flex flex-col gap-3 items-center self-stretch">
-                <span class="text-gray-950 text-sm font-bold text-left w-full">{{ $t('public.agent_information') }}</span>
+                <span class="text-gray-950 text-sm font-bold text-left w-full">{{ $t('public.ib_information') }}</span>
                 <div class="flex flex-col md:flex-row gap-3 items-start md:items-center self-stretch">
                     <div class="flex gap-3 items-center self-stretch w-full">
                         <div class="w-[42px] h-[42px] shrink-0 grow-0 rounded-full overflow-hidden">

@@ -35,7 +35,7 @@ const bonusCalculationPeriodOptions = ref([
 ])
 
 const form = useForm({
-    agent: '',
+    ib: '',
     sales_calculation_mode: '',
     sales_category: '',
     target_amount: null,
@@ -44,17 +44,17 @@ const form = useForm({
     bonus_calculation_period: 'first_sunday_of_every_month',
 })
 
-const agents = ref();
-const getAgents = async () => {
+const ibs = ref();
+const getIBs = async () => {
     try {
-        const agentResponse = await axios.get('/billboard/getAgents');
-        agents.value = agentResponse.data.users;
+        const ibResponse = await axios.get('/billboard/getIBs');
+        ibs.value = ibResponse.data.users;
     } catch (error) {
-        console.error('Error fetching agents:', error);
+        console.error('Error fetching ibs:', error);
     }
 };
 
-getAgents();
+getIBs();
 
 watch(selectedSalesCategory, () => {
     if (selectedSalesCategory.value === 'trade_volume') {
@@ -99,25 +99,25 @@ const submitForm = () => {
         <form>
             <div class="flex flex-col gap-8 items-center self-stretch">
                 <div class="flex flex-col gap-3 items-center self-stretch">
-                    <span class="text-gray-950 text-sm font-bold text-left w-full">{{ $t('public.agent_information') }}</span>
+                    <span class="text-gray-950 text-sm font-bold text-left w-full">{{ $t('public.ib_information') }}</span>
                     <div class="flex flex-col gap-5 items-center self-stretch">
                         <div class="flex flex-col items-start gap-1 self-stretch">
                             <InputLabel
-                                for="agent"
-                                :value="$t('public.agent')"
+                                for="ib"
+                                :value="$t('public.ib')"
                                 :invalid="!!form.errors.sales_calculation_mode"
                             />
                             <Dropdown
-                                id="agent"
-                                v-model="form.agent"
-                                :options="agents"
+                                id="ib"
+                                v-model="form.ib"
+                                :options="ibs"
                                 filter
                                 :filterFields="['name']"
                                 optionLabel="name"
-                                :placeholder="$t('public.select_agent_placeholder')"
+                                :placeholder="$t('public.select_ib_placeholder')"
                                 class="w-full"
                                 scroll-height="236px"
-                                :invalid="!!form.errors.agent"
+                                :invalid="!!form.errors.ib"
                             >
                                 <template #value="slotProps">
                                     <div v-if="slotProps.value" class="flex items-center gap-3">
@@ -151,7 +151,7 @@ const submitForm = () => {
                                     </div>
                                 </template>
                             </Dropdown>
-                            <InputError :message="form.errors.agent" />
+                            <InputError :message="form.errors.ib" />
                         </div>
 
                         <div class="flex flex-col items-start gap-1 self-stretch w-full">

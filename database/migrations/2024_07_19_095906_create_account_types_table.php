@@ -13,7 +13,10 @@ return new class extends Migration {
             $table->string('slug')->nullable();
             $table->string('category')->nullable();
             $table->string('account_group')->nullable();
+            $table->unsignedInteger('account_group_id')->nullable();
             $table->decimal('minimum_deposit')->nullable();
+            $table->decimal('account_group_balance', 13, 2)->nullable();
+            $table->decimal('account_group_equity', 13, 2)->nullable();
             $table->integer('leverage')->nullable();
             $table->string('currency')->nullable();
             $table->integer('allow_create_account')->nullable();

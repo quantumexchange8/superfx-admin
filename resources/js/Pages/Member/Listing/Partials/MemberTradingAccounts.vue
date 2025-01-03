@@ -94,10 +94,10 @@ watchEffect(() => {
                     <span class="text-gray-500 text-xs w-16">{{ $t('public.balance') }}:</span>
                     <span class="text-gray-950 text-xs font-medium">$ {{ tradingAccount.balance ? formatAmount(tradingAccount.balance) : formatAmount(0) }}</span>
                 </div>
-                <div class="w-full flex items-center gap-1 flex-grow">
+                <!-- <div class="w-full flex items-center gap-1 flex-grow">
                     <span class="text-gray-500 text-xs w-16">{{ $t('public.equity') }}:</span>
                     <span class="text-gray-950 text-xs font-medium">$ {{ tradingAccount.equity ? formatAmount(tradingAccount.equity) : formatAmount(0) }}</span>
-                </div>
+                </div> -->
                 <div class="w-full flex items-center gap-1 flex-grow">
                     <span class="text-gray-500 text-xs w-16">{{ tradingAccount.account_type === 'premium_account' ? $t('public.pamm') : $t('public.credit') }}:</span>
                     <div class="text-gray-950 text-xs font-medium">

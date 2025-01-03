@@ -25,7 +25,7 @@ This project is a Customer Relationship Management (CRM) administration system. 
 - Note that all data table is not horizontal scrollable.
 
 ### User Roles
-- The CRM supports 3 user roles: Admin, Agent, and Member.
+- The CRM supports 3 user roles: Admin, IB, and Member.
 - Each role has specific permissions and access levels tailored to their needs.
 
 ## THIS IS FOR DEV

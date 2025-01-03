@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use App\Models\RebateAllocation;
 use App\Models\AssetSubscription;
+use App\Services\MetaFourService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -113,7 +114,7 @@ class MemberController extends Controller
 
         // Clone the query before modifying it for counting
         $memberCount = (clone $query)->where('role', 'member')->count();
-        $agentCount = (clone $query)->where('role', 'agent')->count();
+        $ibCount = (clone $query)->where('role', 'ib')->count();
 
         // Get paginated results
         $users = $query
@@ -152,7 +153,7 @@ class MemberController extends Controller
             'success' => true,
             'data' => $users,
             'total_members' => $memberCount,
-            'total_agents' => $agentCount,
+            'total_ibs' => $ibCount,
         ]);
     }
 
@@ -178,7 +179,7 @@ class MemberController extends Controller
 
         $dial_code = $request->dial_code;
         $country = Country::find($dial_code['id']);
-        $default_agent_id = User::where('id_number', 'AID00000')->first()->id;
+        $default_ib_id = User::where('id_number', 'IB00000')->first()->id;
 
         $user = User::create([
             'name' => $request->name,
@@ -192,13 +193,16 @@ class MemberController extends Controller
             'nationality' => $country->nationality,
             'hierarchyList' => $hierarchyList,
             'password' => Hash::make($request->password),
-            'role' => $upline_id == $default_agent_id ? 'agent' : 'member',
+            'role' => $upline_id == $default_ib_id ? 'ib' : 'member',
             'kyc_approval' => 'verified',
         ]);
 
         $user->setReferralId();
 
-        $id_no = ($user->role == 'agent' ? 'AID' : 'MID') . Str::padLeft($user->id - 2, 5, "0");
+        // Assign the appropriate role based on the upline ID or default conditions
+        $user->assignRole($upline_id == $default_ib_id ? 'ib' : 'member');
+
+        $id_no = ($user->role == 'ib' ? 'IB' : 'MB') . Str::padLeft($user->id - 2, 5, "0");
         $user->id_number = $id_no;
         $user->save();
 
@@ -206,11 +210,11 @@ class MemberController extends Controller
             $user->assignedGroup($upline->groupHasUser->group_id);
         }
 
-        if ($user->role == 'agent') {
+        if ($user->role == 'ib') {
             Wallet::create([
                 'user_id' => $user->id,
                 'type' => 'rebate_wallet',
-                'address' => str_replace('AID', 'RB', $user->id_number),
+                'address' => str_replace('IB', 'RB', $user->id_number),
                 'balance' => 0
             ]);
 
@@ -248,7 +252,7 @@ class MemberController extends Controller
 
     public function getAvailableUplines(Request $request)
     {
-        $role = $request->input('role', ['agent', 'member']);
+        $role = $request->input('role', ['ib', 'member']);
     
         $memberId = $request->input('id');
 
@@ -281,7 +285,7 @@ class MemberController extends Controller
         $request->validate([
             'user_id'   => 'required|exists:users,id',
             'upline_id' => 'required|exists:users,id',
-            'role'      => 'required|in:agent,member',
+            'role'      => 'required|in:ib,member',
         ]);
     
         // Find the user to be transferred
@@ -310,12 +314,12 @@ class MemberController extends Controller
         // Save the updated hierarchyList and upline_id for the user
         $user->save();
 
-        // Step 2: If the role is 'agent' for the transferred user, set their RebateAllocation amounts to 0
-        if ($request->input('role') === 'agent') {
+        // Step 2: If the role is 'ib' for the transferred user, set their RebateAllocation amounts to 0
+        if ($request->input('role') === 'ib') {
             RebateAllocation::where('user_id', $user->id)->update(['amount' => 0]);
         }
         
-        // Step 3: Update related users' hierarchyList and their RebateAllocation amounts if they are agents
+        // Step 3: Update related users' hierarchyList and their RebateAllocation amounts if they are ibs
         $relatedUsers = User::where('hierarchyList', 'like', '%-' . $user->id . '-%')->get();
     
         foreach ($relatedUsers as $relatedUser) {
@@ -335,8 +339,8 @@ class MemberController extends Controller
             // Save the updated hierarchyList for the related user
             $relatedUser->save();
     
-            // Step 4: If the related user is an agent, set their RebateAllocation amounts to 0
-            if ($relatedUser->role === 'agent') {
+            // Step 4: If the related user is an ib, set their RebateAllocation amounts to 0
+            if ($relatedUser->role === 'ib') {
                 RebateAllocation::where('user_id', $relatedUser->id)->update(['amount' => 0]);
             }
         }
@@ -367,7 +371,7 @@ class MemberController extends Controller
 
         $availableUpline = $user->upline;
 
-        while ($availableUpline && $availableUpline->role != 'agent') {
+        while ($availableUpline && $availableUpline->role != 'ib') {
             $availableUpline = $availableUpline->upline;
         }
 
@@ -395,7 +399,7 @@ class MemberController extends Controller
         ]);
     }
 
-    public function upgradeAgent(Request $request)
+    public function upgradeIB(Request $request)
     {
         $user_id = $request->user_id;
         $amounts = $request->amounts;
@@ -461,18 +465,18 @@ class MemberController extends Controller
         }
 
         $user->id_number = $request->id_number;
-        $user->role = 'agent';
+        $user->role = 'ib';
         $user->save();
 
         Wallet::create([
             'user_id' => $user->id,
             'type' => 'rebate_wallet',
-            'address' => str_replace('AID', 'RB', $user->id_number),
+            'address' => str_replace('IB', 'RB', $user->id_number),
             'balance' => 0
         ]);
 
         return back()->with('toast', [
-            'title' => trans('public.upgrade_to_agent_success_alert'),
+            'title' => trans('public.upgrade_to_ib_success_alert'),
             'type' => 'success',
         ]);
     }
@@ -530,7 +534,7 @@ class MemberController extends Controller
             'upline_name' => $user->upline->name ?? null,
             'upline_profile_photo' => $user->upline ? $user->upline->getFirstMediaUrl('profile_photo') : null,
             'total_direct_member' => $user->directChildren->where('role', 'member')->count(),
-            'total_direct_agent' => $user->directChildren->where('role', 'agent')->count(),
+            'total_direct_ib' => $user->directChildren->where('role', 'ib')->count(),
             'kyc_verification' => $user->getFirstMedia('kyc_verification'),
             'kyc_approved_at' => $user->kyc_approved_at,
         ];
@@ -754,6 +758,14 @@ class MemberController extends Controller
 
     public function getTradingAccounts(Request $request)
     {
+        $metaLogins = TradingAccount::query()
+            ->where('user_id', $request->id)
+            ->pluck('meta_login');
+
+        foreach ($metaLogins as $metaLogin) {
+            (new MetaFourService())->getUserInfo((int) $metaLogin);
+        }
+
         // Fetch trading accounts based on user ID
         $tradingAccounts = TradingAccount::query()
             ->where('user_id', $request->id)
@@ -837,18 +849,7 @@ class MemberController extends Controller
         $user->tradingAccounts()->delete();
         $user->tradingUsers()->delete();
         $user->paymentAccounts()->delete();
-        $user->groupHasUser()->delete();
         $user->rebateAllocations()->delete();
-        $user->rebate_wallet()->delete();
-        $user->bonus_wallet()->delete();
-        // Remove roles and permissions
-        if ($user->roles()->exists()) {
-            $user->roles()->detach(); // Detach all roles
-        }
-
-        if ($user->permissions()->exists()) {
-            $user->permissions()->detach(); // Detach all permissions
-        }        
         $user->delete();
 
         return redirect()->back()->with('toast', [

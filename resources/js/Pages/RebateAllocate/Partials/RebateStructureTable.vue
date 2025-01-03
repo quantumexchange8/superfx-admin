@@ -42,13 +42,13 @@ watch(() => props.accountTypes, (newAccountTypes) => {
 const accountType = ref(accountTypes.value[0].value);
 const loading = ref(false);
 const dt = ref();
-const agents = ref();
+const ibs = ref();
 
 const getResults = async (type_id) => {
     loading.value = true;
 
     try {
-        let url = `/rebate_allocate/getAgents?type_id=${type_id}`;
+        let url = `/rebate_allocate/getIBs?type_id=${type_id}`;
 
         if (search.value) {
             url += `&search=${search.value}`;
@@ -57,9 +57,9 @@ const getResults = async (type_id) => {
         // Make the API request
         const response = await axios.get(url);
 
-        agents.value = response.data;
+        ibs.value = response.data;
     } catch (error) {
-        console.error('Error get agents:', error);
+        console.error('Error get ibs:', error);
     } finally {
         loading.value = false;
     }
@@ -75,47 +75,47 @@ watch(accountType, (newValue) => {
 });
 
 // Flag to temporarily disable the watcher
-let isChangingAgent = false;
+let isChangingIB = false;
 
 // Watch the search value with a debounced function directly in the watcher
 watch(search, debounce((newSearchValue) => {
-    // Prevent getResults from being called when changing agent
-    if (!isChangingAgent) {
+    // Prevent getResults from being called when changing ib
+    if (!isChangingIB) {
         getResults(accountType.value, newSearchValue); // Fetch with current account type and search query
     }
 }, 1000)); // Debounce time (1000ms)
 
-const changeAgent = async (newAgent) => {
+const changeIB = async (newIB) => {
     loading.value = true;
 
     try {
         // Temporarily disable the watcher to prevent getResults from running
-        isChangingAgent = true;
+        isChangingIB = true;
 
         // Clear the search value to ensure it doesn't trigger a search
         clearSearch();
 
-        const response = await axios.get(`/rebate_allocate/changeAgents?id=${newAgent.id}&type_id=${accountType.value}`);
-        agents.value = response.data;
+        const response = await axios.get(`/rebate_allocate/changeIBs?id=${newIB.id}&type_id=${accountType.value}`);
+        ibs.value = response.data;
     } catch (error) {
         console.error('Error get change:', error);
     } finally {
         loading.value = false;
 
-        // Re-enable the watcher after the agent change is complete
-        isChangingAgent = false;
+        // Re-enable the watcher after the ib change is complete
+        isChangingIB = false;
     }
 }
 
 const editingRows = ref([]);
 const visible = ref(false);
-const agentRebateDetail = ref();
+const ibRebateDetail = ref();
 const productDetails = ref();
 
-const openDialog = (agentData) => {
+const openDialog = (ibData) => {
     visible.value = true;
-    agentRebateDetail.value = agentData[0][0];
-    productDetails.value = agentData[1];
+    ibRebateDetail.value = ibData[0][0];
+    productDetails.value = ibData[1];
 }
 
 const form = useForm({
@@ -125,9 +125,9 @@ const form = useForm({
 const onRowEditSave = (event) => {
     let { newData, index } = event;
 
-    agents.value[index] = newData;
+    ibs.value[index] = newData;
 
-    const data = agents.value[index][1];
+    const data = ibs.value[index][1];
     
     // Map the indexes (1, 2, 3, 4, 5) to the corresponding categories
     const categories = [
@@ -173,7 +173,7 @@ const onRowEditSave = (event) => {
 
     // Proceed with the form post only if all checks pass
     if (canPost) {
-        form.rebates = agents.value[index][1];
+        form.rebates = ibs.value[index][1];
         form.post(route('rebate_allocate.updateRebateAmount'));
     }
 };
@@ -254,14 +254,14 @@ watchEffect(() => {
         class="p-6 flex flex-col items-center justify-center self-stretch gap-6 border border-gray-200 bg-white shadow-table rounded-2xl">
         <DataTable
             v-model:editingRows="editingRows"
-            :value="agents"
+            :value="ibs"
             tableStyle="min-width: 50rem"
             :globalFilterFields="['name']"
             ref="dt"
             :loading="loading"
             table-style="min-width:fit-content"
             editMode="row"
-            :dataKey="agents && agents.length ? agents[0].id : 'id'"
+            :dataKey="ibs && ibs.length ? ibs[0].id : 'id'"
             @row-edit-save="onRowEditSave"
         >
             <template #header>
@@ -270,7 +270,7 @@ watchEffect(() => {
                         <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                             <IconSearch size="20" stroke-width="1.25"/>
                         </div>
-                        <InputText v-model="search" :placeholder="$t('public.search_agent')" class="font-normal pl-10 pr-10 w-full md:w-60" />
+                        <InputText v-model="search" :placeholder="$t('public.search_ib')" class="font-normal pl-10 pr-10 w-full md:w-60" />
                         <div
                             v-if="search !== null"
                             class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"
@@ -303,12 +303,12 @@ watchEffect(() => {
                     <span class="px-3">{{ slotProps.data[0][0].level }}</span>
                 </template>
             </Column>
-            <Column field="agent" class="w-auto">
+            <Column field="ib" class="w-auto">
                 <template #header>
-                    <span>{{ $t('public.agent') }}</span>
+                    <span>{{ $t('public.ib') }}</span>
                 </template>
                 <template #body="slotProps">
-                    <AgentDropdown :agents="slotProps.data[0]" @update:modelValue="changeAgent($event)" class="w-full"/>
+                    <AgentDropdown :ibs="slotProps.data[0]" @update:modelValue="changeIB($event)" class="w-full"/>
                 </template>
                 <template #editor="{ data }">
                     <div class="flex items-center gap-3">
@@ -436,15 +436,15 @@ watchEffect(() => {
     <Dialog
         v-model:visible="visible"
         modal
-        :header="$t('public.agent_rebate_structure')"
+        :header="$t('public.ib_rebate_structure')"
         class="dialog-xs"
     >
         <div class="flex flex-col gap-8 items-center self-stretch">
-            <!-- agent details -->
+            <!-- ib details -->
             <div class="flex items-center gap-3 w-full">
                 <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
-                    <template v-if="agentRebateDetail.profile_photo">
-                        <img :src="agentRebateDetail.profile_photo" alt="profile_photo">
+                    <template v-if="ibRebateDetail.profile_photo">
+                        <img :src="ibRebateDetail.profile_photo" alt="profile_photo">
                     </template>
                     <template v-else>
                         <DefaultProfilePhoto/>
@@ -452,10 +452,10 @@ watchEffect(() => {
                 </div>
                 <div class="flex flex-col items-start">
                     <div class="font-medium text-gray-950">
-                        {{ agentRebateDetail.name }}
+                        {{ ibRebateDetail.name }}
                     </div>
                     <div class="text-gray-500 text-xs">
-                        {{ agentRebateDetail.email }}
+                        {{ ibRebateDetail.email }}
                     </div>
                 </div>
             </div>

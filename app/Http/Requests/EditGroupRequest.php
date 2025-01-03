@@ -29,7 +29,7 @@ class EditGroupRequest extends FormRequest
             'group_name' => ['required', 'string', Rule::unique(Group::class, 'name')->ignore($id)],
             'fee_charges' => ['required', 'numeric'],
             'color' => ['required'],
-            'agent' => ['required'],
+            'ib' => ['required'],
         ];
     }
 
@@ -39,7 +39,7 @@ class EditGroupRequest extends FormRequest
             'group_name' => 'Group Name',
             'fee_charges' => 'Fee Charges',
             'color' => 'Color',
-            'agent' => 'Agent',
+            'ib' => 'IB',
         ];
     }
 }

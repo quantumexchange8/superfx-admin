@@ -36,7 +36,7 @@ const getAvailableUplines = async () => {
     isLoading.value = true;
 
     try {
-        const url = props.member.role === 'agent' ? `/member/getAvailableUplines?id=${props.member.id}&role=agent` : `/member/getAvailableUplines?id=${props.member.id}`;
+        const url = props.member.role === 'ib' ? `/member/getAvailableUplines?id=${props.member.id}&role=ib` : `/member/getAvailableUplines?id=${props.member.id}`;
 
         const response = await axios.get(url);
 
@@ -60,8 +60,8 @@ const submitForm = () => {
             closeDialog();
             form.reset();
 
-            // Check if the role is 'agent' and require confirmation
-            if (props.member.role === 'agent') {
+            // Check if the role is 'ib' and require confirmation
+            if (props.member.role === 'ib') {
                 requireConfirmation('set_rebate');
             }
         },

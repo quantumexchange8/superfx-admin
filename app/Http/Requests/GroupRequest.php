@@ -25,7 +25,7 @@ class GroupRequest extends FormRequest
             'group_name' => ['required', 'string', 'unique:groups,name'],
             'fee_charges' => ['required', 'numeric'],
             'color' => ['required'],
-            'agent' => ['required'],
+            'ib' => ['required'],
         ];
     }
 
@@ -35,7 +35,7 @@ class GroupRequest extends FormRequest
             'group_name' => 'Group Name',
             'fee_charges' => 'Fee Charges',
             'color' => 'Color',
-            'agent' => 'Agent',
+            'ib' => 'IB',
         ];
     }
 }

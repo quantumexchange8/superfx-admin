@@ -22,8 +22,8 @@ class RebateController extends Controller
         $userId = 2;
 
         $company_profile = RebateAllocation::with(['user' => function ($query) {
-            $query->withCount(['directChildren as direct_agent' => function ($q) {
-                $q->where('role', 'agent');
+            $query->withCount(['directChildren as direct_ib' => function ($q) {
+                $q->where('role', 'ib');
             }]);
         }])
             ->where('user_id', $userId)
@@ -37,7 +37,7 @@ class RebateController extends Controller
             ]);
         }
 
-        $company_profile->user->group_agent = $this->getChildrenCount($userId);
+        $company_profile->user->group_ib = $this->getChildrenCount($userId);
 
         $levels = $this->getHierarchyLevels($company_profile->user, $company_profile->user->id);
         $company_profile->user->minimum_level = $levels['min'];
@@ -87,13 +87,13 @@ class RebateController extends Controller
         // Get the direct children of the upline user
         $users = $upline->directChildren;
 
-        // Function to get all downline users recursively with the role 'agent'
-        function getDownlineAgents($user)
+        // Function to get all downline users recursively with the role 'ib'
+        function getDownlineIBs($user)
         {
             $downline = collect();
 
             foreach ($user->directChildren as $child) {
-                if ($child->role == 'agent') {
+                if ($child->role == 'ib') {
                     $downline->push([
                         'id' => $child->id,
                         'name' => $child->name,
@@ -101,29 +101,29 @@ class RebateController extends Controller
                         'profile_pic' => $child->getFirstMediaUrl('profile_photo'),
                     ]);
                 }
-                $downline = $downline->merge(getDownlineAgents($child));
+                $downline = $downline->merge(getDownlineIBs($child));
             }
 
             return $downline;
         }
 
-        // Get all downline agents for each direct child
-        $downline_agents = collect();
+        // Get all downline ibs for each direct child
+        $downline_ibs = collect();
         foreach ($users as $user) {
-            $downline_agents = $downline_agents->merge(getDownlineAgents($user));
+            $downline_ibs = $downline_ibs->merge(getDownlineIBs($user));
         }
 
         return response()->json([
             'rebateStructures' => $rebate_structure,
             'users' => $users,
-            'downlineAgents' => $downline_agents,
+            'downlineIBs' => $downline_ibs,
         ]);
     }
 
 
     private function getChildrenCount($user_id): int
     {
-        return User::where('role', 'agent')
+        return User::where('role', 'ib')
             ->where('hierarchyList', 'like', '%-' . $user_id . '-%')
             ->count();
     }
@@ -149,13 +149,13 @@ class RebateController extends Controller
         ];
     }
 
-    public function getAgents(Request $request)
+    public function getIBs(Request $request)
     {
         $type_id = $request->type_id;
         $search = $request->search;  // Get the search term
 
-        // Start the query for agents
-        $query = User::where('role', 'agent');
+        // Start the query for ibs
+        $query = User::where('role', 'ib');
 
         // If there is no search term, filter by upline_id
         if (empty($search)) {
@@ -169,93 +169,93 @@ class RebateController extends Controller
             });
         }
         
-        // Get the level 1 agents based on the query
-        $lv1_agents = $query->get()
-            ->map(function ($agent) use ($search) {
-                // Determine the agent's level based on whether there's a search or not
-                $level = $search ? $this->calculateLevel($agent->hierarchyList) : 1;
+        // Get the level 1 ibs based on the query
+        $lv1_ibs = $query->get()
+            ->map(function ($ib) use ($search) {
+                // Determine the ib's level based on whether there's a search or not
+                $level = $search ? $this->calculateLevel($ib->hierarchyList) : 1;
 
                 return [
-                    'id' => $agent->id,
-                    'profile_photo' => $agent->getFirstMediaUrl('profile_photo'),
-                    'name' => $agent->name,
-                    'email' => $agent->email,
-                    'hierarchy_list' => $agent->hierarchyList,
-                    'upline_id' => $agent->upline_id,
+                    'id' => $ib->id,
+                    'profile_photo' => $ib->getFirstMediaUrl('profile_photo'),
+                    'name' => $ib->name,
+                    'email' => $ib->email,
+                    'hierarchy_list' => $ib->hierarchyList,
+                    'upline_id' => $ib->upline_id,
                     'level' => $level,
                 ];
             })
             ->toArray();
 
         // Check if ID 2 exists and move it to the first position
-        $id_2_index = array_search(2, array_column($lv1_agents, 'id'));
+        $id_2_index = array_search(2, array_column($lv1_ibs, 'id'));
         if ($id_2_index !== false) {
-            $id_2_agent = $lv1_agents[$id_2_index];
-            unset($lv1_agents[$id_2_index]);
-            array_unshift($lv1_agents, $id_2_agent); // Add to the start
+            $id_2_ib = $lv1_ibs[$id_2_index];
+            unset($lv1_ibs[$id_2_index]);
+            array_unshift($lv1_ibs, $id_2_ib); // Add to the start
         }
 
-        $agents_array = [];
+        $ibs_array = [];
         $lv1_data = [];
 
-        // Check if there are any agents found
-        if (!empty($lv1_agents)) {
-            // Get level 1 children rebate only if agents are found
-            $lv1_rebate = $this->getRebateAllocate($lv1_agents[0]['id'], $type_id);
+        // Check if there are any ibs found
+        if (!empty($lv1_ibs)) {
+            // Get level 1 children rebate only if ibs are found
+            $lv1_rebate = $this->getRebateAllocate($lv1_ibs[0]['id'], $type_id);
 
-            // Push level 1 agent & rebate data
-            array_push($lv1_data, $lv1_agents, $lv1_rebate);
-            $agents_array[] = $lv1_data;
+            // Push level 1 ib & rebate data
+            array_push($lv1_data, $lv1_ibs, $lv1_rebate);
+            $ibs_array[] = $lv1_data;
 
-            // Get direct agents of the first upline
+            // Get direct ibs of the first upline
             $loop_flag = true;
-            $current_agent_id = $lv1_agents[0]['id'];
+            $current_ib_id = $lv1_ibs[0]['id'];
             while ($loop_flag) {
-                $next_level = $this->getDirectAgents($current_agent_id, $type_id);
+                $next_level = $this->getDirectIBs($current_ib_id, $type_id);
 
-                // If next level agents are found, continue the loop
+                // If next level ibs are found, continue the loop
                 if (!empty($next_level) && isset($next_level[0][0]['id'])) {
-                    $current_agent_id = $next_level[0][0]['id'];
-                    $agents_array[] = $next_level;
+                    $current_ib_id = $next_level[0][0]['id'];
+                    $ibs_array[] = $next_level;
                 } else {
-                    $loop_flag = false; // Stop looping if no more agents
+                    $loop_flag = false; // Stop looping if no more ibs
                 }
             }
         }
 
-        return response()->json($agents_array);
+        return response()->json($ibs_array);
     }
 
-    private function getDirectAgents($agent_id, $type_id)
+    private function getDirectIBs($ib_id, $type_id)
     {
         // children of id passed in
-        $children = User::find($agent_id)->directChildren()->where('role', 'agent')->select('id', 'hierarchyList')->get();
+        $children = User::find($ib_id)->directChildren()->where('role', 'ib')->select('id', 'hierarchyList')->get();
 
         // find children same level
         if ( $children->isNotEmpty() ) {
-            $agents = User::where(['hierarchyList' => $children[0]->hierarchyList, 'role' => 'agent'])->get()
-                ->map(function ($agent) {
+            $ibs = User::where(['hierarchyList' => $children[0]->hierarchyList, 'role' => 'ib'])->get()
+                ->map(function ($ib) {
                     return [
-                        'id' => $agent->id,
-                        'profile_photo' => $agent->getFirstMediaUrl('profile_photo'),
-                        'name' => $agent->name,
-                        'email' => $agent->email,
-                        'hierarchy_list' => $agent->hierarchyList,
-                        'upline_id' => $agent->upline_id,
-                        'level' => $this->calculateLevel($agent->hierarchyList),
+                        'id' => $ib->id,
+                        'profile_photo' => $ib->getFirstMediaUrl('profile_photo'),
+                        'name' => $ib->name,
+                        'email' => $ib->email,
+                        'hierarchy_list' => $ib->hierarchyList,
+                        'upline_id' => $ib->upline_id,
+                        'level' => $this->calculateLevel($ib->hierarchyList),
                     ];
                 })
-                ->sortBy(fn($agent) => $agent['id'] != $children[0]->id)
+                ->sortBy(fn($ib) => $ib['id'] != $children[0]->id)
                 ->toArray();
 
             // reindex
-            $agents = array_values($agents);
+            $ibs = array_values($ibs);
 
-            // push current level hierarchy agent & rebate into array
+            // push current level hierarchy ib & rebate into array
             $temp = [];
-            $rebate = $this->getRebateAllocate($agents[0]['id'], $type_id);
+            $rebate = $this->getRebateAllocate($ibs[0]['id'], $type_id);
 
-            array_push($temp, $agents, $rebate);
+            array_push($temp, $ibs, $rebate);
 
             return $temp;
         }
@@ -294,7 +294,7 @@ class RebateController extends Controller
             'upline_cryptocurrency' => floatval($upline_rebate[4]->amount),
         ];
 
-        $downline = $user->directChildren()->where('role', 'agent')->first();
+        $downline = $user->directChildren()->where('role', 'ib')->first();
 
         if ($downline) {
             $downline_rebate = User::find($downline->id)->rebateAllocations()->where('account_type_id', $type_id)->get();
@@ -313,17 +313,17 @@ class RebateController extends Controller
         return $rebates;
     }
 
-    public function changeAgents(Request $request)
+    public function changeIBs(Request $request)
     {
-        $selected_agent_id = $request->id;
+        $selected_ib_id = $request->id;
         $type_id = $request->type_id;
-        $agents_array = [];
+        $ibs_array = [];
 
-        $selected_agent = User::where('id', $selected_agent_id)->first();
+        $selected_ib = User::where('id', $selected_ib_id)->first();
 
-        // determine is the selected agent other than level 1
-        if ($selected_agent->upline_id !== 2) {
-            $split_hierarchy = explode('-2-', $selected_agent->hierarchyList);
+        // determine is the selected ib other than level 1
+        if ($selected_ib->upline_id !== 2) {
+            $split_hierarchy = explode('-2-', $selected_ib->hierarchyList);
             $upline_ids = explode('-', $split_hierarchy[1]);
 
             array_pop($upline_ids);
@@ -332,73 +332,73 @@ class RebateController extends Controller
                 ->map(function($upline) use ($type_id) {
                     $rebate = $this->getRebateAllocate($upline->id, $type_id);
 
-                    $same_level_agents = User::where(['hierarchyList' => $upline->hierarchyList, 'role' => 'agent'])->get()
-                        ->map(function($same_level_agent) {
+                    $same_level_ibs = User::where(['hierarchyList' => $upline->hierarchyList, 'role' => 'ib'])->get()
+                        ->map(function($same_level_ib) {
                             return [
-                                'id' => $same_level_agent->id,
-                                'profile_photo' => $same_level_agent->getFirstMediaUrl('profile_photo'),
-                                'name' => $same_level_agent->name,
-                                'email' => $same_level_agent->email,
-                                'hierarchy_list' => $same_level_agent->hierarchyList,
-                                'upline_id' => $same_level_agent->upline_id,
-                                'level' => $this->calculateLevel($same_level_agent->hierarchyList),
+                                'id' => $same_level_ib->id,
+                                'profile_photo' => $same_level_ib->getFirstMediaUrl('profile_photo'),
+                                'name' => $same_level_ib->name,
+                                'email' => $same_level_ib->email,
+                                'hierarchy_list' => $same_level_ib->hierarchyList,
+                                'upline_id' => $same_level_ib->upline_id,
+                                'level' => $this->calculateLevel($same_level_ib->hierarchyList),
                             ];
                         })
-                        ->sortBy(fn($agent) => $agent['id'] != $upline->id)
+                        ->sortBy(fn($ib) => $ib['id'] != $upline->id)
                         ->toArray();
 
                     // reindex
-                    $same_level_agents = array_values($same_level_agents);
+                    $same_level_ibs = array_values($same_level_ibs);
 
                     $data = [];
-                    array_push($data, $same_level_agents, $rebate);
+                    array_push($data, $same_level_ibs, $rebate);
                     return $data;
                 })->toArray();
 
-            $agents_array = $uplines;
+            $ibs_array = $uplines;
         }
 
-        // selected agent & same level agents
-        $agents = User::where(['hierarchyList' => $selected_agent->hierarchyList, 'role' => 'agent'])->get()
-            ->map(function($agent) {
+        // selected ib & same level ibs
+        $ibs = User::where(['hierarchyList' => $selected_ib->hierarchyList, 'role' => 'ib'])->get()
+            ->map(function($ib) {
                 return [
-                    'id' => $agent->id,
-                    'profile_photo' => $agent->getFirstMediaUrl('profile_photo'),
-                    'name' => $agent->name,
-                    'email' => $agent->email,
-                    'hierarchy_list' => $agent->hierarchyList,
-                    'upline_id' => $agent->upline_id,
-                    'level' => $this->calculateLevel($agent->hierarchyList),
+                    'id' => $ib->id,
+                    'profile_photo' => $ib->getFirstMediaUrl('profile_photo'),
+                    'name' => $ib->name,
+                    'email' => $ib->email,
+                    'hierarchy_list' => $ib->hierarchyList,
+                    'upline_id' => $ib->upline_id,
+                    'level' => $this->calculateLevel($ib->hierarchyList),
                 ];
             })
-            ->sortBy(fn($agent) => $agent['id'] != $selected_agent->id)
+            ->sortBy(fn($ib) => $ib['id'] != $selected_ib->id)
             ->toArray();
 
         // reindex
-        $agents = array_values($agents);
+        $ibs = array_values($ibs);
 
-        // selected agent rebate
-        $rebate = $this->getRebateAllocate($selected_agent_id, $type_id);
+        // selected ib rebate
+        $rebate = $this->getRebateAllocate($selected_ib_id, $type_id);
 
-        //push selected agent level into array
+        //push selected ib level into array
         $temp = [];
-        array_push($temp, $agents, $rebate);
-        $agents_array[] = $temp;
+        array_push($temp, $ibs, $rebate);
+        $ibs_array[] = $temp;
 
-        //pass to getDirectAgents
+        //pass to getDirectibs
         $loop_flag = true;
-        $current_agent_id = $selected_agent_id;
+        $current_ib_id = $selected_ib_id;
         while ($loop_flag) {
-            $next_level = $this->getDirectAgents($current_agent_id, $type_id);
+            $next_level = $this->getDirectIBs($current_ib_id, $type_id);
             if ( !empty($next_level) ) {
-                $current_agent_id = $next_level[0][0]['id'];
-                $agents_array[] = $next_level;
+                $current_ib_id = $next_level[0][0]['id'];
+                $ibs_array[] = $next_level;
             } else {
                 $loop_flag = false;
             }
         }
 
-        return response()->json($agents_array);
+        return response()->json($ibs_array);
     }
 
     public function updateRebateAmount(Request $request)

@@ -7,12 +7,12 @@ import {trans} from "laravel-vue-i18n";
 import {router} from "@inertiajs/vue3";
 
 const props = defineProps({
-    agent: Object,
+    ib: Object,
 })
 
-const checked = ref(props.agent.isSelected);
+const checked = ref(props.ib.isSelected);
 
-watch(() => props.agent.isSelected, (newStatus) => {
+watch(() => props.ib.isSelected, (newStatus) => {
     checked.value = newStatus;
 });
 
@@ -28,10 +28,10 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.visit(route('member.updatePostPermission', props.agent.id), {
+                router.visit(route('member.updatePostPermission', props.ib.id), {
                     method: 'post',
                     data: {
-                        id: props.agent.id,
+                        id: props.ib.id,
                     },
                 })
 
@@ -46,10 +46,10 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.visit(route('member.updatePostPermission', props.agent.id), {
+                router.visit(route('member.updatePostPermission', props.ib.id), {
                     method: 'post',
                     data: {
-                        id: props.agent.id,
+                        id: props.ib.id,
                     },
                 })
 
@@ -74,7 +74,7 @@ const requireConfirmation = (action_type) => {
 };
 
 const handlePermissions = () => {
-    if (props.agent.isSelected) {
+    if (props.ib.isSelected) {
         requireConfirmation('remove_permission')
     } else {
         requireConfirmation('grant_permission')

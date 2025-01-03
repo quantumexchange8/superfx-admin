@@ -57,13 +57,13 @@ watchEffect(() => {
                     </div>
                     <div class="grid grid-cols-2 gap-5 w-full">
                         <div class="flex flex-col items-start justify-center gap-2">
-                            <span class="text-xs text-gray-500">{{ $t('public.direct_agent') }}</span>
-                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.direct_agent }}</span>
+                            <span class="text-xs text-gray-500">{{ $t('public.direct_ib') }}</span>
+                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.direct_ib }}</span>
                             <div v-else class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
                         </div>
                         <div class="flex flex-col items-start justify-center gap-2">
-                            <span class="text-xs text-gray-500">{{ $t('public.group_agent') }}</span>
-                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.group_agent }}</span>
+                            <span class="text-xs text-gray-500">{{ $t('public.group_ib') }}</span>
+                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.group_ib }}</span>
                             <div v-else class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
                         </div>
                         <div class="flex flex-col items-start justify-center gap-2">

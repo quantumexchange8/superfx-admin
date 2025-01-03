@@ -249,8 +249,8 @@ const handleMemberStatus = () => {
                     <div class="truncate text-gray-950 text-sm font-medium w-full">{{ userDetail.total_direct_member }}</div>
                 </div>
                 <div class="flex flex-col justify-center items-start gap-2 w-1/2">
-                    <div class="text-gray-500 text-xs w-full truncate">{{ $t('public.total_referred_agent') }}</div>
-                    <div class="truncate text-gray-950 text-sm font-medium w-full">{{ userDetail.total_direct_agent }}</div>
+                    <div class="text-gray-500 text-xs w-full truncate">{{ $t('public.total_referred_ib') }}</div>
+                    <div class="truncate text-gray-950 text-sm font-medium w-full">{{ userDetail.total_direct_ib }}</div>
                 </div>
             </div>
         </div>
@@ -283,7 +283,7 @@ const handleMemberStatus = () => {
                     <div class="h-2 bg-gray-200 rounded-full w-36 mt-2 mb-1"></div>
                 </div>
                 <div class="flex flex-col justify-center items-start gap-2 w-1/2">
-                    <div class="text-gray-500 text-xs w-full truncate">{{ $t('public.total_referred_agent') }}</div>
+                    <div class="text-gray-500 text-xs w-full truncate">{{ $t('public.total_referred_ib') }}</div>
                     <div class="h-2 bg-gray-200 rounded-full w-36 mt-2 mb-1"></div>
                 </div>
             </div>

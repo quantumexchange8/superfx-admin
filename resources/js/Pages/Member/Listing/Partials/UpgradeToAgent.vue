@@ -31,7 +31,7 @@ const getAvailableUplineData = async () => {
         accountTypes.value = response.data.accountTypeSel;
 
         selectedAccountType.value = accountTypes.value[0];
-        newIdNumber.value = props.member.id_number.replace(/^M/, 'A');
+        newIdNumber.value = props.member.id_number.replace(/^M/, 'I');
 
         initializeMemberRebateAmount();
     } catch (error) {
@@ -93,7 +93,7 @@ const form = useForm({
 const submitForm = () => {
     form.id_number = newIdNumber.value;
     form.amounts = prepareSubmissionData();
-    form.post(route('member.upgradeAgent'), {
+    form.post(route('member.upgradeIB'), {
         onSuccess: () => {
             closeDialog();
         }
@@ -135,7 +135,7 @@ const closeDialog = () => {
                 </div>
             </div>
 
-            <!-- agent -->
+            <!-- ib -->
             <div class="flex flex-col gap-2 items-start self-stretch w-full">
                 <div class="text-xs text-gray-500">
                     {{ $t('public.upline') }}

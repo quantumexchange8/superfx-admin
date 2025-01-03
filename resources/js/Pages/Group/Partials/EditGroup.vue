@@ -20,27 +20,27 @@
     const color = ref(props.group.color);
     const memberCount = ref(props.group.member_count);
     const currentLeader = ref({value: props.group.user_id, name: props.group.leader_name, profile_photo: props.group.profile_photo});
-    const agents = ref([]);
+    const ibs = ref([]);
 
-    const getAgents = async () => {
+    const getIBs = async () => {
         try {
-            const agentResponse = await axios.get('/group/getAgents');
-            agents.value = agentResponse.data;
-            agents.value.push(currentLeader.value);
+            const ibResponse = await axios.get('/group/getIBs');
+            ibs.value = ibResponse.data;
+            ibs.value.push(currentLeader.value);
         } catch (error) {
-            console.error('Error fetching agents:', error);
+            console.error('Error fetching ibs:', error);
         }
     };
 
     onMounted(() => {
-        getAgents();
+        getIBs();
     })
 
     const form = useForm({
         group_name: '',
         fee_charges: '',
         color: '',
-        agent: currentLeader.value,
+        ib: currentLeader.value,
         group_members: null,
     })
 
@@ -107,22 +107,22 @@
                 </div>
                 <div class="flex flex-col items-center gap-3 self-stretch">
                     <div class="self-stretch text-gray-950 text-sm font-bold">
-                        {{ $t('public.agent') }}
+                        {{ $t('public.ib') }}
                     </div>
                     <div class="flex flex-col items-start gap-3 self-stretch md:flex-row md:justify-center md:content-start md:gap-5 md:flex-wrap">
                         <div class="flex flex-col items-start gap-1 self-stretch md:flex-1">
-                            <InputLabel for="agent" :value="$t('public.agent')" :invalid="!!form.errors.agent" />
+                            <InputLabel for="ib" :value="$t('public.ib')" :invalid="!!form.errors.ib" />
                             <Dropdown
-                                id="agent"
-                                v-model="form.agent"
-                                :options="agents"
+                                id="ib"
+                                v-model="form.ib"
+                                :options="ibs"
                                 filter
                                 :filterFields="['name', 'phone_code']"
                                 optionLabel="name"
-                                :placeholder="$t('public.select_agent_placeholder')"
+                                :placeholder="$t('public.select_ib_placeholder')"
                                 class="w-full"
                                 scroll-height="236px"
-                                :invalid="!!form.errors.agent"
+                                :invalid="!!form.errors.ib"
                             >
                                 <template #value="slotProps">
                                     <div v-if="slotProps.value" class="flex items-center gap-3">
@@ -156,7 +156,7 @@
                                     </div>
                                 </template>
                             </Dropdown>
-                            <InputError :message="form.errors.agent" />
+                            <InputError :message="form.errors.ib" />
                         </div>
                         <div class="flex flex-col items-start gap-1 self-stretch md:flex-1">
                             <InputLabel for="groupMembers" :value="$t('public.total_group_members')" :invalid="!!form.errors.group_members" />

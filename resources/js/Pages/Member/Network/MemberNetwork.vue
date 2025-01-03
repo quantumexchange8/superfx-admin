@@ -145,7 +145,7 @@ const clearSearch = () => {
                         <div
                             class="rounded-xl pt-3 flex flex-col items-center w-full max-w-[168px] xl:max-w-[148px] shadow-toast border border-gray-25 sm:basis-1/5 xl:basis-1/6"
                             :class="{
-                                'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': upline.role === 'agent',
+                                'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': upline.role === 'ib',
                                 'bg-gradient-to-r from-primary-700 to-[#0BA5EC]': upline.role === 'member',
                             }"
                         >
@@ -184,8 +184,8 @@ const clearSearch = () => {
                         <div
                             class="rounded-xl pt-3 flex flex-col items-center w-full max-w-[168px] xl:max-w-[148px] shadow-toast border border-gray-25 sm:basis-1/5 xl:basis-1/6"
                             :class="{
-                                      'bg-gradient-to-r from-gray-900 to-gray-500': upline.role === 'agent' && upline.level === 0,
-                                      'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': upline.role === 'agent' && upline.level !== 0,
+                                      'bg-gradient-to-r from-gray-900 to-gray-500': upline.role === 'ib' && upline.level === 0,
+                                      'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': upline.role === 'ib' && upline.level !== 0,
                                       'bg-gradient-to-r from-primary-700 to-[#0BA5EC]': upline.role === 'member',
                                     }"
                         >
@@ -213,7 +213,7 @@ const clearSearch = () => {
                                         <IconUserFilled size="10" />
                                     </div>
                                     <div class="text-xs text-gray-950 font-medium">
-                                        {{ formatAmount(upline.total_agent_count, 0) }}
+                                        {{ formatAmount(upline.total_ib_count, 0) }}
                                     </div>
                                 </div>
                                 <div class="flex gap-2 items-center w-full">
@@ -241,7 +241,7 @@ const clearSearch = () => {
                             class="rounded-xl pt-3 flex flex-col items-center w-full max-w-[168px] xl:max-w-[148px] shadow-toast border border-gray-25 sm:basis-1/5 xl:basis-1/6"
                             :class="{
                                 'bg-gradient-to-r from-gray-900 to-gray-500': parent.length === 0 || parent.level === 0,
-                                'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': parent && parent.role === 'agent' && parent.level !== 0,
+                                'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': parent && parent.role === 'ib' && parent.level !== 0,
                                 'bg-gradient-to-r from-primary-700 to-[#0BA5EC]': parent && parent.role === 'member',
                             }"
                         >
@@ -289,8 +289,8 @@ const clearSearch = () => {
                         <div
                             class="rounded-xl pt-3 flex flex-col items-center w-full max-w-[168px] xl:max-w-[148px] shadow-toast border border-gray-25 sm:basis-1/5 xl:basis-1/6"
                             :class="{
-                                      'bg-gradient-to-r from-gray-900 to-gray-500': parent.role === 'agent' && parent.level === 0,
-                                      'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': parent.role === 'agent' && parent.level !== 0,
+                                      'bg-gradient-to-r from-gray-900 to-gray-500': parent.role === 'ib' && parent.level === 0,
+                                      'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': parent.role === 'ib' && parent.level !== 0,
                                       'bg-gradient-to-r from-primary-700 to-[#0BA5EC]': parent.role === 'member',
                                     }"
                         >
@@ -318,7 +318,7 @@ const clearSearch = () => {
                                         <IconUserFilled size="10" />
                                     </div>
                                     <div class="text-xs text-gray-950 font-medium">
-                                        {{ formatAmount(parent.total_agent_count, 0) }}
+                                        {{ formatAmount(parent.total_ib_count, 0) }}
                                     </div>
                                 </div>
                                 <div class="flex gap-2 items-center w-full">
@@ -345,7 +345,7 @@ const clearSearch = () => {
                         <div
                             class="rounded-xl pt-3 flex flex-col items-center w-full max-w-[168px] xl:max-w-[148px] shadow-toast border border-gray-25 select-none cursor-pointer sm:basis-1/5 xl:basis-1/6"
                             :class="{
-                                'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': parent && parent.role === 'agent',
+                                'bg-gradient-to-r from-warning-500 to-[#FDEF5B]': parent && parent.role === 'ib',
                                 'bg-gradient-to-r from-primary-700 to-[#0BA5EC]': parent && parent.role === 'member',
                             }"
                         >
@@ -386,7 +386,7 @@ const clearSearch = () => {
                             :key="downline.id"
                             class="rounded-xl pt-3 flex flex-col items-center xl:max-w-[148px] shadow-toast border border-gray-25 select-none cursor-pointer sm:basis-1/5 xl:basis-1/6"
                             :class="{
-                              'agent-bg hover:border-warning-500': downline.role === 'agent',
+                              'ib-bg hover:border-warning-500': downline.role === 'ib',
                               'member-bg hover:border-primary-500': downline.role === 'member',
                             }"
                             @click="selectDownline(downline.id)"
@@ -415,7 +415,7 @@ const clearSearch = () => {
                                         <IconUserFilled size="10" />
                                     </div>
                                     <div class="text-xs text-gray-950 font-medium">
-                                        {{ formatAmount(downline.total_agent_count, 0) }}
+                                        {{ formatAmount(downline.total_ib_count, 0) }}
                                     </div>
                                 </div>
                                 <div class="flex gap-2 items-center w-full">
@@ -436,17 +436,17 @@ const clearSearch = () => {
 </template>
 
 <style>
-.agent-bg {
+.ib-bg {
     background: linear-gradient(to right, #F79009, #FDEF5B);
 }
 
-.agent-bg:hover {
+.ib-bg:hover {
     background: linear-gradient(90deg, #F79009, #FDEF5B, #F79009, #FDEF5B);
     background-size: 400%;
-    animation: agent-gradient 3s ease infinite;
+    animation: ib-gradient 3s ease infinite;
 }
 
-@keyframes agent-gradient {
+@keyframes ib-gradient {
     0% {
         background-position: 0 50%;
     }

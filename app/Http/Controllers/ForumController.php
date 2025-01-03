@@ -92,20 +92,20 @@ class ForumController extends Controller
         return response()->json($posts);
     }
 
-    public function getAgents(Request $request)
+    public function getIBs(Request $request)
     {
         $allRolesInDatabase = Role::all()->pluck('name');
 
-        if (!$allRolesInDatabase->contains('agent')) {
-            Role::create(['name' => 'agent']);
+        if (!$allRolesInDatabase->contains('ib')) {
+            Role::create(['name' => 'ib']);
         }
 
-        $agentWithoutRole = User::where('role', 'agent')
-            ->withoutRole('agent')
+        $ibWithoutRole = User::where('role', 'ib')
+            ->withoutRole('ib')
             ->get();
 
-        foreach ($agentWithoutRole as $agentRole) {
-            $agentRole->syncRoles('agent');
+        foreach ($ibWithoutRole as $ibRole) {
+            $ibRole->syncRoles('ib');
         }
 
         $allPermissionsInDatabase = Permission::all()->pluck('name');
@@ -114,7 +114,7 @@ class ForumController extends Controller
             Permission::create(['name' => 'post_forum']);
         }
 
-        $agents = User::role('agent')
+        $ibs = User::role('ib')
             ->with('media')
             ->where('status', 'active')
             ->select('id', 'name', 'email', 'id_number')
@@ -134,17 +134,17 @@ class ForumController extends Controller
                 return $user;
             });
 
-        $selected_agents = $agents->filter(function ($user) {
+        $selected_ibs = $ibs->filter(function ($user) {
             return $user->isSelected;
         });
 
-        $non_selected_agents = $agents->reject(function ($user) {
+        $non_selected_ibs = $ibs->reject(function ($user) {
             return $user->isSelected;
         });
 
         return response()->json([
-            'selectedAgents' => $selected_agents->values(),
-            'agents' => $non_selected_agents->values(),
+            'selectedIBs' => $selected_ibs->values(),
+            'ibs' => $non_selected_ibs->values(),
         ]);
     }
 

@@ -52,11 +52,11 @@ const items = ref([
         },
     },
     {
-        label: 'upgrade_to_agent',
+        label: 'upgrade_to_ib',
         icon: h(IconUserUp),
         command: () => {
             visible.value = true;
-            dialogType.value = 'upgrade_to_agent';
+            dialogType.value = 'upgrade_to_ib';
         },
         role: 'member', // Add a custom property to check the role
     },
@@ -82,7 +82,7 @@ const items = ref([
 
 const filteredItems = computed(() => {
     return items.value.filter(item => {
-        return !(item.role && item.role === 'member' && props.member.role === 'agent');
+        return !(item.role && item.role === 'member' && props.member.role === 'ib');
 
     });
 });
@@ -220,7 +220,7 @@ const handleMemberStatus = () => {
                 @update:visible="visible = false"
             />
         </template>
-        <template v-if="dialogType === 'upgrade_to_agent'">
+        <template v-if="dialogType === 'upgrade_to_ib'">
             <UpgradeToAgent
                 :member="member"
                 @update:visible="visible = false"
