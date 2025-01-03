@@ -113,7 +113,7 @@ const submitForm = () => {
                     <div class="h-3 bg-gray-400 rounded-full w-28 my-1"></div>
                 </div>
                 <div v-else class="text-gray-950 text-center text-xl font-semibold">
-                    <span v-if="dialogType === 'account_balance'">$ {{ formatAmount(currentAmount['account_balance'] - currentAmount['account_credit']) }}</span>
+                    <span v-if="dialogType === 'account_balance'">$ {{ formatAmount(currentAmount['account_balance']) }}</span>
                     <span v-else>$ {{ formatAmount(currentAmount[dialogType]) }}</span>
                 </div>
             </div>
