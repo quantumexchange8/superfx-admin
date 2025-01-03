@@ -134,7 +134,7 @@ class MetaFourService {
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
-            ->post($$url . "/transaction");
+            ->post($url . "/transaction");
     
         // Return the JSON response from the API
         return $accountResponse->json();

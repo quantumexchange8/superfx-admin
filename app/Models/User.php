@@ -54,7 +54,7 @@ class User extends Authenticatable implements HasMedia
     public function setReferralId(): void
     {
         $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        $randomString = 'SFx';
+        $randomString = 'SFXx';
 
         $length = 10 - strlen($randomString);
 
