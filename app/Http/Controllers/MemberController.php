@@ -123,6 +123,7 @@ class MemberController extends Controller
                 'name',
                 'email',
                 'upline_id',
+                'kyc_status',
                 'role',
                 'id_number',
                 'hierarchyList',
@@ -146,6 +147,7 @@ class MemberController extends Controller
                 'group_name' => $user->groupHasUser->group->name ?? null,
                 'group_color' => $user->groupHasUser->group->color ?? null,
                 'profile_photo' => $user->getFirstMediaUrl('profile_photo'),
+                'kyc_status' => $user->kyc_status,
             ];
         });
 
@@ -300,10 +302,17 @@ class MemberController extends Controller
         }
     
         // Find the new upline
-        $newUpline = User::findOrFail($request->input('upline_id'));
+        $upline_id = $request->input('upline_id');
+        $newUpline = User::find($upline_id);
+
+        if(empty($newUpline->hierarchyList)) {
+            $hierarchyList = "-" . $upline_id . "-";
+        } else {
+            $hierarchyList = $newUpline->hierarchyList . $upline_id . "-";
+        }
     
         // Step 1: Update the user's hierarchyList to reflect the new upline's hierarchy and ID
-        $user->hierarchyList = $newUpline->hierarchyList . $newUpline->id . '-';
+        $user->hierarchyList = $hierarchyList;
         $user->upline_id = $newUpline->id;
     
         // Update the user's group relationship
@@ -535,8 +544,9 @@ class MemberController extends Controller
             'upline_profile_photo' => $user->upline ? $user->upline->getFirstMediaUrl('profile_photo') : null,
             'total_direct_member' => $user->directChildren->where('role', 'member')->count(),
             'total_direct_ib' => $user->directChildren->where('role', 'ib')->count(),
-            'kyc_verification' => $user->getFirstMedia('kyc_verification'),
+            'kyc_verification' => $user->getMedia('kyc_verification'),
             'kyc_approved_at' => $user->kyc_approved_at,
+            'kyc_status' => $user->kyc_status,
         ];
 
         $paymentAccounts = $user->paymentAccounts()
@@ -658,13 +668,20 @@ class MemberController extends Controller
     {
         $user = User::find($request->id);
 
-        $user->kyc_approved_at = null;
+        if ($request->input('action') === 'approve') {
+            $user->kyc_approved_at = now();
+            $user->kyc_status = 'approved';
+        } elseif ($request->input('action') === 'reject') {
+            $user->kyc_approved_at = null;
+            $user->kyc_status = 'rejected';
+        }
         $user->save();
 
         return redirect()->back()->with('toast', [
-            'title' => trans('public.toast_kyc_upload_request'),
+            'title' => $request->input('action') === 'approve' ? trans('public.toast_kyc_approved') : trans('public.toast_kyc_rejected'),
             'type' => 'success'
         ]);
+
     }
 
     public function getFinancialInfoData(Request $request)

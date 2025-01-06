@@ -4,6 +4,7 @@ import Dialog from "primevue/dialog";
 import Button from "@/Components/Button.vue";
 import dayjs from "dayjs";
 import {useForm} from "@inertiajs/vue3";
+import Carousel from 'primevue/carousel';
 
 const props = defineProps({
     userDetail: Object
@@ -12,29 +13,33 @@ const props = defineProps({
 const kycVerification = ref([]);
 const visible = ref(false);
 
-watch(() => props.userDetail, () => {
-    kycVerification.value = props.userDetail.kyc_verification;
-})
+// Watch the props.userDetail and transform the kyc_verification object into an array
+watch(() => props.userDetail, (newUserDetail) => {
+    // Check if kyc_verification exists and is an object before using Object.values()
+    if (newUserDetail && newUserDetail.kyc_verification) {
+        kycVerification.value = Object.values(newUserDetail.kyc_verification);
+    } else {
+        kycVerification.value = []; // Set it to an empty array if kyc_verification doesn't exist
+    }
+}, { immediate: true });
 
 const openDialog = () => {
     visible.value = true
 }
 
 const form = useForm({
-    id: '',
+    id: props?.userDetail?.id,
+    action: '',
 })
 
-const submitForm = () => {
-    if (props.userDetail) {
-        form.id = props.userDetail.id
-
-        form.post(route('member.updateKYCStatus'), {
-            onSuccess: () => {
-                visible.value = false;
-            }
-        })
-    }
-}
+const handleApproval = (action) => {
+    form.action = action;
+    form.post(route('member.updateKYCStatus'), {
+        onSuccess: () => {
+            visible.value = false;
+        },
+    });
+};
 </script>
 
 <template>
@@ -48,12 +53,12 @@ const submitForm = () => {
             @click="openDialog"
         >
             <img
-                :src="kycVerification ? kycVerification.original_url : '/img/member/kyc_example_preview.svg'"
+                :src="kycVerification.length > 0 ? kycVerification[0].original_url : '/img/member/kyc_example_preview.svg'"
                 class="w-12 h-9"
                 alt="kyc_verification"
             />
             <div class="truncate text-gray-950 font-medium w-full">
-                {{ kycVerification ? kycVerification.file_name : $t('public.image') + '.jpg' }}
+                {{ kycVerification.length > 0 ? kycVerification[0].file_name : $t('public.image') + '.jpg' }}
             </div>
         </div>
 
@@ -71,10 +76,10 @@ const submitForm = () => {
                 <div class="h-2.5 bg-gray-300 rounded-full w-48"></div>
             </div>
         </div>
-        <div v-if="userDetail && kycVerification" class="flex items-center gap-3">
-            <span class="text-gray-500 text-xs">{{ $t('public.uploaded') }} {{ dayjs(kycVerification.created_at).format('YYYY/MM/DD HH:mm:ss')  }}</span>
+        <div v-if="userDetail && kycVerification[0]" class="flex items-center gap-3">
+            <span class="text-gray-500 text-xs">{{ $t('public.uploaded') }} {{ dayjs(kycVerification[0].created_at).format('YYYY/MM/DD HH:mm:ss')  }}</span>
             <span class="bg-gray-500 w-1 h-1 rounded-full grow-0 shrink-0"></span>
-            <span class="text-gray-500 text-xs">{{ (kycVerification.size / 1000000 ).toFixed(2) }}MB</span>
+            <span class="text-gray-500 text-xs">{{ (kycVerification[0].size / 1000000 ).toFixed(2) }}MB</span>
         </div>
     </div>
 
@@ -84,26 +89,51 @@ const submitForm = () => {
         :header="$t('public.kyc_verification')"
         class="dialog-xs md:dialog-lg"
     >
-        <div v-if="kycVerification" class="flex justify-center">
-            <img :src="kycVerification.original_url" alt="kyc_verification">
+        <div v-if="kycVerification.length > 0" class="flex justify-center">
+            <Carousel
+                :value="kycVerification"
+                :numVisible="1"
+                :numScroll="1"
+                class="w-full h-auto"
+                circular
+            >
+                <template #item="slotProps">
+                    <div class="flex justify-center">
+                        <img 
+                            :src="slotProps.data.original_url" 
+                            :alt="slotProps.data.file_name" 
+                            class="w-full h-auto"
+                        />
+                    </div>
+                </template>
+            </Carousel>
         </div>
         <div v-else>
             <img src="/img/member/kyc_example.svg" alt="kyc_verification">
         </div>
 
-        <div class="h-[1px] bg-gray-200 absolute left-0 w-full"></div>
-        <div class="flex flex-col gap-5 items-start self-stretch pt-7">
-            <div class="flex flex-col items-start self-stretch gap-1">
+        <div class="h-[1px] bg-gray-200 w-full"></div>
+        <div class="flex justify-end items-center gap-5 self-stretch pt-7">
+            <!-- <div class="flex flex-col items-start self-stretch gap-1">
                 <span class="font-bold text-gray-950">{{ $t('public.kyc_verification_title') }}</span>
                 <span class="text-sm text-gray-950">{{ $t('public.kyc_verification_desc') }}</span>
-            </div>
+            </div> -->
             <Button
                 type="button"
-                variant="primary-flat"
-                @click="submitForm"
-                :disabled="userDetail.kyc_approved_at === null"
+                variant="error-flat"
+                class="w-full md:w-[120px]"
+                @click="handleApproval('reject')"
+                :disabled="form.processing || userDetail.kyc_status !== 'pending'"
             >
-                {{ $t('public.ask_to_submit_again') }}
+                {{ $t('public.reject') }}
+            </Button>
+            <Button
+                variant="success-flat"
+                class="w-full md:w-[120px]"
+                @click="handleApproval('approve')"
+                :disabled="form.processing || userDetail.kyc_status !== 'pending'"
+            >
+                {{ $t('public.approve') }}
             </Button>
         </div>
     </Dialog>

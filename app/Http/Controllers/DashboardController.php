@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AssetMaster;
-use App\Models\AssetMasterProfitDistribution;
-use App\Models\ForumPost;
+use App\Models\User;
 use Inertia\Inertia;
+use App\Models\ForumPost;
 use App\Models\AccountType;
+use App\Models\AssetMaster;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Models\TradingAccount;
 // use App\Services\CTraderService;
 use App\Models\TradeRebateSummary;
 use App\Services\DropdownOptionService;
+use App\Models\AssetMasterProfitDistribution;
 
 class DashboardController extends Controller
 {
@@ -35,6 +36,8 @@ class DashboardController extends Controller
             ->where('status', 'processing')
             ->count();
 
+        $pendingKYC = User::where('kyc_status', 'pending')->count();
+
         $pendingPammAllocate = 0;
 
         $activeMasters = AssetMaster::where('status', 'active')->get();
@@ -52,6 +55,7 @@ class DashboardController extends Controller
         return response()->json([
             'pendingWithdrawals' => $pendingWithdrawals,
             'pendingPammAllocate' => $pendingPammAllocate,
+            'pendingKYC' => $pendingKYC,
             'pendingBonusWithdrawal' => $pendingBonusWithdrawal,
         ]);
     }

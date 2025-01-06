@@ -87,7 +87,7 @@ const getStartOfMonth = (dateStr) => {
 };
 
 // Reactive variable for selected date range
-const selectedDate = ref([minDate.value, maxDate.value]);
+const selectedDate = ref([maxDate.value, maxDate.value]);
 
 // Clear date selection
 const clearDate = () => {
@@ -105,7 +105,7 @@ watch(() => props.selectedMonths, (newValue) => {
 
     minDate.value = computedMinDate;
     maxDate.value = today;
-    selectedDate.value = [minDate.value, maxDate.value];
+    selectedDate.value = [maxDate.value, maxDate.value];
 
     if (newValue.length === 0) {
         clearDate();

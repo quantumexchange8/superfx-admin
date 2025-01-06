@@ -21,6 +21,7 @@ import {
 const pendingWithdrawals = ref(0);
 const pendingPammAllocate = ref(0);
 const pendingBonusWithdrawal = ref(0);
+const pendingKYC = ref(0);
 
 const getPendingCounts = async () => {
     try {
@@ -28,6 +29,7 @@ const getPendingCounts = async () => {
         pendingWithdrawals.value = response.data.pendingWithdrawals
         pendingPammAllocate.value = response.data.pendingPammAllocate
         pendingBonusWithdrawal.value = response.data.pendingBonusWithdrawal
+        pendingKYC.value = response.data.pendingKYC
     } catch (error) {
         console.error('Error pending counts:', error);
     }
@@ -77,6 +79,7 @@ watchEffect(() => {
         <SidebarCollapsible
             :title="$t('public.member')"
             :active="route().current('member.*')"
+            :pendingCounts="pendingKYC"
         >
             <template #icon>
                 <IconComponents :size="20" stroke-width="1.25" />
@@ -86,6 +89,7 @@ watchEffect(() => {
                 :title="$t('public.member_listing')"
                 :href="route('member.listing')"
                 :active="route().current('member.listing') || route().current('member.detail')"
+                :pendingCounts="pendingKYC"
             />
 
             <SidebarCollapsibleItem

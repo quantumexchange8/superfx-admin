@@ -19,6 +19,7 @@ import {
     IconSearch,
     IconCircleXFilled,
     IconAdjustments,
+    IconAlertCircleFilled,
     IconDotsVertical,
     IconReportSearch,
     IconPencilMinus,
@@ -332,7 +333,22 @@ const paginator_caption = wTrans('public.paginator_caption');
                                 <span class="hidden md:block">id</span>
                             </template>
                             <template #body="slotProps">
-                                {{ slotProps.data.id_number }}
+                                <div class="text-gray-950 text-sm flex flex-wrap gap-1 items-center truncate">
+                                    {{ slotProps.data.id_number }}
+                                    <IconAlertCircleFilled  
+                                        :size="20" 
+                                        stroke-width="1.25" 
+                                        class="text-error-500 grow-0 shrink-0" 
+                                        v-if="slotProps.data.kyc_status == 'pending'"
+                                    />
+                                    <!-- <IconAlertCircleFilled  
+                                        :size="20" 
+                                        stroke-width="1.25" 
+                                        class="text-error-500 grow-0 shrink-0" 
+                                        v-if="slotProps.data.kyc_status == 'pending'"
+                                        v-tooltip.top="$t('public.trading_account_inactive_warning')"
+                                    /> -->
+                                </div>
                             </template>
                         </Column>
                         <Column
@@ -435,8 +451,21 @@ const paginator_caption = wTrans('public.paginator_caption');
                                                 </template>
                                             </div>
                                             <div class="flex flex-col items-start">
-                                                <div class="font-medium max-w-[120px] xxs:max-w-[140px] min-[390px]:max-w-[180px] xs:max-w-[220px] truncate">
-                                                    {{ slotProps.data.name }}
+                                                <div class="font-medium flex items-center justify-between max-w-[120px] xxs:max-w-[140px] min-[390px]:max-w-[180px] xs:max-w-[220px] truncate">
+                                                    <span class="truncate">{{ slotProps.data.name }}</span>
+                                                    <IconAlertCircleFilled  
+                                                        :size="20" 
+                                                        stroke-width="1.25" 
+                                                        class="text-error-500 flex-shrink-0 ml-2" 
+                                                        v-if="slotProps.data.kyc_status == 'pending'"
+                                                    />
+                                                    <!-- <IconAlertCircleFilled  
+                                                        :size="20" 
+                                                        stroke-width="1.25" 
+                                                        class="text-error-500 flex-shrink-0 ml-2" 
+                                                        v-if="slotProps.data.kyc_status == 'pending'"
+                                                        v-tooltip.top="$t('public.trading_account_inactive_warning')"
+                                                    /> -->
                                                 </div>
                                                 <div class="text-gray-500 text-xs max-w-[120px] xxs:max-w-[140px] min-[390px]:max-w-[180px] xs:max-w-[220px] truncate">
                                                     {{ slotProps.data.email }}

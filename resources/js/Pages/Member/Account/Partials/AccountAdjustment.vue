@@ -198,7 +198,7 @@ const submitForm = () => {
                 :disabled="form.processing"
                 @click.prevent="closeDialog"
             >
-                Cancel
+                {{ $t('public.cancel') }}
             </Button>
             <Button
                 variant="primary-flat"
@@ -206,7 +206,7 @@ const submitForm = () => {
                 :disabled="form.processing || currentAmount === null"
                 @click.prevent="submitForm"
             >
-                Confirm
+                {{ $t('public.confirm') }}
             </Button>
         </div>
     </form>

@@ -15,6 +15,7 @@ const props = defineProps({
     active: {
         type: Boolean,
     },
+    pendingCounts: Number,
 })
 
 const { active } = props
@@ -39,8 +40,8 @@ const leave = (el) => {
 </script>
 
 <template>
-    <div class="relative w-full">
-        <SidebarLink @click="isOpen = !isOpen" :title="title" :active="active">
+    <div class="relative w-full focus:outline-none">
+        <SidebarLink @click="isOpen = !isOpen" :title="title" :active="active" :pendingCounts="pendingCounts">
             <template #icon>
                 <slot name="icon">
                     <EmptyCircleIcon
@@ -55,6 +56,12 @@ const leave = (el) => {
                     v-show="sidebarState.isOpen || sidebarState.isHovered"
                     aria-hidden="true"
                     class="relative block w-5 h-5 ml-auto"
+                    :class="[
+                        {
+                            'text-primary-500': active,
+                            'text-gray-700 focus:bg-gray-100': !active,
+                        },
+                    ]"
                 >
                     <IconChevronDown
                         :class="[

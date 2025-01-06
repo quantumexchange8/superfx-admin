@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3'
 import { sidebarState } from '@/Composables'
 import { EmptyCircleIcon } from '@/Components/Icons/outline'
 import Badge from '@/Components/Badge.vue';
+import { IconAlertTriangleFilled } from '@tabler/icons-vue';
 
 const props = defineProps({
     href: {
@@ -33,16 +34,16 @@ const Tag = !props.external ? Link : 'a'
         v-if="href"
         :href="href"
         :class="[
-            'p-3 flex gap-3 items-center rounded-lg transition-colors w-full',
+            'p-3 flex gap-3 items-center rounded transition-colors w-full focus:outline-none',
             {
-                'text-gray-950 hover:text-primary-500 hover:bg-primary-50':
+                'text-gray-700 hover:bg-gray-100 focus:bg-gray-100':
                     !active,
-                'text-white bg-primary-500 hover:bg-primary-600':
+                'text-primary-600 bg-primary-100':
                     active,
             },
         ]"
     >
-        <div class="max-w-5">
+        <div class="max-w-5 text-primary-500">
             <slot name="icon">
                 <EmptyCircleIcon aria-hidden="true" class="flex-shrink-0 w-5 h-5" />
             </slot>
@@ -59,7 +60,6 @@ const Tag = !props.external ? Link : 'a'
                 v-if="pendingCounts > 0 && (sidebarState.isOpen || sidebarState.isHovered)"
                 class="text-xs text-white"
                 :pill="true"
-                variant="error"
             >
                 {{ pendingCounts }}
             </Badge>
@@ -69,18 +69,20 @@ const Tag = !props.external ? Link : 'a'
         v-else
         type="button"
         :class="[
-            'p-3 flex gap-3 items-center rounded-lg transition-colors w-full',
+            'p-3 flex gap-3 items-center rounded transition-colors w-full focus:outline-none',
             {
-                'text-gray-950 hover:text-primary-500 hover:bg-primary-50':
+                'text-gray-700 hover:bg-gray-100 focus:bg-gray-100':
                     !active,
-                'text-white bg-primary-500 hover:bg-primary-600':
+                'text-primary-600 bg-primary-100':
                     active,
             },
         ]"
     >
-        <slot name="icon">
-            <EmptyCircleIcon aria-hidden="true" class="flex-shrink-0 w-5 h-5" />
-        </slot>
+        <div class="max-w-5 text-primary-500">
+            <slot name="icon">
+                <EmptyCircleIcon aria-hidden="true" class="flex-shrink-0 w-5 h-5" />
+            </slot>
+        </div>
 
         <span
             class="text-sm font-medium"
@@ -88,6 +90,7 @@ const Tag = !props.external ? Link : 'a'
         >
             {{ title }}
         </span>
+        <IconAlertTriangleFilled v-if="pendingCounts > 0" size="16" stroke-width="1.25" color="#FF9800" />
         <slot name="arrow" />
     </button>
 </template>

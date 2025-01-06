@@ -10,7 +10,10 @@ import Loader from "@/Components/Loader.vue";
 import { usePage } from '@inertiajs/vue3';
 import AccountTypeAction from '@/Pages/AccountType/Partials/AccountTypeAction.vue';
 import Dialog from 'primevue/dialog';
-import AccountTypeStatus from '@/Pages/AccountType/Partials/AccountTypeStatus.vue';
+
+const props = defineProps({
+    leverages: Array,
+})
 
 const accountTypes = ref();
 const loading = ref(false);
@@ -119,7 +122,11 @@ const rowClicked = (data) => {
                         <Column field="action" style="width: 15%">
                             <template #body="slotProps">
                                 <div class="py-2 px-3 flex justify-center items-center gap-2 flex-1">
-                                    <AccountTypeAction :accountType="slotProps.data"/>
+                                    <AccountTypeAction 
+                                        :accountType="slotProps.data" 
+                                        :leverages="props.leverages" 
+                                        :loading="loading"
+                                    />
                                 </div>
                             </template>
                         </Column>

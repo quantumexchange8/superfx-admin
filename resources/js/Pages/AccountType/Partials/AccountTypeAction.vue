@@ -11,9 +11,9 @@ import AccountTypeSetting from "@/Pages/AccountType/Partials//AccountTypeSetting
 
 const props = defineProps({
     accountType: Object,
+    leverages: Array,
+    loading: Boolean,
 })
-
-const visible = ref(false)
 
 const checked = ref(props.accountType.status === 'active')
 
@@ -90,7 +90,12 @@ const handleAccountTypeStatus = () => {
             v-model="checked"
             readonly
             @click="handleAccountTypeStatus"
+            :disabled="props.loading"
         />
-        <AccountTypeSetting :accountTypeId="props.accountType.id"/>
+        <AccountTypeSetting 
+            :accountType="props.accountType" 
+            :leverages="props.leverages"
+            :loading="props.loading"
+        />
     </div>
 </template>

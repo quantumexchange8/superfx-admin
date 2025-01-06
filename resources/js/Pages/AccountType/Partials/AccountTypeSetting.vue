@@ -8,10 +8,12 @@ import InputText from 'primevue/inputtext';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import { useForm } from '@inertiajs/vue3';
+import ColorPicker from 'primevue/colorpicker';
 
 const props = defineProps({
-    accountTypeId: Number,
-    buttonText: String,
+    accountType: Object,
+    leverages: Array,
+    loading: Boolean,
 })
 
 const visible = ref(false);
@@ -34,48 +36,33 @@ const trade_delay_duration_dropdown = ref([
     {name: '4 min', value: '240'},
     {name: '5 min', value: '300'},
 ])
-const leverages = ref();
-const account_type = ref();
-const disabling = ref(true);
+const leverages = ref(props.leverages);
 
-const getData = async () => {
-    try {
-        disabling.value = true;
-        const response = await axios.get('/account_type/getLevearges');
-        leverages.value = response.data.leverages;
-        const response_account = await axios.get(`/account_type/findAccountType/${props.accountTypeId}`);
-        account_type.value = response_account.data.account_type;
-    } catch (error) {
-        console.error('Error getting leverages:', error);
-    } finally {
-        disabling.value = false;
-    }
+const openDialog = () => {
+    visible.value = true;
+    form.reset();
+}
+
+const closeDialog = () => {
+    visible.value = false;
 }
 
 const form = useForm({
-    account_type_name: '',
-    category: '',
-    descriptions: { en: '', tw: '' },
-    leverage: '',
-    trade_delay_duration: '',
-    max_account: '',
+    id: props.accountType.id,
+    account_type_name: props.accountType.name,
+    category: props.accountType.category,
+    descriptions: { en: props.accountType.description_en, tw: props.accountType.description_tw },
+    leverage: props.accountType.leverage,
+    trade_delay_duration: props.accountType.trade_open_duration,
+    max_account: props.accountType.maximum_account_number,
+    color: props.accountType.color,
 })
 
 const submitForm = () => {
-    form.account_type_name = account_type.value.name
-    form.category = account_type.value.category
-    form.descriptions = {
-        en: account_type.value.description_en,
-        tw: account_type.value.description_tw
-    }
-    form.leverage = account_type.value.leverage
-    form.trade_delay_duration = account_type.value.trade_open_duration
-    form.max_account = account_type.value.maximum_account_number
-
-    form.post(route('accountType.update', props.accountTypeId), {
+    form.post(route('accountType.update', props.accountType.id), {
         preserveScroll: true,
         onSuccess: () => {
-            visible.value = false;
+            closeDialog();
             emit('detailsVisible', false);
         },
         onError: (e) => {
@@ -84,41 +71,20 @@ const submitForm = () => {
     })
 }
 
-onMounted(() => {
-    getData()
-})
-
-watch(() => props.accountTypeId, () => {
-    getData()
-})
 
 const emit = defineEmits(['detailsVisible']);
-const openSettingDialog = () => {
-    visible.value = true;
-}
 </script>
 
 <template>
     <Button
-        v-if="buttonText"
-        variant="primary-flat"
-        type="button"
-        class="w-full"
-        @click="openSettingDialog()"
-        :disabled="disabling"
-    >
-        {{ buttonText }}
-    </Button>
-    <Button
-        v-else
         variant="gray-text"
         type="button"
         size="sm"
         iconOnly
         pill
         v-tooltip.bottom="'Setting'"
-        @click="visible = true"
-        :disabled="disabling"
+        @click="openDialog"
+        :disabled="props.loading"
     >
         <IconAdjustmentsHorizontal size="16" stroke-width="1.25" color="#667085" />
     </Button>
@@ -142,7 +108,7 @@ const openSettingDialog = () => {
                                     {{ $t('public.account_type_name') }}
                                 </InputLabel>
                                 <InputText
-                                    v-model="account_type.name"
+                                    v-model="form.account_type_name"
                                     id="account_type_name"
                                     type="text"
                                     class="w-full"
@@ -153,41 +119,54 @@ const openSettingDialog = () => {
                             <div class="flex flex-col items-start gap-1 flex-1">
                                 <InputLabel for="category" :value="$t('public.category')" :invalid="!!form.errors.category" />
                                 <Dropdown
-                                    v-model="account_type.category"
+                                    v-model="form.category"
                                     id="category"
                                     :options="categories"
                                     class="w-full"
-                                    :disabled="disabling"
-                                />
+                                    :disabled="props.loading"
+                                >
+                                    <template #value="slotProps">
+                                        <div v-if="slotProps.value" class="flex items-center gap-3">
+                                            <div class="flex items-center gap-2">
+                                                <div>{{ $t('public.' + slotProps.value) }}</div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template #option="slotProps">
+                                        <div class="flex items-center gap-2">
+                                            <div>{{ $t('public.' + slotProps.option) }}</div>
+                                        </div>
+                                    </template>
+                                </Dropdown>
                                 <InputError :message="form.errors.category" />
                             </div>
                             <div class="flex flex-col items-start gap-1 flex-1">
-                                <InputLabel for="description" :invalid="!!form.errors.description">
+                                <InputLabel for="descriptions_en" :invalid="!!form.errors['descriptions.en']">
                                     {{ $t('public.description_en') }}
                                 </InputLabel>
                                 <InputText
-                                    v-model="account_type.description_en"
-                                    id="description"
+                                    v-model="form.descriptions.en"
+                                    id="descriptions_en"
                                     type="text"
                                     class="w-full"
-                                    placeholder="Tell more about this..."
-                                    :disabled="disabling"
+                                    :placeholder="$t('public.descriptions_en_placeholder')"
+                                    :disabled="props.loading"
                                 />
-                                <InputError :message="form.errors.descriptions" />
+                                <InputError :message="form.errors['descriptions.en']" />
                             </div>
                             <div class="flex flex-col items-start gap-1 flex-1">
-                                <InputLabel for="description" :invalid="!!form.errors.description">
-                                    {{ $t('public.description_zh') }}
+                                <InputLabel for="descriptions_tw" :invalid="!!form.errors['descriptions.tw']">
+                                    {{ $t('public.description_tw') }}
                                 </InputLabel>
                                 <InputText
-                                    v-model="account_type.description_tw"
-                                    id="description"
+                                    v-model="form.descriptions.tw"
+                                    id="descriptions_tw"
                                     type="text"
                                     class="w-full"
-                                    placeholder="Tell more about this..."
-                                    :disabled="disabling"
+                                    :placeholder="$t('public.descriptions_cn_placeholder')"
+                                    :disabled="props.loading"
                                 />
-                                <InputError :message="form.errors.descriptions" />
+                                <InputError :message="form.errors['descriptions.tw']" />
                             </div>
                         </div>
 
@@ -204,26 +183,26 @@ const openSettingDialog = () => {
                         <div class="w-full flex flex-col items-start gap-1 flex-1">
                             <InputLabel for="leverage" :value="$t('public.leverage')" :invalid="!!form.errors.leverage" />
                             <Dropdown
-                                v-model="account_type.leverage"
+                                v-model="form.leverage"
                                 id="category"
                                 :options="leverages"
                                 optionLabel="name"
                                 optionValue="value"
                                 class="w-full"
-                                :disabled="disabling"
+                                :disabled="props.loading"
                             />
                             <InputError :message="form.errors.leverage" />
                         </div>
                         <div class="w-full flex flex-col items-start gap-1 flex-1">
                             <InputLabel for="trade_delay_duration" :value="$t('public.trade_delay_duration')" :invalid="!!form.errors.trade_delay_duration" />
                             <Dropdown
-                                v-model="account_type.trade_open_duration"
+                                v-model="form.trade_delay_duration"
                                 id="trade_delay_duration"
                                 :options="trade_delay_duration_dropdown"
                                 optionLabel="name"
                                 optionValue="value"
                                 class="w-full"
-                                :disabled="disabling"
+                                :disabled="props.loading"
                             />
                             <InputError :message="form.errors.trade_delay_duration" />
                         </div>
@@ -237,14 +216,19 @@ const openSettingDialog = () => {
                         <div class="flex flex-col items-start gap-1 flex-1">
                             <InputLabel for="max_account" :value="$t('public.maximum_account_creation')" :invalid="!!form.errors.max_account" />
                             <InputText
-                                v-model="account_type.maximum_account_number"
+                                v-model="form.max_account"
                                 id="max_account"
                                 type="number"
                                 class="w-full"
                                 placeholder="0"
-                                :disabled="disabling"
+                                :disabled="props.loading"
                             />
                             <InputError :message="form.errors.max_account" />
+                        </div>
+                        <div class="flex flex-col items-start gap-1 flex-1">
+                            <InputLabel for="color" :value="$t('public.color')" :invalid="!!form.errors.color"/>
+                            <ColorPicker v-model="form.color" id="Color"/>
+                            <InputError :message="form.errors.color" />
                         </div>
                     </div>
                 </div>
@@ -252,7 +236,7 @@ const openSettingDialog = () => {
             <div class="pt-5 md:pt-7 flex flex-col items-end self-stretch">
                 <Button
                     variant="primary-flat"
-                    :disabled="form.processing || disabling"
+                    :disabled="form.processing || props.loading"
                 >
                     {{ $t('public.save') }}
                 </Button>

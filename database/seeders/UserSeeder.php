@@ -65,23 +65,23 @@ class UserSeeder extends Seeder
             'balance' => 0
         ]);
 
-        // Create the TestMember user
-        $testMember = User::create([
-            'name' => 'TestMember',
-            'email' => 'testmember@testmember.com',
-            'email_verified_at' => now(),
-            'password' => Hash::make('testtest'),
-            'remember_token' => Str::random(10),
-            'dial_code' => '60',
-            'phone' => '121215155',
-            'phone_number' => '60121215155',
-            'country_id' => 132,
-            'state_id' => 1949,
-            'city_id' => 76497,
-            'referral_code' => 'MOSx555555',
-            'id_number' => 'MB00003',
-        ]);
-        // Assign member role
-        $testMember->assignRole('member');
+        // // Create the TestMember user
+        // $testMember = User::create([
+        //     'name' => 'TestMember',
+        //     'email' => 'testmember@testmember.com',
+        //     'email_verified_at' => now(),
+        //     'password' => Hash::make('testtest'),
+        //     'remember_token' => Str::random(10),
+        //     'dial_code' => '60',
+        //     'phone' => '121215155',
+        //     'phone_number' => '60121215155',
+        //     'country_id' => 132,
+        //     'state_id' => 1949,
+        //     'city_id' => 76497,
+        //     'referral_code' => 'MOSx555555',
+        //     'id_number' => 'MB00003',
+        // ]);
+        // // Assign member role
+        // $testMember->assignRole('member');
     }
 }

@@ -221,7 +221,7 @@ const closeDialog = () => {
                 <!-- lazy loading -->
                 <div
                     v-else
-                    v-for="index in 5"
+                    v-for="index in 6"
                     class="flex items-center w-full self-stretch py-4 text-gray-950"
                 >
                     <div class="w-full">

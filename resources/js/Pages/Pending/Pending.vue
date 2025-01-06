@@ -4,17 +4,12 @@ import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import {h, ref, watch} from "vue";
 import PendingWithdrawal from "@/Pages/Pending/Withdrawal/PendingWithdrawal.vue";
-import PendingRevokePamm from "@/Pages/Pending/RevokePamm/PendingRevokePamm.vue";
 
 const tabs = ref([
     {
         title: 'withdrawal_pending',
         component: h(PendingWithdrawal)
     },
-    {
-        title: 'revoke_pamm',
-        component: h(PendingRevokePamm),
-    }
 ]);
 
 const selectedType = ref('withdrawal_pending');

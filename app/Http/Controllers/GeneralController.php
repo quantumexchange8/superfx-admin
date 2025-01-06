@@ -116,7 +116,7 @@ class GeneralController extends Controller
         $leverages = SettingLeverage::where('status', 'active')->get()
             ->map(function ($leverage) {
                 return [
-                    'name' => $leverage->leverage,
+                    'name' => $leverage->display,
                     'value' => $leverage->value,
                 ];
             });
