@@ -215,7 +215,7 @@ watchEffect(() => {
         </template>
         <template v-if="accounts?.length > 0">
             <Column
-                field="last_login"
+                field="last_access"
                 sortable
                 class="hidden md:table-cell"
             >
@@ -227,7 +227,7 @@ watchEffect(() => {
                 </template>
             </Column>
             <Column
-                field="user_name"
+                field="name"
                 sortable
                 :header="$t('public.name')"
                 class="hidden md:table-cell"

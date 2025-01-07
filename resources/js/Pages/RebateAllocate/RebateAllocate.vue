@@ -1,9 +1,16 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import {ref, watchEffect} from "vue";
-import EditRebateDetails from "@/Pages/RebateAllocate/Partials/EditRebateDetails.vue";
+import {ref, watchEffect, computed} from "vue";
+import {
+    IBIcon,
+    GroupIBIcon,
+    MinIcon,
+    MaxIcon,
+} from '@/Components/Icons/outline.jsx';
 import {transactionFormat} from "@/Composables/index.js";
 import {usePage} from "@inertiajs/vue3";
+import { wTrans, trans } from "laravel-vue-i18n";
+import EditRebateDetails from "@/Pages/RebateAllocate/Partials/EditRebateDetails.vue";
 import RebateStructureTable from "@/Pages/RebateAllocate/Partials/RebateStructureTable.vue";
 
 const props = defineProps({
@@ -16,6 +23,35 @@ const rebateDetails = ref();
 const loading = ref(false);
 const {formatAmount} = transactionFormat()
 
+const totalDirectIB = ref(0.00);
+const totalGroupIB = ref(0.00);
+const minimumLevel = ref(0.00);
+const maximumLevel = ref(0.00);
+
+// data overview
+const dataOverviews = computed(() => [
+    {
+        icon: IBIcon,
+        total: totalDirectIB.value,
+        label: trans('public.direct_ib'),
+    },
+    {
+        icon: GroupIBIcon,
+        total: totalGroupIB.value,
+        label: trans('public.group_ib'),
+    },
+    {
+        icon: MinIcon,
+        total: minimumLevel.value,
+        label: trans('public.minimum_level'),
+    },
+    {
+        icon: MaxIcon,
+        total: maximumLevel.value,
+        label: trans('public.maximum_level'),
+    },
+]);
+
 const getResults = async () => {
     loading.value = true;
 
@@ -23,6 +59,13 @@ const getResults = async () => {
         const response = await axios.get(`/rebate_allocate/getCompanyProfileData?account_type_id=${accountType.value}`);
         companyProfile.value = response.data.companyProfile;
         rebateDetails.value = response.data.rebateDetails;
+
+        // Directly updating values without a separate function
+        minimumLevel.value = companyProfile.value.user.minimum_level || 0;
+        maximumLevel.value = companyProfile.value.user.maximum_level || 0;
+        totalDirectIB.value = companyProfile.value.user.direct_ib || 0;
+        totalGroupIB.value = companyProfile.value.user.group_ib || 0;
+
     } catch (error) {
         console.error('Error fetch company profile:', error);
     } finally {
@@ -48,34 +91,17 @@ watchEffect(() => {
     <AuthenticatedLayout :title="$t('public.rebate_allocate')">
         <div class="flex flex-col gap-8 items-center">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
-                <div class="flex flex-col items-center justify-center gap-8 py-6 px-8 self-stretch bg-white shadow-toast rounded-2xl w-full">
-                    <div class="flex flex-col items-center justify-center gap-2 pb-6 border-b border-gray-200 w-full">
-                        <span v-if="companyProfile" class="text-xl font-semibold text-gray-950">{{ companyProfile.user.name }}</span>
-                        <div v-else class="h-4 bg-gray-200 rounded-full w-48 my-2"></div>
-                        <span v-if="companyProfile" class="text-gray-700">{{ companyProfile.user.id_number }}</span>
-                        <div v-else class="h-2 bg-gray-200 rounded-full w-20 my-2"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-5 w-full">
-                        <div class="flex flex-col items-start justify-center gap-2">
-                            <span class="text-xs text-gray-500">{{ $t('public.direct_ib') }}</span>
-                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.direct_ib }}</span>
-                            <div v-else class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
-                        </div>
-                        <div class="flex flex-col items-start justify-center gap-2">
-                            <span class="text-xs text-gray-500">{{ $t('public.group_ib') }}</span>
-                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.group_ib }}</span>
-                            <div v-else class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
-                        </div>
-                        <div class="flex flex-col items-start justify-center gap-2">
-                            <span class="text-xs text-gray-500">{{ $t('public.minimum_level') }}</span>
-                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.minimum_level }}</span>
-                            <div v-else class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
-                        </div>
-                        <div class="flex flex-col items-start justify-center gap-2">
-                            <span class="text-xs text-gray-500">{{ $t('public.maximum_level') }}</span>
-                            <span v-if="companyProfile" class="text-sm font-medium text-gray-950">{{ companyProfile.user.maximum_level }}</span>
-                            <div v-else class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
-                        </div>
+
+                <!-- data overview -->
+                <div class="w-full grid grid-cols-2 gap-3 md:gap-5 self-stretch overflow-x-auto">
+                    <div 
+                        v-for="(item, index) in dataOverviews"
+                        :key="index"
+                        class="flex flex-col justify-center items-center py-5 px-3 md:p-0 gap-3 rounded-lg bg-white shadow-card"
+                    >
+                        <component :is="item.icon" class="w-8 h-8 grow-0 shrink-0 text-primary-600" />
+                        <span class="text-gray-500 text-sm">{{ item.label }}</span>
+                        <span class="self-stretch text-gray-950 text-center text-lg font-semibold">{{ item.total }}</span>
                     </div>
                 </div>
 

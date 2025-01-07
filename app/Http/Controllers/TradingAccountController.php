@@ -151,7 +151,7 @@ class TradingAccountController extends Controller
             }
 
             // Handle sorting
-            $sortField = $request->input('sortField', 'last_access'); // Default to 'created_at'
+            $sortField = $request->input('sortField', 'meta_login'); // Default to 'meta_login'
             $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
             $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
     

@@ -222,7 +222,7 @@ watchEffect(() => {
                 </template>
             </Column>
             <Column
-                field="user_name"
+                field="name"
                 sortable
                 :header="$t('public.name')"
                 class="hidden md:table-cell"
