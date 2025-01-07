@@ -33,7 +33,7 @@ const requireConfirmation = (action_type) => {
             acceptButton: trans('public.confirm'),
             action: () => {
                 router.visit(route('accountType.updateStatus', props.accountType.id), {
-                    method: 'post',
+                    method: 'patch',
                     data: {
                         id: props.accountType.id,
                     },
@@ -50,7 +50,7 @@ const requireConfirmation = (action_type) => {
             acceptButton: trans('public.deactivate'),
             action: () => {
                 router.visit(route('accountType.updateStatus', props.accountType.id), {
-                    method: 'post',
+                    method: 'patch',
                     data: {
                         id: props.accountType.id,
                     },

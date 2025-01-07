@@ -586,4 +586,5 @@ return [
     "toast_change_account_type_warning" => "此账户的类别无法更改!",
     "toast_change_account_type_success" => "账户类别已更改!",
     "toast_change_account_type_failed" => "账户类别更改失败！请再试一次。",
+    "view" => "查看",
 ];

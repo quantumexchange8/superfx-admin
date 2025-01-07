@@ -48,7 +48,11 @@ const handleApproval = (action) => {
         <div class="flex h-9 items-center gap-7 self-stretch">
             <div class="flex flex-grow text-gray-950 text-sm font-bold">{{ $t('public.kyc_verification') }}</div>
         </div>
-        <div
+        <Button v-if="userDetail" variant="primary-flat" @click="openDialog" class="w-full md:w-auto">
+            {{ $t('public.view') }}
+        </Button>
+
+        <!-- <div
             v-if="userDetail"
             class="p-3 flex gap-5 items-center self-stretch select-none cursor-pointer rounded-xl bg-gray-50 hover:bg-gray-100"
             @click="openDialog"
@@ -61,7 +65,7 @@ const handleApproval = (action) => {
             <div class="truncate text-gray-950 font-medium w-full">
                 {{ kycVerification.length > 0 ? kycVerification[0].file_name : $t('public.image') + '.jpg' }}
             </div>
-        </div>
+        </div> -->
 
         <!-- loading state -->
         <div
@@ -99,11 +103,11 @@ const handleApproval = (action) => {
                 circular
             >
                 <template #item="slotProps">
-                    <div class="flex justify-center">
+                    <div class="flex justify-center items-center">
                         <img 
                             :src="slotProps?.data?.original_url" 
                             :alt="slotProps?.data?.file_name" 
-                            class="w-full h-auto"
+                            class="w-full h-[300px]"
                         />
                     </div>
                 </template>

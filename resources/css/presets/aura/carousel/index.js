@@ -104,7 +104,7 @@ export default {
     item: ({ props }) => ({
         class: [
             // Flexbox
-            'flex shrink-0 grow-0 ',
+            'flex shrink-0 grow-0 justify-center items-center',
 
             // Size
             {
@@ -117,7 +117,7 @@ export default {
     itemcloned: ({ props }) => ({
         class: [
             // Flexbox
-            'flex shrink-0 grow-0',
+            'flex shrink-0 grow-0 justify-center items-center',
             'unvisible',
 
             // Size

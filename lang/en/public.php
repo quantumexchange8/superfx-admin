@@ -586,4 +586,5 @@ return [
     "toast_change_account_type_warning" => "The account type for this account cannot be changed!",
     "toast_change_account_type_success" => "Account Type updated successfully!",
     "toast_change_account_type_failed" => "Account Type update failed! Please try again.",
+    "view" => "View",
 ];

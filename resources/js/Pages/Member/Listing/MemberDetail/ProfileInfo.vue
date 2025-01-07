@@ -2,6 +2,7 @@
 import Button from "@/Components/Button.vue";
 import StatusBadge from "@/Components/StatusBadge.vue";
 import { Edit01Icon } from "@/Components/Icons/outline.jsx";
+import { IconCircleCheckFilled } from "@tabler/icons-vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
 import InputSwitch from "primevue/inputswitch";
 import { ref, watch } from "vue";
@@ -184,8 +185,8 @@ const handleMemberStatus = () => {
                     <div class="truncate text-gray-950 md:text-lg font-semibold">
                         {{ userDetail.name }}
                     </div>
+                    <IconCircleCheckFilled v-if="userDetail.kyc_status == 'approved'" size="20" stroke-width="1.25" class="text-success-700 grow-0 shrink-0" />
                     <StatusBadge :variant="userDetail.role" :value="$t('public.' + userDetail.role)"/>
-                    <StatusBadge :variant="userDetail.status" :value="$t('public.' + userDetail.status)"/>
                 </div>
                 <div class="text-gray-700 text-sm md:text-base">{{ userDetail.id_number }}</div>
             </div>

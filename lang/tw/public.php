@@ -586,4 +586,5 @@ return [
     "toast_change_account_type_warning" => "此賬戶的類別無法更改!",
     "toast_change_account_type_success" => "賬戶類別已更改!",
     "toast_change_account_type_failed" => "賬戶類別更改失敗！請再試一次。",
+    "view" => "查看",
 ];

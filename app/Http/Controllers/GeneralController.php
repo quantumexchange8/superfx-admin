@@ -120,7 +120,6 @@ class GeneralController extends Controller
                     'value' => $leverage->value,
                 ];
             });
-        $leverages->prepend(['name' => 'Free', 'value' => 0]);
 
         if ($returnAsArray) {
             return $leverages;
