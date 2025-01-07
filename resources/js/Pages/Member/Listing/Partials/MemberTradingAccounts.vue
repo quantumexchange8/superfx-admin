@@ -94,10 +94,10 @@ watchEffect(() => {
                     <span class="text-gray-500 text-xs w-16">{{ $t('public.balance') }}:</span>
                     <span class="text-gray-950 text-xs font-medium">$ {{ tradingAccount.balance ? formatAmount(tradingAccount.balance) : formatAmount(0) }}</span>
                 </div>
-                <!-- <div class="w-full flex items-center gap-1 flex-grow">
+                <div class="w-full flex items-center gap-1 flex-grow">
                     <span class="text-gray-500 text-xs w-16">{{ $t('public.equity') }}:</span>
                     <span class="text-gray-950 text-xs font-medium">$ {{ tradingAccount.equity ? formatAmount(tradingAccount.equity) : formatAmount(0) }}</span>
-                </div> -->
+                </div>
                 <div class="w-full flex items-center gap-1 flex-grow">
                     <span class="text-gray-500 text-xs w-16">{{ tradingAccount.account_type === 'premium_account' ? $t('public.pamm') : $t('public.credit') }}:</span>
                     <div class="text-gray-950 text-xs font-medium">
@@ -109,7 +109,7 @@ watchEffect(() => {
                     <span class="text-gray-500 text-xs w-16">{{ tradingAccount.account_type === 'premium_account' ? $t('public.mature_in') : $t('public.leverage') }}:</span>
                     <div class="text-gray-950 text-xs font-medium">
                         <span v-if="tradingAccount.account_type === 'premium_account'">{{ tradingAccount.asset_master_name ? tradingAccount.remaining_days + ' ' + $t('public.days') : '-' }}</span>
-                        <span v-else>{{ `1:${tradingAccount.leverage}` }}</span>
+                        <span v-else>{{ tradingAccount.leverage === 0 ? $t('public.free') : `1:${tradingAccount.leverage}` }}</span>
                     </div>
                 </div>
             </div>

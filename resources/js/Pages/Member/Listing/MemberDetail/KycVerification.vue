@@ -28,11 +28,12 @@ const openDialog = () => {
 }
 
 const form = useForm({
-    id: props?.userDetail?.id,
+    id: null,
     action: '',
 })
 
 const handleApproval = (action) => {
+    form.id = props?.userDetail?.id
     form.action = action;
     form.post(route('member.updateKYCStatus'), {
         onSuccess: () => {
@@ -100,8 +101,8 @@ const handleApproval = (action) => {
                 <template #item="slotProps">
                     <div class="flex justify-center">
                         <img 
-                            :src="slotProps.data.original_url" 
-                            :alt="slotProps.data.file_name" 
+                            :src="slotProps?.data?.original_url" 
+                            :alt="slotProps?.data?.file_name" 
                             class="w-full h-auto"
                         />
                     </div>

@@ -24,7 +24,7 @@ class TradingUser extends Model
     }
 
     // Relations
-    public function user(): BelongsTo
+    public function users(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
@@ -33,4 +33,5 @@ class TradingUser extends Model
     {
         return $this->belongsTo(TradingAccount::class, 'meta_login', 'meta_login');
     }
+
 }

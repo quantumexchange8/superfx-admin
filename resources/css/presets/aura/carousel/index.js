@@ -44,8 +44,10 @@ export default {
             'text-surface-600',
 
             // States
-            'hover:bg-surface-50 dark:hover:bg-surface-800',
-            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400',
+            'hover:bg-surface-50',
+            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500',
+            // 'hover:bg-surface-50 dark:hover:bg-surface-800',
+            // 'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400',
 
             // Transitions
             'transition duration-200 ease-in-out'
@@ -72,8 +74,10 @@ export default {
             'text-surface-600',
 
             // States
-            'hover:bg-surface-50 dark:hover:bg-surface-800',
-            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400',
+            'hover:bg-surface-50',
+            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500',
+            // 'hover:bg-surface-50 dark:hover:bg-surface-800',
+            // 'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400',
 
             // Transitions
             'transition duration-200 ease-in-out'
@@ -100,11 +104,11 @@ export default {
     item: ({ props }) => ({
         class: [
             // Flexbox
-            'flex shrink-0 grow ',
+            'flex shrink-0 grow-0 ',
 
             // Size
             {
-                'w-full sm:w-[50%] md:w-[33.333333333333336%]': props.orientation !== 'vertical',
+                'w-full': props.orientation !== 'vertical',
 
                 'w-full h-full': props.orientation == 'vertical'
             }
@@ -113,12 +117,12 @@ export default {
     itemcloned: ({ props }) => ({
         class: [
             // Flexbox
-            'flex shrink-0 grow',
+            'flex shrink-0 grow-0',
             'unvisible',
 
             // Size
             {
-                'w-full sm:w-[50%] md:w-[33.333333333333336%]': props.orientation !== 'vertical',
+                'w-full': props.orientation !== 'vertical',
 
                 'w-full h-full': props.orientation == 'vertical'
             }
@@ -145,11 +149,13 @@ export default {
             'transition duration-200',
 
             // Focus Styles
-            'focus:outline-none focus:outline-offset-0 focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400',
+            'focus:outline-none focus:outline-offset-0 focus:ring-1 focus:ring-primary-500',
+            // 'focus:outline-none focus:outline-offset-0 focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400',
 
             // Color & Background
             {
-                'bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600': !context.highlighted,
+                'bg-surface-200 hover:bg-surface-300': !context.highlighted,
+                // 'bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600': !context.highlighted,
                 'bg-primary hover:bg-primary-hover': context.highlighted
             }
         ]

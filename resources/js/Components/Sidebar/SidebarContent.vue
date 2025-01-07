@@ -147,7 +147,7 @@ watchEffect(() => {
         </SidebarLink>
 
         <!-- Billboard -->
-        <SidebarLink
+        <!-- <SidebarLink
             :title="$t('public.billboard')"
             :href="route('billboard')"
             :active="route().current('billboard')"
@@ -156,7 +156,7 @@ watchEffect(() => {
             <template #icon>
                 <IconAward :size="20" stroke-width="1.25" />
             </template>
-        </SidebarLink>
+        </SidebarLink> -->
 
         <!-- Transaction -->
         <SidebarLink

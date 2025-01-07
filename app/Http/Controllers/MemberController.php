@@ -97,6 +97,10 @@ class MemberController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        if ($request->input('kyc_status')) {
+            $query->where('kyc_status', $request->input('kyc_status'));
+        }
+
         // Handle sorting
         $sortField = $request->input('sortField', 'created_at'); // Default to 'created_at'
         $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
@@ -666,22 +670,22 @@ class MemberController extends Controller
 
     public function updateKYCStatus(Request $request)
     {
+        $action = $request->input('action');
         $user = User::find($request->id);
 
-        if ($request->input('action') === 'approve') {
+        if ($action == 'approve') {
             $user->kyc_approved_at = now();
             $user->kyc_status = 'approved';
-        } elseif ($request->input('action') === 'reject') {
+        } elseif ($action == 'reject') {
             $user->kyc_approved_at = null;
             $user->kyc_status = 'rejected';
         }
         $user->save();
 
         return redirect()->back()->with('toast', [
-            'title' => $request->input('action') === 'approve' ? trans('public.toast_kyc_approved') : trans('public.toast_kyc_rejected'),
+            'title' => $action == 'approve' ? trans('public.toast_kyc_approved') : trans('public.toast_kyc_rejected'),
             'type' => 'success'
         ]);
-
     }
 
     public function getFinancialInfoData(Request $request)
@@ -803,6 +807,7 @@ class MemberController extends Controller
                     'id' => $trading_account->id,
                     'meta_login' => $trading_account->meta_login,
                     'account_type' => $trading_account->accountType->slug,
+                    'account_group' => $trading_account->accountType->account_group,
                     'balance' => $trading_account->balance,
                     'credit' => $trading_account->credit,
                     'equity' => $trading_account->equity,

@@ -1,10 +1,12 @@
 <script setup>
 import Button from "@/Components/Button.vue";
-import {IconDots, IconTrash, IconDatabaseEdit, IconSettingsDollar} from "@tabler/icons-vue";
+import {IconDots, IconTrash, IconDatabaseEdit, IconSettingsDollar, IconScale, IconContract} from "@tabler/icons-vue";
 import TieredMenu from "primevue/tieredmenu";
 import {h, onMounted, ref} from "vue";
 import Dialog from "primevue/dialog";
 import AccountAdjustment from "@/Pages/Member/Account/Partials/AccountAdjustment.vue";
+import ChangeLeverage from "@/Pages/Member/Account/Partials/ChangeLeverage.vue";
+import ChangeAccountGroup from "@/Pages/Member/Account/Partials/ChangeAccountGroup.vue";
 import {useConfirm} from "primevue/useconfirm";
 import {trans} from "laravel-vue-i18n";
 import {router} from "@inertiajs/vue3";
@@ -35,6 +37,22 @@ const items = ref([
         command: () => {
             visible.value = true;
             dialogType.value = 'account_credit';
+        },
+    },
+    {
+        label: 'change_leverage',
+        icon: h(IconScale),
+        command: () => {
+            visible.value = true;
+            dialogType.value = 'change_leverage';
+        },
+    },
+    {
+        label: 'change_account_type',
+        icon: h(IconContract),
+        command: () => {
+            visible.value = true;
+            dialogType.value = 'change_account_type';
         },
     },
     {
@@ -117,7 +135,7 @@ const requireConfirmation = (action_type) => {
     <Dialog
         v-model:visible="visible"
         modal
-        :header="$t(`public.${dialogType + '_adjustment'}`)"
+        :header="dialogType === 'account_balance' || dialogType === 'account_credit' ? $t(`public.${dialogType + '_adjustment'}`) : $t(`public.${dialogType}`)"
         class="dialog-xs sm:dialog-sm"
     >
         <template v-if="dialogType === 'account_balance'|| dialogType === 'account_credit' ">
@@ -125,6 +143,18 @@ const requireConfirmation = (action_type) => {
                 :account="account"
                 :dialogType="dialogType"
                 @update:visible="visible = $event"
+            />
+        </template>
+        <template v-if="dialogType === 'change_leverage'">
+            <ChangeLeverage
+                :account="account"
+                @update:visible="visible = false"
+            />
+        </template>
+        <template v-if="dialogType === 'change_account_type'">
+            <ChangeAccountGroup
+                :account="account"
+                @update:visible="visible = false"
             />
         </template>
     </Dialog>

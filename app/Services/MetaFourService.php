@@ -140,6 +140,63 @@ class MetaFourService {
         return $accountResponse->json();
     }
     
+    public function updateLeverage($meta_login, $leverage)
+    {
+        $payload = [
+            'meta_login' => $meta_login,
+            'leverage' => $leverage,
+        ];
+
+        $jsonPayload = json_encode($payload);
+    
+        $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
+
+        if ($tradingUser && $tradingUser->category === 'live') {
+            $url = $this->baseURL;
+        } else {
+            $url = $this->demoURL;
+        }
+    
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->patch($url . "/updateleverage");
+    
+        // Return the JSON response from the API
+        return $accountResponse->json();
+    }
+
+
+    public function updateAccountGroup($meta_login, $group)
+    {
+        $payload = [
+            'meta_login' => $meta_login,
+            'group' => $group,
+        ];
+
+        $jsonPayload = json_encode($payload);
+    
+        $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
+
+        if ($tradingUser && $tradingUser->category === 'live') {
+            $url = $this->baseURL;
+        } else {
+            $url = $this->demoURL;
+        }
+    
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->patch($url . "/updategroup");
+    
+        // Return the JSON response from the API
+        return $accountResponse->json();
+    }
+
     // public function createDeal($meta_login, $amount, $comment, $type)
     // {
     //     $dealResponse = Http::acceptJson()->post($this->baseURL . "/conduct_deal", [

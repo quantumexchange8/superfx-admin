@@ -121,9 +121,7 @@ class TradingAccountController extends Controller
 
         if ($type === 'all') {
             $query = TradingUser::query()
-            ->leftJoin('users', 'trading_users.user_id', '=', 'users.id') // Join users table
-            ->leftJoin('trading_accounts', 'trading_users.meta_login', '=', 'trading_accounts.meta_login') // Join trading accounts
-            ->leftJoin('account_types', 'trading_users.account_type_id', '=', 'account_types.id'); // Join account types
+                ->with(['users:id,name,email', 'trading_account:id,meta_login,equity']); // Eager load related models
 
             if ($request->last_logged_in_days) {
                 switch ($request->last_logged_in_days) {
@@ -140,14 +138,16 @@ class TradingAccountController extends Controller
             $search = $request->input('search');
             if ($search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where('users.name', 'like', '%' . $search . '%')
-                        ->orWhere('users.email', 'like', '%' . $search . '%')
-                        ->orWhere('trading_users.meta_login', 'like', '%' . $search . '%');
+                    $query->whereHas('users', function ($query) use ($search) {
+                        $query->where('name', 'like', '%' . $search . '%')
+                              ->orWhere('email', 'like', '%' . $search . '%');
+                    })
+                    ->orWhere('meta_login', 'like', '%' . $search . '%');
                 });
-                        }
-
+            }
+            
             if ($request->input('balance')) {
-                $query->where('trading_users.balance', $request->input('balance'));
+                $query->where('balance', $request->input('balance'));
             }
 
             // Handle sorting
@@ -158,7 +158,7 @@ class TradingAccountController extends Controller
             // Handle pagination
             $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
             $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
-    
+
             // // Export logic
             // if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
             //     $accounts = $query->clone();
@@ -168,13 +168,11 @@ class TradingAccountController extends Controller
             // Fetch the accounts with selected fields and pagination
             $accounts = $query
                 ->select([
-                    'trading_users.id',
-                    'trading_users.user_id',
-                    'trading_users.meta_login',
-                    'users.name',
-                    'users.email',
+                    'id',
+                    'user_id',
+                    'meta_login',
                 ])
-                ->where('trading_users.acc_status', '!=', 'inactive')
+                ->where('acc_status', '!=', 'inactive')
                 ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
 
             // Iterate over each account on the current page and update the account status
@@ -208,24 +206,30 @@ class TradingAccountController extends Controller
 
             // Now re-fetch the data after updating the statuses
             $accounts = $query->select([
-                'trading_users.id',
-                'trading_users.meta_login',
-                'users.name as user_name',
-                'users.email as user_email',
-                'trading_users.balance',
-                'trading_accounts.equity',
-                'trading_users.credit',
-                'trading_users.leverage',
-                'trading_users.deleted_at',
-                'trading_users.last_access as last_login',
-                DB::raw('DATEDIFF(CURRENT_DATE, trading_users.last_access) as last_login_days'), // Raw SQL for last login days
+                'id',
+                'user_id',
+                'meta_login',
+                'balance',
+                'credit',
+                'leverage',
+                'deleted_at',
+                'last_access as last_login',
+                DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
+                'meta_group as account_group',
             ])
-            ->where('trading_users.acc_status', '!=', 'inactive')
+            ->where('acc_status', '!=', 'inactive')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
             
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
                 $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
+                $account->user_name = $account->users->name;
+                $account->user_email = $account->users->email;
+                $account->equity = $account->trading_account->equity;
+
+                // Remove unnecessary nested data (users and trading_account)
+                unset($account->users);
+                unset($account->trading_account);
             }
                             
             // After the status update, return the re-fetched paginated data
@@ -236,24 +240,19 @@ class TradingAccountController extends Controller
         } else {
             // Handle inactive accounts or other types
             $query = TradingUser::onlyTrashed() // Only consider soft-deleted trading users
-                ->withTrashed(['user:id,name,email', 'trading_account:id,user_id,meta_login']) // Include soft-deleted related users and trading accounts
-                ->leftJoin('users', 'trading_users.user_id', '=', 'users.id') // Join users table
-                ->leftJoin('trading_accounts', 'trading_users.meta_login', '=', 'trading_accounts.meta_login') // Join trading accounts
-                ->leftJoin('account_types', 'trading_users.account_type_id', '=', 'account_types.id'); // Join account types
+                ->withTrashed(['user:id,name,email', 'trading_account:id,user_id,meta_login']); // Include soft-deleted related users and trading accounts
         
             // Filters
             // Handle search functionality
             $search = $request->input('search');
             if ($search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where('users.name', 'like', '%' . $search . '%')
-                        ->orWhere('users.email', 'like', '%' . $search . '%')
-                        ->orWhere('trading_users.meta_login', 'like', '%' . $search . '%');
+                    $query->whereHas('users', function ($query) use ($search) {
+                        $query->where('name', 'like', '%' . $search . '%')
+                              ->orWhere('email', 'like', '%' . $search . '%');
+                    })
+                    ->orWhere('meta_login', 'like', '%' . $search . '%');
                 });
-                        }
-
-            if ($request->input('balance')) {
-                $query->where('trading_users.balance', $request->input('balance'));
             }
 
             // Handle sorting
@@ -272,23 +271,30 @@ class TradingAccountController extends Controller
             // }
 
             $accounts = $query->select([
-                'trading_users.id',
-                'trading_users.meta_login',
-                'users.name as user_name',
-                'users.email as user_email',
-                'trading_users.balance',
-                'trading_accounts.equity',
-                'trading_users.credit',
-                'trading_users.leverage',
-                'trading_users.deleted_at',
-                'trading_users.last_access as last_login',
+                'id',
+                'user_id',
+                'meta_login',
+                'balance',
+                'credit',
+                'leverage',
+                'deleted_at',
+                'last_access as last_login',
+                DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
+                'meta_group as account_group',
             ])
-            ->where('trading_users.acc_status', '=', 'inactive')
+            ->where('acc_status', '!=', 'inactive')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
             
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
-                $account->user_profile_photo = optional($account->user->media->first())->getFirstMediaUrl('profile_photo');
+                $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
+                $account->user_name = $account->users->name;
+                $account->user_email = $account->users->email;
+                $account->equity = $account->trading_account->equity;
+
+                // Remove unnecessary nested data (users and trading_account)
+                unset($account->users);
+                unset($account->trading_account);
             }
 
             return response()->json([
@@ -445,6 +451,66 @@ class TradingAccountController extends Controller
             return back()
                 ->with('toast', [
                     'title' => 'Adjustment failed',
+                    'type' => 'error'
+                ]);
+        }
+    }
+
+    public function updateLeverage(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'meta_login' => ['required'],
+            'leverage' => ['required'],
+        ])->setAttributeNames([
+            'meta_login' => trans('public.meta_login'),
+            'leverage' => trans('public.leverage'),
+        ]);
+        $validator->validate();
+
+        try {
+            (new MetaFourService())->updateLeverage($request->meta_login, $request->leverage);
+
+            return redirect()->back()->with('toast', [
+                'title' => trans('public.toast_change_leverage_success'),
+                'type' => 'success'
+            ]);
+        } catch (\Throwable $e) {
+            // Log the main error
+            Log::error('Error creating trade: ' . $e->getMessage());
+
+            return back()
+                ->with('toast', [
+                    'title' => trans('public.toast_change_leverage_failed'),
+                    'type' => 'error'
+                ]);
+        }
+    }
+
+    public function updateAccountGroup(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'meta_login' => ['required'],
+            'account_group' => ['required'],
+        ])->setAttributeNames([
+            'meta_login' => trans('public.meta_login'),
+            'account_group' => trans('public.account_type'),
+        ]);
+        $validator->validate();
+
+        try {
+            (new MetaFourService())->updateAccountGroup($request->meta_login, $request->account_group);
+
+            return redirect()->back()->with('toast', [
+                'title' => trans('public.toast_change_account_type_success'),
+                'type' => 'success'
+            ]);
+        } catch (\Throwable $e) {
+            // Log the main error
+            Log::error('Error creating trade: ' . $e->getMessage());
+
+            return back()
+                ->with('toast', [
+                    'title' => trans('public.toast_change_account_type_failed'),
                     'type' => 'error'
                 ]);
         }

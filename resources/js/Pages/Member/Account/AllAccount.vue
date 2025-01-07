@@ -405,17 +405,17 @@ watchEffect(() => {
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.balance') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.balance) }}</span>
             </div>
-            <!-- <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.equity') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ data?.equity ? formatAmount(data?.equity) : formatAmount(0) }}</span>
-            </div> -->
+            </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.credit') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.credit) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.leverage') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">1:{{ data?.leverage }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ data?.leverage === 0 ? $t('public.free') : `1:${data?.leverage}` }}</span>
             </div>
         </div>
 

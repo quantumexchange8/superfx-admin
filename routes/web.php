@@ -38,6 +38,8 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/getAssetData', [DashboardController::class, 'getAssetData'])->name('dashboard.getAssetData');
     Route::get('/getAccountTypes', [GeneralController::class, 'getAccountTypes'])->name('getAccountTypes');
     Route::get('/getTransactionMonths', [GeneralController::class, 'getTransactionMonths'])->name('getTransactionMonths');
+    Route::get('/getLeverages', [GeneralController::class, 'getLeverages'])->name('getLeverages');
+    Route::get('/getAccountGroups', [GeneralController::class, 'getAccountGroups'])->name('getAccountGroups');
 
     /**
      * ==============================
@@ -109,6 +111,8 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::get('/getTradingAccountData', [TradingAccountController::class, 'getTradingAccountData'])->name('member.getTradingAccountData');
 
         Route::post('/accountAdjustment', [TradingAccountController::class, 'accountAdjustment'])->name('member.accountAdjustment');
+        Route::post('/updateLeverage', [TradingAccountController::class, 'updateLeverage'])->name('member.updateLeverage');
+        Route::post('/updateAccountGroup', [TradingAccountController::class, 'updateAccountGroup'])->name('member.updateAccountGroup');
         Route::post('/refreshAllAccount', [TradingAccountController::class, 'refreshAllAccount'])->name('member.refreshAllAccount');
         Route::delete('/accountDelete', [TradingAccountController::class, 'accountDelete'])->name('member.accountDelete');
     });

@@ -223,9 +223,6 @@ class GeneralController extends Controller
     public function getAccountTypes($returnAsArray = false)
     {
         $accountTypes = AccountType::all()
-            ->filter(function ($accountType) {
-                return $accountType->slug !== 'demo_account';
-            })
             ->map(function ($accountType) {
                 return [
                     'value' => $accountType->id,
@@ -242,25 +239,22 @@ class GeneralController extends Controller
         ]);
     }
 
-    public function getAccountTypesWithSlugs($returnAsArray = false)
+    public function getAccountGroups($returnAsArray = false)
     {
-        $accountTypes = AccountType::all()
-            ->filter(function ($accountType) {
-                return $accountType->slug !== 'demo_account';
-            })
+        $accountGroups = AccountType::all()
             ->map(function ($accountType) {
                 return [
-                    'value' => $accountType->slug,
+                    'value' => $accountType->account_group,
                     'name' => trans('public.' . $accountType->slug),
                 ];
             });
 
         if ($returnAsArray) {
-            return $accountTypes;
+            return $accountGroups;
         }
 
         return response()->json([
-            'accountTypes' => $accountTypes,
+            'accountGroups' => $accountGroups,
         ]);
     }
 

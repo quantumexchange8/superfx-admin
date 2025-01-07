@@ -73,6 +73,7 @@ const filters = ref({
     group_id: null,
     role: [],
     status: [],
+    kyc_status: [],
 });
 
 const upline_id = ref(null)
@@ -129,6 +130,10 @@ const getResults = async () => {
 
         if (filters.value.status) {
             url += `&status=${filters.value.status}`;
+        }
+
+        if (filters.value.kyc_status) {
+            url += `&kyc_status=${filters.value.kyc_status}`;
         }
 
         if (sortField.value && sortOrder.value !== null) {
@@ -210,6 +215,7 @@ const clearFilter = () => {
         group_id: null,
         role: [],
         status: [],
+        kyc_status: [],
     };
 
     upline_id.value = null;
@@ -620,6 +626,27 @@ const paginator_caption = wTrans('public.paginator_caption');
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <RadioButton v-model="filters['status']" inputId="status_inactive" value="inactive" class="w-4 h-4" />
                         <label for="status_inactive">{{ $t('public.inactive') }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter kyc-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_kyc_status') }}
+                </div>
+                <div class="flex flex-col gap-1 self-stretch">
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <RadioButton v-model="filters['kyc_status']" inputId="kyc_status_approved" value="approved" class="w-4 h-4" />
+                        <label for="kyc_status_approved">{{ $t('public.approved') }}</label>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <RadioButton v-model="filters['kyc_status']" inputId="kyc_status_rejected" value="rejected" class="w-4 h-4" />
+                        <label for="kyc_status_rejected">{{ $t('public.rejected') }}</label>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <RadioButton v-model="filters['kyc_status']" inputId="kyc_status_pending" value="pending" class="w-4 h-4" />
+                        <label for="kyc_status_pending">{{ $t('public.pending') }}</label>
                     </div>
                 </div>
             </div>
