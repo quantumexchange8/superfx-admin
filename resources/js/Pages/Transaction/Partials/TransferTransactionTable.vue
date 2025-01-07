@@ -454,7 +454,7 @@ const handleFilter = (e) => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.status') }}</span>
-                <StatusBadge :value="data.status">{{ $t(`public.${data.status}`) }}</StatusBadge>
+                <StatusBadge :variant="data.status" :value="$t('public.' + data.status)"/>
             </div>
         </div>
 

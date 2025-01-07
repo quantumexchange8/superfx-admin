@@ -58,9 +58,7 @@ const items = ref([
 
 <template>
     <div class="flex justify-between items-center self-stretch">
-        <StatusBadge :value="profile.bonus_badge">
-            {{ $t(`public.${profile.sales_calculation_mode}`) }}
-        </StatusBadge>
+        <StatusBadge :variant="profile.bonus_badge" :value="$t('public.' + profile.sales_calculation_mode)"/>
 
         <Button
             type="button"

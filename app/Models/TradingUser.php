@@ -34,4 +34,9 @@ class TradingUser extends Model
         return $this->belongsTo(TradingAccount::class, 'meta_login', 'meta_login');
     }
 
+    public function accountType(): BelongsTo
+    {
+        return $this->belongsTo(AccountType::class, 'account_type_id', 'id');
+    }
+
 }

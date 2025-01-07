@@ -205,9 +205,7 @@ const copyToClipboard = (text) => {
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">
-                    <StatusBadge :value="slotProps.data.status" class="w-fit">
-                        {{ $t(`public.${slotProps.data.status}`) }}
-                    </StatusBadge>
+                    <StatusBadge class="w-fit" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
                 </template>
             </Column>
             <Column class="md:hidden px-0">
@@ -219,9 +217,7 @@ const copyToClipboard = (text) => {
                                     <div class="text-sm text-gray-950 font-semibold">
                                         {{ slotProps.data.transaction_number }}
                                     </div>
-                                    <StatusBadge :value="slotProps.data.status" class="w-fit">
-                                        <span class="text-xxs">{{ $t(`public.${slotProps.data.status}`) }}</span>
-                                    </StatusBadge>
+                                    <StatusBadge class="w-fit" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
                                 </div>
 
                                 <div class="flex items-center gap-2 text-gray-500 text-xs">
@@ -290,10 +286,7 @@ const copyToClipboard = (text) => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.status') }}</span>
-                <StatusBadge :value="withdrawalData.status">
-                    <span v-if="withdrawalData.status === 'successful'">{{ $t('public.approved') }}</span>
-                    <span v-else>{{ $t('public.rejected') }}</span>
-                </StatusBadge>
+                <StatusBadge :variant="withdrawalData.status" :value="$t('public.' + withdrawalData.status)"/>
             </div>
         </div>
 

@@ -326,9 +326,7 @@ const handleFilter = (e) => {
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">
-                    <StatusBadge class="w-fit" :value="slotProps.data.status">
-                        {{ $t('public.' + slotProps.data.status) }}
-                    </StatusBadge>
+                    <StatusBadge class="w-fit" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
                 </template>
             </Column>
             <Column class="md:hidden">
@@ -462,7 +460,7 @@ const handleFilter = (e) => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.status') }}</span>
-                <StatusBadge :value="data.status">{{ $t('public.' + data.status) }}</StatusBadge>
+                <StatusBadge :variant="data.status" :value="$t('public.' + data.status)"/>
             </div>
         </div>
 

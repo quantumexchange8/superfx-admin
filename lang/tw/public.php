@@ -489,6 +489,8 @@ return [
     "greater_than_90_days" => "超過90天",
     "filter_balance" => "按餘額篩選",
     "zero_balance" => "零餘額",
+    "filter_leverage" => "按槓桿篩選",
+    "filter_account_type" => "按賬戶類別篩選",
     "empty_account_title" => "沒有找到賬戶",
     "empty_account_message" => "目前還沒有賬戶記錄。一旦賬戶被添加，您將在這裡看到它們的詳細資訊。",
     "loading_accounts_data" => "正在載入賬戶資料。請稍候。",

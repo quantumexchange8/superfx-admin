@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-// use App\Jobs\UpdateCTraderAccountJob;
+use App\Jobs\UpdateAllAccountJob;
 use Carbon\Carbon;
 use Inertia\Inertia;
 use App\Models\TradingUser;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-// use App\Services\CTraderService;
 use App\Models\TradingAccount;
 use App\Services\MetaFourService;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +30,9 @@ class TradingAccountController extends Controller
             ->first();
 
         return Inertia::render('Member/Account/AccountListing', [
-            'last_refresh_datetime' => $last_refresh_datetime?->reserved_at
+            'last_refresh_datetime' => $last_refresh_datetime?->reserved_at,
+            'leverages' => (new GeneralController())->getLeverages(true),
+            'accountTypes' => (new GeneralController())->getAccountTypes(true),
         ]);
     }
 
@@ -121,7 +122,11 @@ class TradingAccountController extends Controller
 
         if ($type === 'all') {
             $query = TradingUser::query()
-                ->with(['users:id,name,email', 'trading_account:id,meta_login,equity']); // Eager load related models
+                ->with([
+                    'users:id,name,email',
+                    'trading_account:id,meta_login,equity',
+                    'accountType:id,slug,account_group,color',
+                ]); // Eager load related models
 
             if ($request->last_logged_in_days) {
                 switch ($request->last_logged_in_days) {
@@ -148,6 +153,14 @@ class TradingAccountController extends Controller
             
             if ($request->input('balance')) {
                 $query->where('balance', $request->input('balance'));
+            }
+
+            if ($request->input('leverage')) {
+                $query->where('leverage', $request->input('leverage'));
+            }
+
+            if ($request->input('account_type')) {
+                $query->where('account_type_id', $request->input('account_type'));
             }
 
             // Handle sorting
@@ -188,12 +201,6 @@ class TradingAccountController extends Controller
                                 ->update(['acc_status' => 'inactive']);
                         }
                     } else {
-                        // If valid data is fetched, update account to active and proceed with further updates
-                        if ($account->acc_status !== 'active') {
-                            TradingUser::where('meta_login', $account->meta_login)
-                                ->update(['acc_status' => 'active']);
-                        }
-
                         // Proceed with updating account information
                         (new UpdateTradingUser)->execute($account->meta_login, $accData);
                         (new UpdateTradingAccount)->execute($account->meta_login, $accData);
@@ -209,13 +216,13 @@ class TradingAccountController extends Controller
                 'id',
                 'user_id',
                 'meta_login',
+                'account_type_id',
                 'balance',
                 'credit',
                 'leverage',
                 'deleted_at',
                 'last_access as last_login',
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
-                'meta_group as account_group',
             ])
             ->where('acc_status', '!=', 'inactive')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
@@ -226,10 +233,14 @@ class TradingAccountController extends Controller
                 $account->user_name = $account->users->name;
                 $account->user_email = $account->users->email;
                 $account->equity = $account->trading_account->equity;
+                $account->account_type = $account->accountType->slug;
+                $account->account_type_color = $account->accountType->color;
+                $account->account_group = $account->accountType->account_group;
 
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);
+                unset($account->accountType);
             }
                             
             // After the status update, return the re-fetched paginated data
@@ -240,7 +251,11 @@ class TradingAccountController extends Controller
         } else {
             // Handle inactive accounts or other types
             $query = TradingUser::onlyTrashed() // Only consider soft-deleted trading users
-                ->withTrashed(['user:id,name,email', 'trading_account:id,user_id,meta_login']); // Include soft-deleted related users and trading accounts
+                ->withTrashed([
+                    'user:id,name,email', 
+                    'trading_account:id,user_id,meta_login',
+                    'accountType:id,slug,account_group,color',
+                ]); // Include soft-deleted related users, trading accounts and account type
         
             // Filters
             // Handle search functionality
@@ -280,7 +295,6 @@ class TradingAccountController extends Controller
                 'deleted_at',
                 'last_access as last_login',
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
-                'meta_group as account_group',
             ])
             ->where('acc_status', '!=', 'inactive')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
@@ -291,10 +305,14 @@ class TradingAccountController extends Controller
                 $account->user_name = $account->users->name;
                 $account->user_email = $account->users->email;
                 $account->equity = $account->trading_account->equity;
+                $account->account_type = $account->accountType->slug;
+                $account->account_type_color = $account->accountType->color;
+                $account->account_group = $account->accountType->account_group;
 
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);
+                unset($account->accountType);
             }
 
             return response()->json([
@@ -576,6 +594,6 @@ class TradingAccountController extends Controller
 
     public function refreshAllAccount(): void
     {
-        // UpdateCTraderAccountJob::dispatch();
+        UpdateAllAccountJob::dispatch();
     }
 }

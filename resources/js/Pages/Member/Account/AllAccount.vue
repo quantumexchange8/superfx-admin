@@ -6,6 +6,7 @@ import {FilterMatchMode} from "primevue/api";
 import Loader from "@/Components/Loader.vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
 import OverlayPanel from 'primevue/overlaypanel';
+import Dropdown from "primevue/dropdown";
 import Empty from "@/Components/Empty.vue";
 import dayjs from "dayjs";
 import AccountTableActions from "@/Pages/Member/Account/Partials/AccountTableActions.vue";
@@ -14,19 +15,23 @@ import InputText from "primevue/inputtext";
 import Button from "@/Components/Button.vue";
 import {IconAdjustments, IconCircleXFilled, IconSearch} from "@tabler/icons-vue";
 import RadioButton from "primevue/radiobutton";
-import {transactionFormat} from "@/Composables/index.js";
+import {transactionFormat, generalFormat} from "@/Composables/index.js";
 import Dialog from "primevue/dialog";
 import {usePage} from "@inertiajs/vue3";
 import debounce from "lodash/debounce.js";
 
 const props = defineProps({
   loadResults: Boolean,
+  leverages: Array,
+  accountTypes: Array,
 });
 
 // overlay panel
 const op = ref();
 const accounts = ref([]);
 const totalRecords = ref(0);
+const leverages = ref();
+const accountTypes = ref();
 const rows = ref(10);
 const page = ref(0);
 const sortField = ref(null);  
@@ -34,12 +39,25 @@ const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 const loading = ref(false);
 const filterCount = ref(0);
 const {formatAmount} = transactionFormat();
+const { formatRgbaColor } = generalFormat()
 const visible = ref(false);
+
+// Watch both 'leverages' and 'accountTypes' props together
+watch(
+  () => [props.leverages, props.accountTypes], 
+  ([newLeverages, newAccountTypes]) => {
+    leverages.value = newLeverages;
+    accountTypes.value = newAccountTypes;
+  },
+  { immediate: true } // Optionally add `immediate: true` to run the watch immediately on component mount
+);
 
 const filters = ref({
     global: '',
     last_logged_in_days: '',
-    balance: ''
+    balance: '',
+    leverage: '',
+    account_type: '',
 });
 
 const clearFilterGlobal = () => {
@@ -52,7 +70,9 @@ const clearFilter = () => {
     filters.value = {
         global: '',
         last_logged_in_days: '',
-        balance: ''
+        balance: '',
+        leverage: '',
+        account_type: '',
     };
 };
 
@@ -86,6 +106,14 @@ const getResults = async () => {
 
         if (filters.value.balance) {
             url += `&balance=${filters.value.balance}`;
+        }
+
+        if (filters.value.leverage) {
+            url += `&leverage=${filters.value.leverage.value}`;
+        }
+
+        if (filters.value.account_type) {
+            url += `&account_type=${filters.value.account_type.value}`;
         }
 
         if (sortField.value && sortOrder.value !== null) {
@@ -217,10 +245,10 @@ watchEffect(() => {
             <Column
                 field="last_access"
                 sortable
-                class="hidden md:table-cell"
+                class="hidden md:table-cell w-[15%] max-w-0"
             >
                 <template #header>
-                    <span class="hidden md:block max-w-[40px] md:max-w-[60px] lg:max-w-[100px] truncate">{{ $t('public.last_logged_in') }}</span>
+                    <span class="hidden md:block truncate">{{ $t('public.last_logged_in') }}</span>
                 </template>
                 <template #body="slotProps">
                     {{ dayjs(slotProps.data?.last_login).format('YYYY/MM/DD HH:mm:ss') }}
@@ -230,10 +258,10 @@ watchEffect(() => {
                 field="name"
                 sortable
                 :header="$t('public.name')"
-                class="hidden md:table-cell"
+                class="hidden md:table-cell w-[25%] max-w-0"
             >
                 <template #body="slotProps">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 max-w-full">
                         <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
                             <template v-if="slotProps.data?.user_profile_photo">
                                 <img :src="slotProps.data?.user_profile_photo" alt="profile_photo">
@@ -242,11 +270,11 @@ watchEffect(() => {
                                 <DefaultProfilePhoto />
                             </template>
                         </div>
-                        <div class="flex flex-col items-start">
-                            <div class="font-medium max-w-[120px] lg:max-w-[160px] xl:max-w-[400px] truncate">
+                        <div class="grid grid-cols-1 items-start max-w-full">
+                            <div class="font-medium max-w-full truncate">
                                 {{ slotProps.data?.user_name }}
                             </div>
-                            <div class="text-gray-500 text-xs max-w-[120px] lg:max-w-[160px] xl:max-w-[400px] truncate">
+                            <div class="text-gray-500 text-xs max-w-full truncate">
                                 {{ slotProps.data?.user_email }}
                             </div>
                         </div>
@@ -256,43 +284,74 @@ watchEffect(() => {
             <Column
                 field="meta_login"
                 sortable
-                class="hidden md:table-cell"
+                class="hidden md:table-cell w-[10%] max-w-0"
             >
                 <template #header>
-                    <span class="hidden md:block max-w-[40px] lg:max-w-[100px] truncate">{{ $t('public.account') }}</span>
+                    <span class="hidden md:block truncate">{{ $t('public.account') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data?.meta_login }}
+                    <span class="break-all">{{ slotProps.data?.meta_login }}</span>
                 </template>
             </Column>
             <Column
                 field="balance"
                 sortable
-                class="hidden md:table-cell"
+                class="hidden md:table-cell w-[10%] max-w-0"
             >
                 <template #header>
-                    <span class="hidden md:block max-w-[40px] lg:max-w-[100px] truncate">{{ $t('public.balance') }} ($)</span>
+                    <span class="hidden md:block truncate">{{ $t('public.balance') }} ($)</span>
                 </template>
                 <template #body="slotProps">
-                    {{ formatAmount(slotProps.data?.balance) }}
+                    <span class="break-all">{{ formatAmount(slotProps.data?.balance) }}</span>
                 </template>
             </Column>
             <Column
                 field="credit"
                 sortable
-                class="hidden md:table-cell"
+                class="hidden md:table-cell w-[10%] max-w-0"
             >
                 <template #header>
-                    <span class="hidden md:block max-w-[40px] lg:max-w-[100px] truncate">{{ $t('public.credit') }} ($)</span>
+                    <span class="hidden md:block truncate">{{ $t('public.credit') }} ($)</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data?.credit ? formatAmount(slotProps.data?.credit) : formatAmount(0) }}
+                    <span class="break-all">{{ slotProps.data?.credit ? formatAmount(slotProps.data?.credit) : formatAmount(0) }}</span>
+                </template>
+            </Column>
+            <Column
+                field="leverage"
+                sortable
+                class="hidden md:table-cell w-[10%] max-w-0"
+            >
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.leverage') }}</span>
+                </template>
+                <template #body="slotProps">
+                    <span class="break-all">{{ slotProps.data?.leverage === 0 ? $t('public.free') : `1:${slotProps.data?.leverage}` }}</span>
+                </template>
+            </Column>
+            <Column
+                field="account_type"
+                class="hidden md:table-cell w-[10%] max-w-0"
+            >
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.account_type') }}</span>
+                </template>
+                <template #body="slotProps">
+                    <div
+                        class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
+                        :style="{
+                            backgroundColor: formatRgbaColor(slotProps.data?.account_type_color, 0.15),
+                            color: `#${slotProps.data?.account_type_color}`,
+                        }"
+                    >
+                        {{ $t('public.' + slotProps.data?.account_type) }}
+                    </div>
                 </template>
             </Column>
             <Column
                 field="action"
                 header=""
-                class="hidden md:table-cell"
+                class="hidden md:table-cell w-[10%] max-w-0"
             >
                 <template #body="slotProps">
                     <AccountTableActions
@@ -360,6 +419,68 @@ watchEffect(() => {
                 </div>
             </div>
 
+            <!-- Filter Leverage-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_leverage') }}
+                </div>
+                <Dropdown
+                    v-model="filters['leverage']"
+                    :options="leverages"
+                    filter
+                    :filterFields="['name']"
+                    optionLabel="name"
+                    :placeholder="$t('public.leverages_placeholder')"
+                    class="w-full"
+                    scroll-height="236px"
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <div>{{ slotProps.value.name }}</div>
+                            </div>
+                        </div>
+                        <span v-else class="text-gray-400">{{ slotProps.placeholder }}</span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex items-center gap-2">
+                            <div>{{ slotProps.option.name }}</div>
+                        </div>
+                    </template>
+                </Dropdown>
+            </div>
+
+            <!-- Filter account_type-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_account_type') }}
+                </div>
+                <Dropdown
+                    v-model="filters['account_type']"
+                    :options="accountTypes"
+                    filter
+                    :filterFields="['name']"
+                    optionLabel="name"
+                    :placeholder="$t('public.account_type_placeholder')"
+                    class="w-full"
+                    scroll-height="236px"
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <div>{{ slotProps.value.name }}</div>
+                            </div>
+                        </div>
+                        <span v-else class="text-gray-400">{{ slotProps.placeholder }}</span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex items-center gap-2">
+                            <div>{{ slotProps.option.name }}</div>
+                        </div>
+                    </template>
+                </Dropdown>
+            </div>
+
             <div class="flex w-full">
                 <Button
                     type="button"
@@ -416,6 +537,18 @@ watchEffect(() => {
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.leverage') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium">{{ data?.leverage === 0 ? $t('public.free') : `1:${data?.leverage}` }}</span>
+            </div>
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.account_type') }}</span>
+                <div
+                    class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
+                    :style="{
+                        backgroundColor: formatRgbaColor(data?.account_type_color, 0.15),
+                        color: `#${data?.account_type_color}`,
+                    }"
+                >
+                    {{ $t('public.' + data?.account_type) }}
+                </div>
             </div>
         </div>
 

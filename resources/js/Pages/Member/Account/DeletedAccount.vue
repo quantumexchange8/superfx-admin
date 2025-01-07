@@ -18,6 +18,8 @@ import debounce from "lodash/debounce.js";
 
 const props = defineProps({
   loadResults: Boolean,
+  leverages: Array,
+  accountTypes: Array,
 });
 
 const accounts = ref([]);
@@ -115,6 +117,12 @@ watch(selectedDate, (newDateRange) => {
     }
 });
 
+// Watch for changes on the entire 'filters' object and debounce the API call
+watch(filters, debounce(() => {
+    page.value = 0; // Reset to first page when filters change
+    getResults(); // Call getResults function to fetch the data
+}, 1000), { deep: true });
+
 const data = ref({});
 const openDialog = (rowData) => {
     visible.value = true;
@@ -153,16 +161,15 @@ watchEffect(() => {
             <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
                 <div class="relative w-full md:w-60">
                     <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
-                        <IconSearch size="20" stroke-width="1.25"/>
+                        <IconSearch size="20" stroke-width="1.25" />
                     </div>
-                    <InputText v-model="filters['global'].value" :placeholder="$t('public.keyword_search')"
-                               class="font-normal pl-12 w-full md:w-60"/>
+                    <InputText v-model="filters['global']" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
                     <div
-                        v-if="filters['global'].value !== null"
+                        v-if="filters['global'] !== null && filters['global'] !== ''"
                         class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"
                         @click="clearFilterGlobal"
                     >
-                        <IconCircleXFilled size="16"/>
+                        <IconCircleXFilled size="16" />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 w-full gap-3">

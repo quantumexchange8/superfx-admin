@@ -226,7 +226,7 @@ const handleFilter = (e) => {
                 <template #body="slotProps">
                     <StatusBadge
                         v-if="slotProps.data.investment_periods > 0"
-                        :value="slotProps.data.status"
+                        :variant="slotProps.data.status"
                     >
                         <span v-if="slotProps.data.status === 'ongoing'">{{ slotProps.data.remaining_days }} {{ $t('public.days') }}</span>
                         <span v-else>{{ $t('public.' + slotProps.data.status) }}</span>

@@ -79,9 +79,7 @@ const submitForm = () => {
                             <span class="w-full text-gray-500 text-sm max-w-[220px] md:max-w-md truncate">{{ profile.email }}</span>
                         </div>
                     </div>
-                    <StatusBadge :value="profile.bonus_badge">
-                        {{ $t(`public.${profile.sales_calculation_mode}`) }}
-                    </StatusBadge>
+                    <StatusBadge :variant="profile.bonus_badge" :value="$t('public.' + profile.sales_calculation_mode)"/>
                 </div>
             </div>
 

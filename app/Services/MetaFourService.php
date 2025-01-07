@@ -62,7 +62,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -129,7 +130,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -157,7 +159,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -186,7 +189,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])

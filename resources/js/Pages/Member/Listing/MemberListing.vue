@@ -395,7 +395,7 @@ const paginator_caption = wTrans('public.paginator_caption');
                             </template>
                             <template #body="slotProps">
                                 <div class="flex items-center justify-center">
-                                    <StatusBadge :value="slotProps.data.role">{{ $t(`public.${slotProps.data.role}`) }}</StatusBadge>
+                                    <StatusBadge :variant="slotProps.data.role" :value="$t('public.' + slotProps.data.role)"/>
                                 </div>
                             </template>
                         </Column>
@@ -485,7 +485,7 @@ const paginator_caption = wTrans('public.paginator_caption');
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1 h-[26px]">
-                                        <StatusBadge :value="slotProps.data.role">{{ $t(`public.${slotProps.data.role}`) }}</StatusBadge>
+                                        <StatusBadge :variant="slotProps.data.role" :value="$t('public.' + slotProps.data.role)"/>
                                         <div class="flex items-center justify-center">
                                             <div
                                                 v-if="slotProps.data.group_id"

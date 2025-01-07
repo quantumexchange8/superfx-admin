@@ -489,6 +489,8 @@ return [
     "greater_than_90_days" => "超过90天",
     "filter_balance" => "按余额筛选",
     "zero_balance" => "零余额",
+    "filter_leverage" => "按杠杆筛选",
+    "filter_account_type" => "按账户类别筛选",
     "empty_account_title" => "没有找到账户",
     "empty_account_message" => "目前还没有账户记录。一旦账户被添加，您将在这里看到它们的详细资讯。",
     "loading_accounts_data" => "正在载入账户资料。请稍候。",

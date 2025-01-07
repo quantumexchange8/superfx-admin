@@ -184,8 +184,8 @@ const handleMemberStatus = () => {
                     <div class="truncate text-gray-950 md:text-lg font-semibold">
                         {{ userDetail.name }}
                     </div>
-                    <StatusBadge :value="userDetail.role">{{ $t(`public.${userDetail.role}`) }}</StatusBadge>
-                    <StatusBadge :value="userDetail.status">{{ $t(`public.${userDetail.status}`) }}</StatusBadge>
+                    <StatusBadge :variant="userDetail.role" :value="$t('public.' + userDetail.role)"/>
+                    <StatusBadge :variant="userDetail.status" :value="$t('public.' + userDetail.status)"/>
                 </div>
                 <div class="text-gray-700 text-sm md:text-base">{{ userDetail.id_number }}</div>
             </div>

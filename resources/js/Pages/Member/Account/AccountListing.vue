@@ -11,7 +11,9 @@ import { router } from "@inertiajs/vue3";
 import dayjs from "dayjs";
 
 defineProps({
-    last_refresh_datetime: Number
+    last_refresh_datetime: Number,
+    leverages: Array,
+    accountTypes: Array,
 });
 
 const tabs = ref([
@@ -83,6 +85,8 @@ const refreshAll = () => {
                         <component 
                             :is="tab.component" 
                             v-if="activeIndex === index" 
+                            :leverages=leverages
+                            :accountTypes=accountTypes
                         />
                     </TabPanel>
                 </TabView>

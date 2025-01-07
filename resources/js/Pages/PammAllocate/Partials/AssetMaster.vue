@@ -331,10 +331,10 @@ const saveLikesDebounced = debounce((masterId) => {
 
                     <!-- StatusBadge Section -->
                     <div class="flex items-center gap-2 self-stretch">
-                        <StatusBadge value="info">
+                        <StatusBadge variant="info">
                             $ {{ formatAmount(master.minimum_investment) }}
                         </StatusBadge>
-                        <StatusBadge value="gray">
+                        <StatusBadge variant="gray">
                             <div v-if="master.minimum_investment_period !== 0">
                                 {{ master.minimum_investment_period }} {{ $t('public.months') }}
                             </div>
@@ -342,7 +342,7 @@ const saveLikesDebounced = debounce((masterId) => {
                                 {{ $t('public.lock_free') }}
                             </div>
                         </StatusBadge>
-                        <StatusBadge value="gray">
+                        <StatusBadge variant="gray">
                             {{ master.performance_fee > 0 ? formatAmount(master.performance_fee, 0) + '%&nbsp;' + $t('public.fee') : $t('public.zero_fee') }}
                         </StatusBadge>
                     </div>

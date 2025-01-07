@@ -173,7 +173,7 @@ watchEffect(() => {
         >
             <div class="flex flex-col items-center self-stretch">
                 <div class="flex items-start w-full h-9">
-                    <StatusBadge value="gray">{{ 'category' }}</StatusBadge>
+                    <StatusBadge variant="gray">{{ 'category' }}</StatusBadge>
                 </div>
                 <div class="flex flex-col items-center gap-2 self-stretch -mt-3">
                     <div class="w-[42px] h-[42px] shrink-0 grow-0 rounded-full overflow-hidden">
