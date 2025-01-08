@@ -55,47 +55,49 @@ getAvailableUplines();
 
 const submitForm = () => {
     form.upline_id = upline.value['value'];
-    form.post(route('member.transferUpline'), {
-        onSuccess: () => {
-            closeDialog();
-            form.reset();
-
-            // Check if the role is 'ib' and require confirmation
-            if (props.member.role === 'ib') {
-                requireConfirmation('set_rebate');
-            }
-        },
-    });
+    // Check if the role is 'ib' and require confirmation first
+    if (props.member.role === 'ib') {
+        requireConfirmation('ib_transfer_upline'); // Show confirmation dialog first
+    } else {
+        // Directly submit the form if the role is not 'ib'
+        form.post(route('member.transferUpline'), {
+            onSuccess: () => {
+                closeDialog();
+                form.reset();
+            },
+        });
+    }
 }
 
 const confirm = useConfirm();
 
 const requireConfirmation = (action_type) => {
     const messages = {
-        set_rebate: {
-            group: 'headless',
-            color: 'primary',
-            icon: h(IconUserCheck),
-            header: trans('public.set_rebate_header'),
-            message: trans('public.set_rebate_message'),
+        ib_transfer_upline: {
+            group: 'headless-error',
+            actionType: 'transfer_upline',
+            header: trans('public.ib_transfer_upline_header'),
+            text: trans('public.ib_transfer_upline_message'),
             cancelButton: trans('public.cancel'),
-            acceptButton: trans('public.set_rebate'),
+            acceptButton: trans('public.confirm'),
             action: () => {
-                router.visit(route('rebate_allocate'), {
-                    method: 'get',
-                })
+                form.post(route('member.transferUpline'), {
+                    onSuccess: () => {
+                        closeDialog();
+                        form.reset();
+                    },
+                });
             }
         },
     };
 
-    const { group, color, icon, header, message, cancelButton, acceptButton, action } = messages[action_type];
+    const { group, actionType, header, text, cancelButton, acceptButton, action } = messages[action_type];
 
     confirm.require({
         group,
-        color,
-        icon,
+        actionType,
         header,
-        message,
+        text,
         cancelButton,
         acceptButton,
         accept: action
@@ -175,7 +177,7 @@ const requireConfirmation = (action_type) => {
                 :disabled="form.processing || isLoading"
                 @click.prevent="submitForm"
             >
-                {{ $t('public.reset') }}
+                {{ $t('public.confirm') }}
             </Button>
         </div>
 </template>

@@ -587,4 +587,13 @@ return [
     "toast_change_account_type_success" => "Account Type updated successfully!",
     "toast_change_account_type_failed" => "Account Type update failed! Please try again.",
     "view" => "View",
+    "logout_header" => "Log Out",
+    "logout_caption" => "Are you sure you want to log out?",
+    "ib_transfer_upline_header" => "Transfer Upline Confirmation",
+    "ib_transfer_upline_message" => "If an IB transfers the upline, the rebate of the IB and their downline will be reset to 0. Please be cautious.",
+    "change_password" => "Change Password",
+    "master_password" => "Master Password",
+    "investor_password" => "Investor Password",
+    "toast_update_password_success" => "Password updated successfully!",
+    "toast_update_password_failed" => "Failed to update password. Please try again.",
 ];

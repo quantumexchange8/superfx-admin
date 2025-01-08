@@ -30,7 +30,7 @@ const requireConfirmation = (action_type) => {
             header: trans('public.deactivate_header'),
             message: trans('public.activate_content'),
             cancelButton: trans('public.cancel'),
-            acceptButton: trans('public.confirm'),
+            acceptButton: trans('public.deactivate'),
             action: () => {
                 router.visit(route('accountType.updateStatus', props.accountType.id), {
                     method: 'patch',
@@ -47,7 +47,7 @@ const requireConfirmation = (action_type) => {
             header: trans('public.activate_header'),
             message: trans('public.activate_content'),
             cancelButton: trans('public.cancel'),
-            acceptButton: trans('public.deactivate'),
+            acceptButton: trans('public.confirm'),
             action: () => {
                 router.visit(route('accountType.updateStatus', props.accountType.id), {
                     method: 'patch',

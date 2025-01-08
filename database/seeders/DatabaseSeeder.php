@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             AccountTypeSeeder::class,
             PermissionSeeder::class,
             PaymentGateWaySeeder::class,
+            CurrencyConversionRateSeeder::class,
             CountrySeeder::class,
             StateSeeder::class,
             CitySeeder::class,

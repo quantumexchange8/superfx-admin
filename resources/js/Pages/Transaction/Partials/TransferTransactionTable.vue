@@ -80,7 +80,7 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     role: { value: null, matchMode: FilterMatchMode.EQUALS },
-    amount: { value: [minFilterAmount.value, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
+    transaction_amount: { value: [minFilterAmount.value, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
     transaction_type: { value: null, matchMode: FilterMatchMode.EQUALS },
     status: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
@@ -88,16 +88,17 @@ const filters = ref({
 // Watch minFilterAmount and maxFilterAmount to update the amount filter
 watch([minFilterAmount, maxFilterAmount], ([newMin, newMax]) => {
     // Convert 0 to null for the amount filter
-    filters.value.amount.value = [
+    filters.value.transaction_amount.value = [
         newMin === 0 ? null : newMin,
-        newMax
+        newMax,
     ];
 });
 
-// Watch the amount filter to update minFilterAmount
-watch(() => filters.value.amount.value[0], (newMin) => {
-    // Update minFilterAmount based on the first value of the amount filter
-    filters.value.amount.value[0] = newMin === 0 ? null : newMin;
+// Watch changes to the filters for 'amount'
+watch(() => filters.value.transaction_amount.value, ([newMin, newMax]) => {
+    // console.log(`Slider range updated. min: ${newMin}, max: ${newMax}`);
+    filters.value.transaction_amount.value[0] = newMin === 0 || newMin === minFilterAmount ? null : newMin;
+    filters.value.transaction_amount.value[1] = newMax === 0 || newMax ===  maxFilterAmount ? null : newMax;
 }, { immediate: true });
 
 // overlay panel
@@ -113,7 +114,7 @@ const recalculateTotals = () => {
         return (
             (!filters.value.name?.value || transaction.name.startsWith(filters.value.name.value)) &&
             (!filters.value.role?.value || transaction.role === filters.value.role.value) &&
-            (!filters.value.amount?.value[0] || !filters.value.amount?.value[1] || (transaction.transaction_amount >= filters.value.amount.value[0] && transaction.transaction_amount <= filters.value.amount.value[1])) &&
+            (!filters.value.transaction_amount?.value[0] || !filters.value.transaction_amount?.value[1] || (transaction.transaction_amount >= filters.value.transaction_amount.value[0] && transaction.transaction_amount <= filters.value.transaction_amount.value[1])) &&
             (!filters.value.transaction_type?.value || transaction.transaction_type === filters.value.transaction_type.value) &&
             (!filters.value.status?.value || transaction.status === filters.value.status.value)
         );
@@ -127,12 +128,12 @@ watch(filters, () => {
     recalculateTotals();
 
     // Check if the amount filter is active by comparing against initial values
-    const isAmountFilterActive = (filters.value.amount.value[0] !== null && filters.value.amount.value[0] !== minFilterAmount.value) ||
-                                 (filters.value.amount.value[1] !== null && filters.value.amount.value[1] !== maxFilterAmount.value);
+    const isAmountFilterActive = (filters.value.transaction_amount.value[0] !== null && filters.value.transaction_amount.value[0] !== minFilterAmount.value) ||
+                                 (filters.value.transaction_amount.value[1] !== null && filters.value.transaction_amount.value[1] !== maxFilterAmount.value);
 
     // Count active filters
     filterCount.value = Object.entries(filters.value).reduce((count, [key, filter]) => {
-        if (filter === filters.value.amount) {
+        if (filter === filters.value.transaction_amount) {
             // The amount filter is considered active if it's not covering the full range
             return isAmountFilterActive ? count + 1 : count;
         }
@@ -147,7 +148,7 @@ const clearFilter = () => {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
         role: { value: null, matchMode: FilterMatchMode.EQUALS },
-        amount: { value: [null, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
+        transaction_amount: { value: [null, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
         transaction_type: { value: null, matchMode: FilterMatchMode.EQUALS },
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
     };
@@ -387,7 +388,7 @@ const handleFilter = (e) => {
                 </div>
                 <div class="flex flex-col items-center gap-1 self-stretch">
                     <div class="h-4 self-stretch">
-                        <Slider v-model="filters['amount'].value" :min="minFilterAmount" :max="maxFilterAmount" range />
+                        <Slider v-model="filters['transaction_amount'].value" :min="minFilterAmount" :max="maxFilterAmount" range />
                     </div>
                     <div class="flex justify-between items-center self-stretch">
                         <span class="text-gray-950 text-sm">${{ minFilterAmount }}</span>

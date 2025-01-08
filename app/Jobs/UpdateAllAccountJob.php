@@ -25,7 +25,7 @@ class UpdateAllAccountJob implements ShouldQueue
 
     public function handle(): void
     {
-        $trading_accounts = TradingAccount::all();
+        $trading_accounts = TradingUser::where('acc_status', 'active')->get();
 
         foreach ($trading_accounts as $account) {
             try {
@@ -35,16 +35,9 @@ class UpdateAllAccountJob implements ShouldQueue
                 // If no data is returned (null or empty), mark the account as inactive
                 if (empty($accData)) {
                     if ($account->acc_status !== 'inactive') {
-                        TradingUser::where('meta_login', $account->meta_login)
-                            ->update(['acc_status' => 'inactive']);
+                        $account->update(['acc_status' => 'inactive']);
                     }
                 } else {
-                    // If valid data is fetched, update account to active and proceed with further updates
-                    if ($account->acc_status !== 'active') {
-                        TradingUser::where('meta_login', $account->meta_login)
-                            ->update(['acc_status' => 'active']);
-                    }
-
                     // Proceed with updating account information
                     (new UpdateTradingUser)->execute($account->meta_login, $accData);
                     (new UpdateTradingAccount)->execute($account->meta_login, $accData);

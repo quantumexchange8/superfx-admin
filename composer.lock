@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "82f446add825164cc023e01e75b2d5be",
+    "content-hash": "c8010adc062390e20f9957deeca0fa9c",
     "packages": [
         {
             "name": "aleedhillon/meta-five",
@@ -58,6 +58,80 @@
                 }
             ],
             "time": "2024-05-13T18:30:09+00:00"
+        },
+        {
+            "name": "ashallendesign/laravel-exchange-rates",
+            "version": "v7.8.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ash-jc-allen/laravel-exchange-rates.git",
+                "reference": "ec4f3bee1a2e548ff790478ae7407b04e4b7fc64"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ash-jc-allen/laravel-exchange-rates/zipball/ec4f3bee1a2e548ff790478ae7407b04e4b7fc64",
+                "reference": "ec4f3bee1a2e548ff790478ae7407b04e4b7fc64",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "guzzlehttp/guzzle": "^7.0",
+                "illuminate/cache": "^9.0|^10.0|^11.0",
+                "illuminate/container": "^9.0|^10.0|^11.0",
+                "nesbot/carbon": "^2.0|^3.0",
+                "php": "^8.0"
+            },
+            "require-dev": {
+                "larastan/larastan": "^1.0|^2.0|^3.0",
+                "mockery/mockery": "^1.0",
+                "orchestra/testbench": "^7.0|^8.0|^9.0",
+                "phpunit/phpunit": "^9.0|^10.5|^11.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "ExchangeRate": "AshAllenDesign\\LaravelExchangeRates\\Facades\\ExchangeRate"
+                    },
+                    "providers": [
+                        "AshAllenDesign\\LaravelExchangeRates\\Providers\\ExchangeRatesProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "AshAllenDesign\\LaravelExchangeRates\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ash Allen",
+                    "email": "mail@ashallendesign.co.uk"
+                }
+            ],
+            "description": "A wrapper package for interacting with the exchangeratesapi.io API.",
+            "homepage": "https://github.com/ash-jc-allen/laravel-exchange-rates",
+            "keywords": [
+                "ashallendesign",
+                "exchange-rate",
+                "exchangeratesapi.io",
+                "laravel-exchange-rates"
+            ],
+            "support": {
+                "issues": "https://github.com/ash-jc-allen/laravel-exchange-rates/issues",
+                "source": "https://github.com/ash-jc-allen/laravel-exchange-rates/tree/v7.8.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/ash-jc-allen",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-01-02T14:04:50+00:00"
         },
         {
             "name": "aws/aws-crt-php",

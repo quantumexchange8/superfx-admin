@@ -7,6 +7,7 @@
     "require": {
         "php": "^8.2",
         "aleedhillon/meta-five": "^1.1",
+        "ashallendesign/laravel-exchange-rates": "^7.8",
         "inertiajs/inertia-laravel": "^1.0",
         "laravel/framework": "^11.9",
         "laravel/sanctum": "^4.0",

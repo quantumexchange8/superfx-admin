@@ -110,7 +110,7 @@ watch(() => props.selectedMonths, (newValue) => {
     if (newValue.length === 0) {
         clearDate();
     } else {
-        getResults(props.selectedType, newValue, [minDate.value, maxDate.value]);
+        getResults(props.selectedType, newValue, [maxDate.value, maxDate.value]);
     }
 }, { immediate: true });
 

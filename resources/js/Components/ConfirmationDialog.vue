@@ -129,6 +129,7 @@ import {
                             <!-- Conditionally render the icon based on actionType -->
                             <DeleteIcon v-if="message.actionType === 'delete'" class="w-16 h-16 md:w-full md:h-auto" />
                             <DisbandIcon v-if="message.actionType === 'disband'" class="w-16 h-16 md:w-full md:h-auto" />
+                            <PermissionIcon v-if="message.actionType === 'transfer_upline'" class="w-16 h-16 md:w-full md:h-auto" />
                             <!-- Default icon if actionType is not specified -->
                             <DeleteIcon v-if="!message.actionType" class="w-16 h-16 md:w-full md:h-auto" />
                         </div>

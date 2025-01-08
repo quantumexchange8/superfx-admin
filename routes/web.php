@@ -113,6 +113,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::post('/accountAdjustment', [TradingAccountController::class, 'accountAdjustment'])->name('member.accountAdjustment');
         Route::post('/updateLeverage', [TradingAccountController::class, 'updateLeverage'])->name('member.updateLeverage');
         Route::post('/updateAccountGroup', [TradingAccountController::class, 'updateAccountGroup'])->name('member.updateAccountGroup');
+        Route::post('/change_password', [TradingAccountController::class, 'change_password'])->name('member.change_password');
         Route::post('/refreshAllAccount', [TradingAccountController::class, 'refreshAllAccount'])->name('member.refreshAllAccount');
         Route::delete('/accountDelete', [TradingAccountController::class, 'accountDelete'])->name('member.accountDelete');
     });

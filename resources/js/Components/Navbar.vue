@@ -10,6 +10,9 @@ import {Link, usePage} from "@inertiajs/vue3";
 import OverlayPanel from "primevue/overlaypanel";
 import {ref} from "vue";
 import {loadLanguageAsync} from "laravel-vue-i18n";
+import {router} from "@inertiajs/vue3";
+import {useConfirm} from "primevue/useconfirm";
+import {trans} from "laravel-vue-i18n";
 
 defineProps({
     title: String
@@ -37,6 +40,36 @@ const changeLanguage = async (langVal) => {
         console.error('Error changing locale:', error);
     }
 };
+
+const confirm = useConfirm();
+
+const requireConfirmation = (action_type) => {
+    const messages = {
+        logout: {
+            group: 'headless-error',
+            header: trans('public.logout_header'),
+            text: trans('public.logout_caption'),
+            cancelButton: trans('public.cancel'),
+            acceptButton: trans('public.confirm'),
+            action: () => {
+                router.visit(route('logout'), {
+                    method: 'post',
+                })
+            }
+        },
+    };
+
+    const { group, header, text, cancelButton, acceptButton, action } = messages[action_type];
+
+    confirm.require({
+        group,
+        header,
+        text,
+        cancelButton,
+        acceptButton,
+        accept: action
+    });
+};
 </script>
 
 <template>
@@ -62,14 +95,20 @@ const changeLanguage = async (langVal) => {
             >
                 <IconWorld size="20" stroke-width="1.25" />
             </div>
-            <Link
+            <!-- <Link
                 class="w-12 h-12 p-3.5 flex items-center justify-center rounded-full hover:cursor-pointer hover:bg-gray-100 text-gray-800"
                 :href="route('logout')"
                 method="post"
                 as="button"
             >
                 <IconLogout size="20" stroke-width="1.25" />
-            </Link>
+            </Link> -->
+            <div 
+                class="w-12 h-12 p-3.5 flex items-center justify-center rounded-full hover:cursor-pointer hover:bg-gray-100 text-gray-800"
+                @click.prevent="requireConfirmation('logout')"
+            >
+                <IconLogout size="20" stroke-width="1.25" />
+            </div>
             <Link
                 class="w-12 h-12 p-2 items-center justify-center rounded-full hover:cursor-pointer hover:bg-gray-100 hidden md:block"
                 :href="route('profile')"

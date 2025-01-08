@@ -62,7 +62,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -82,26 +83,37 @@ class MetaFourService {
         }
     }
 
-    // public function createUser(UserModel $user, $group, $leverage, $mainPassword, $investorPassword)
-    // {
-    //     $accountResponse = Http::acceptJson()
-    //         ->withHeaders([
-    //             'Authorization' => 'Bearer ' . $this->token,
-    //         ])
-    //         ->post($this->baseURL . "/createuser", [
-    //             'master_password' => $mainPassword,
-    //             'investor_password' => $investorPassword,
-    //             'name' => $user->name,
-    //             'group' => $group,
-    //             'leverage' => $leverage,
-    //             'email' => $user->email,
-    //         ]);
-    //     $accountResponse = $accountResponse->json();
+    public function createUser(UserModel $user, $group, $leverage, $mainPassword, $investorPassword, $type)
+    {
+        $payload = [
+            'master_password' => $mainPassword,
+            'investor_password' => $investorPassword,
+            'name' => $user->name,
+            'group' => $group,
+            'leverage' => $leverage,
+            'email' => $user->email,
+        ];
 
-    //     (new CreateTradingAccount)->execute($user, $accountResponse, $group);
-    //     (new CreateTradingUser)->execute($user, $accountResponse, $group);
-    //     return $accountResponse;
-    // }
+        $jsonPayload = json_encode($payload);
+
+        if ($type && $type === 'live') {
+            $url = $this->baseURL;
+        } else {
+            $url = $this->demoURL;
+        }
+
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->post($url . "/createuser");
+
+        (new CreateTradingAccount)->execute($user, $accountResponse, $group);
+        (new CreateTradingUser)->execute($user, $accountResponse, $group);
+        return $accountResponse;
+    }
 
     public function createTrade($meta_login, $amount, $comment, $type)
     {
@@ -129,7 +141,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -157,7 +170,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -186,7 +200,8 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::acceptJson()
+        $accountResponse = Http::withoutVerifying()
+            ->acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -197,103 +212,63 @@ class MetaFourService {
         return $accountResponse->json();
     }
 
-    // public function createDeal($meta_login, $amount, $comment, $type)
-    // {
-    //     $dealResponse = Http::acceptJson()->post($this->baseURL . "/conduct_deal", [
-    //         'login' => $meta_login,
-    //         'amount' => $amount,
-    //         'imtDeal_EnDealAction' => dealType::DEAL_BALANCE,
-    //         'comment' => $comment,
-    //         'deposit' => $type,
-    //     ]);
-    //     $dealResponse = $dealResponse->json();
-    //     Log::debug($dealResponse);
+    public function updateMasterPassword($meta_login, $password)
+    {
+        $payload = [
+            'meta_login' => $meta_login,
+            'password' => $password,
+        ];
 
-    //     $this->getUserInfo($meta_login);
-    //     // $userData = $this->getMetaUser($meta_login);
-    //     // $metaAccountData = $this->getMetaAccount($meta_login);
-    //     // (new UpdateTradingAccount)->execute($meta_login, $metaAccountData);
-    //     // (new UpdateTradingUser)->execute($meta_login, $userData);
-    //     return $dealResponse;
-    // }
+        $jsonPayload = json_encode($payload);
+    
+        $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
-    // public function createTrade($meta_login, $amount, $comment, $type): Trade
-    // {
-    //     $response = Http::acceptJson()->post($this->baseURL . "/v2/webserv/traders/$meta_login/changebalance?token=$this->token", [
-    //         'login' => $meta_login,
-    //         'amount' => $amount * 100, //
-    //         'preciseAmount' => $amount, //
-    //         'type' => $type,
-    //         'comment' => $comment, //
-    //         /* 'externalNote' => '', //
-    //         'source' => '', //
-    //         'externalId' => '', // */
-    //     ]);
-    //     $response = $response->json();
+        if ($tradingUser && $tradingUser->category === 'live') {
+            $url = $this->baseURL;
+        } else {
+            $url = $this->demoURL;
+        }
+    
+        $accountResponse = Http::
+        acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->patch($url . "/changemasterpassword");
+    
+        // Return the JSON response from the API
+        return $accountResponse->json();
+    }
 
-    //     $trade = new Trade();
-    //     $trade->setAmount($amount);
-    //     $trade->setComment($comment);
-    //     $trade->setType($type);
-    //     $trade->setTicket($response['balanceHistoryId']);
+    public function updateInvestorPassword($meta_login, $password)
+    {
+        $payload = [
+            'meta_login' => $meta_login,
+            'password' => $password,
+        ];
 
-    //     $this->getUserInfo($meta_login);
-    //     return $trade;
-    // }
+        $jsonPayload = json_encode($payload);
+    
+        $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
-    // public function disableTrade($meta_login)
-    // {
-    //     $disableTrade = Http::acceptJson()->patch($this->baseURL . "/disable_trade/{$meta_login}")->json();
-
-    //     $userData = $this->getMetaUser($meta_login);
-    //     $metaAccountData = $this->getMetaAccount($meta_login);
-    //     (new UpdateTradingAccount)->execute($meta_login, $metaAccountData);
-    //     (new UpdateTradingUser)->execute($meta_login, $userData);
-
-    //     return $disableTrade;
-    // }
-
-    // public function dealHistory($meta_login, $start_date, $end_date)
-    // {
-    //     return Http::acceptJson()->get($this->baseURL . "/deal_history/{$meta_login}&{$start_date}&{$end_date}")->json();
-    // }
-
-    // public function updateLeverage($meta_login, $leverage)
-    // {
-    //     $upatedResponse = Http::acceptJson()->patch($this->baseURL . "/update_leverage", [
-    //         'login' => $meta_login,
-    //         'leverage' => $leverage,
-    //     ]);
-    //     $upatedResponse = $upatedResponse->json();
-    //     $userData = $this->getMetaUser($meta_login);
-    //     $metaAccountData = $this->getMetaAccount($meta_login);
-    //     (new UpdateTradingAccount)->execute($meta_login, $metaAccountData);
-    //     (new UpdateTradingUser)->execute($meta_login, $userData);
-
-    //     return $upatedResponse;
-    // }
-
-    // public function changePassword($meta_login, $type, $password)
-    // {
-    //     $passwordResponse = Http::acceptJson()->patch($this->baseURL . "/change_password", [
-    //         'login' => $meta_login,
-    //         'type' => $type,
-    //         'password' => $password,
-    //     ]);
-    //     return $passwordResponse->json();
-    // }
-
-    // public function userTrade($meta_login)
-    // {
-    //     return Http::acceptJson()->get($this->baseURL . "/check_position/{$meta_login}")->json();
-    // }
-
-    // public function deleteAccount($meta_login)
-    // {
-    //     $deleteAccount = Http::acceptJson()->delete($this->baseURL . "/delete_tradeacc/{$meta_login}")->json();
-
-    //     return $deleteAccount;
-    // }
+        if ($tradingUser && $tradingUser->category === 'live') {
+            $url = $this->baseURL;
+        } else {
+            $url = $this->demoURL;
+        }
+    
+        $accountResponse = Http::
+        acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->patch($url . "/changeinvestorpassword");
+    
+        // Return the JSON response from the API
+        return $accountResponse->json();
+    }
 }
 
 class dealAction

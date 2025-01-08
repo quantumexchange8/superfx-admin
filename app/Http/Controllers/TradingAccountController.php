@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\UpdateAllAccountJob;
 use Carbon\Carbon;
+use App\Models\User;
 use Inertia\Inertia;
 use App\Models\TradingUser;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Models\TradingAccount;
+use App\Jobs\UpdateAllAccountJob;
 use App\Services\MetaFourService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,8 +18,11 @@ use App\Services\RunningNumberService;
 use App\Services\Data\UpdateTradingUser;
 use App\Services\ChangeTraderBalanceType;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 use App\Services\Data\UpdateTradingAccount;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
+use App\Notifications\ChangeTradingAccountPasswordNotification;
 
 class TradingAccountController extends Controller
 {
@@ -126,7 +130,8 @@ class TradingAccountController extends Controller
                     'users:id,name,email',
                     'trading_account:id,meta_login,equity',
                     'accountType:id,slug,account_group,color',
-                ]); // Eager load related models
+                ]) // Eager load related models
+                ->where('acc_status', 'active');
 
             if ($request->last_logged_in_days) {
                 switch ($request->last_logged_in_days) {
@@ -197,8 +202,7 @@ class TradingAccountController extends Controller
                     // If no data is returned (null or empty), mark the account as inactive
                     if (empty($accData)) {
                         if ($account->acc_status !== 'inactive') {
-                            TradingUser::where('meta_login', $account->meta_login)
-                                ->update(['acc_status' => 'inactive']);
+                            $account->update(['acc_status' => 'inactive']);
                         }
                     } else {
                         // Proceed with updating account information
@@ -224,7 +228,7 @@ class TradingAccountController extends Controller
                 'last_access as last_login',
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
             ])
-            ->where('acc_status', '!=', 'inactive')
+            ->where('acc_status', 'active')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
             
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
@@ -296,7 +300,6 @@ class TradingAccountController extends Controller
                 'last_access as last_login',
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
             ])
-            ->where('acc_status', '!=', 'inactive')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
             
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
@@ -531,6 +534,57 @@ class TradingAccountController extends Controller
                     'title' => trans('public.toast_change_account_type_failed'),
                     'type' => 'error'
                 ]);
+        }
+    }
+
+    public function change_password(Request $request)
+    {
+        Validator::make($request->all(), [
+            'meta_login' => ['required'],
+            'master_password' => ['nullable', Password::min(8)->letters()->mixedCase()->numbers()->symbols(), 'required_without:investor_password'],
+            'investor_password' => ['nullable', Password::min(8)->letters()->mixedCase()->numbers()->symbols(), 'required_without:master_password'],
+        ])->setAttributeNames([
+            'meta_login' => trans('public.meta_login'),
+            'master_password' => trans('public.master_password'),
+            'investor_password' => trans('public.investor_password'),
+        ])->validate();
+
+        // $user = User::find($request->user_id);
+        $meta_login = $request->meta_login;
+        $master_password = $request->master_password;
+        $investor_password = $request->investor_password;
+        
+        // Try to update passwords and send notification
+        try {
+            if ($master_password || $investor_password) {
+                if ($master_password) {
+                    (new MetaFourService())->updateMasterPassword($meta_login, $master_password);
+                }
+
+                if ($investor_password) {
+                    (new MetaFourService())->updateInvestorPassword($meta_login, $investor_password);
+                }
+
+                // // Send notification
+                // Notification::route('mail', $user->email)
+                //     ->notify(new ChangeTradingAccountPasswordNotification($user, $meta_login, $master_password, $investor_password));
+            }
+
+            // Success response
+            return back()->with('toast', [
+                'title' => trans("public.toast_update_password_success"),
+                'type' => 'success',
+            ]);
+
+        } catch (\Throwable $e) {
+            // Log the error
+            Log::error('Error updating trading account password: ' . $e->getMessage());
+
+            // Failure response
+            return back()->with('toast', [
+                'title' => trans('public.toast_update_password_failed'),
+                'type' => 'error',
+            ]);
         }
     }
 

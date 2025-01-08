@@ -587,4 +587,13 @@ return [
     "toast_change_account_type_success" => "账户类别已更改!",
     "toast_change_account_type_failed" => "账户类别更改失败！请再试一次。",
     "view" => "查看",
+    "logout_header" => "登出",
+    "logout_caption" => "您确定要登出吗？",
+    "ib_transfer_upline_header" => "转换上级代理",
+    "ib_transfer_upline_message" => "如果IB转换上级代理,该IB及其下线的回馈金将重置为0, 请谨慎操作。",
+    "master_password" => "主密码",
+    "investor_password" => "投资者密码",
+    "toast_update_password_success" => "密码已成功更新！",
+    "toast_update_password_failed" => "密码更新失败。请再试一次。",
+    "change_password" => "更改密码",
 ];
