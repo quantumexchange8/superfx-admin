@@ -55,7 +55,9 @@ const Tag = external ? 'a' : Link
                 {{ title }}
             </div>
             <div v-if="pendingCounts > 0" class="ml-auto">
-                <Badge variant="errorNumberBadge">
+                <Badge
+                    :pill="true"
+                >
                     <span class="text-white text-xs">
                         {{ pendingCounts }}
                     </span>
