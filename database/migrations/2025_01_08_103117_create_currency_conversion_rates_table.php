@@ -12,6 +12,8 @@ return new class extends Migration {
             $table->string('base_currency')->nullable();
             $table->string('crypto_network')->nullable();
             $table->string('target_currency')->nullable();
+            $table->string('api_host')->nullable();
+            $table->string('api_key')->nullable();
             $table->decimal('deposit_rate')->nullable();
             $table->decimal('withdrawal_rate')->nullable();
             $table->string('deposit_charge_type')->nullable();

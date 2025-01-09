@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Models\CurrencyConversionRate;
 use AshAllenDesign\LaravelExchangeRates\Classes\ExchangeRate;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 
 class UpdateExchangeRateCommand extends Command
 {
@@ -12,23 +14,36 @@ class UpdateExchangeRateCommand extends Command
 
     protected $description = 'Update latest exchange rates daily';
 
+    /**
+     * @throws ConnectionException
+     */
     public function handle(): void
     {
-        $currencyArrays = CurrencyConversionRate::whereNot('base_currency', 'USDT')->get()->pluck('base_currency')->toArray();
+        $currencies = CurrencyConversionRate::whereNot('base_currency', 'USDT')
+            ->get();
 
-        $exchangeRates = app(ExchangeRate::class);
+        foreach ($currencies as $currency) {
+            if ($currency->api_key) {
+                $response = Http::acceptJson()
+                    ->withHeaders([
+                        'Authorization' => 'Bearer ' . $currency->api_key,
+                    ])
+                    ->get($currency->api_host)
+                    ->json();
 
-        $results = $exchangeRates->exchangeRate('USD', $currencyArrays);
+                $results = $response['results'];
 
-        foreach ($results as $currency => $rate) {
-            $baseCurrency = CurrencyConversionRate::where('base_currency', $currency)->first();
-            // $depositRate = $rate * 1.01;
-            // $withdrawalRate = $rate * 0.99;
+                foreach ($results as $result) {
+                    if ($result['currency'] == $currency->target_currency) {
+                        $currency->update([
+                            'deposit_rate' => $result['sell'],
+                            'withdrawal_rate' => $result['buy_transfer'],
+                        ]);
 
-            $baseCurrency->update([
-                'deposit_rate' => $rate,
-                'withdrawal_rate' => $rate,
-            ]);
+                        break;
+                    }
+                }
+            }
         }
     }
 }
