@@ -259,7 +259,7 @@ class GeneralController extends Controller
 
     // public function getSettlementMonths($returnAsArray = false)
     // {
-    //     $settledDates = TeamSettlement::pluck('transaction_start_at');
+    //     $settledDates = GroupSettlement::pluck('transaction_start_at');
     //     $months = $settledDates
     //         ->map(function ($date) {
     //             return Carbon::parse($date)->format('F Y');
@@ -321,22 +321,22 @@ class GeneralController extends Controller
         ]);
     }
 
-    // public function getTeams($returnAsArray = false)
+    // public function getGroups($returnAsArray = false)
     // {
-    //     $teams = Team::all()->map(function ($team) {
+    //     $groups = Group::all()->map(function ($group) {
     //         return [
-    //             'value' => $team->id,
-    //             'name' => $team->name,
-    //             'color' => $team->color,
+    //             'value' => $group->id,
+    //             'name' => $group->name,
+    //             'color' => $group->color,
     //         ];
     //     });
 
     //     if ($returnAsArray) {
-    //         return $teams;
+    //         return $groups;
     //     }
 
     //     return response()->json([
-    //         'teams' => $teams,
+    //         'groups' => $groups,
     //     ]);
     // }
 }

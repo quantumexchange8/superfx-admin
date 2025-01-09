@@ -21,8 +21,10 @@ use App\Models\RebateAllocation;
 use App\Models\AssetSubscription;
 use App\Services\MetaFourService;
 use Illuminate\Support\Facades\Log;
+use App\Exports\MemberListingExport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Services\RunningNumberService;
 use App\Http\Requests\AddMemberRequest;
 use App\Services\DropdownOptionService;
@@ -110,11 +112,11 @@ class MemberController extends Controller
         $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
         $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
         
-        // // Export logic
-        // if ($request->has('exportStatus') && $request->exportStatus == true) {
-        //     $members = $query; // Fetch all members for export
-        //     return Excel::download(new MemberListingExport($members), now() . '-report.xlsx');
-        // }
+        // Export logic
+        if ($request->has('exportStatus') && $request->exportStatus == true) {
+            $members = $query; // Fetch all members for export
+            return Excel::download(new MemberListingExport($members), now() . '-members.xlsx');
+        }
 
         // Clone the query before modifying it for counting
         $memberCount = (clone $query)->where('role', 'member')->count();

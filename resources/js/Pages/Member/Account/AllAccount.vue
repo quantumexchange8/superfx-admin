@@ -28,6 +28,7 @@ const props = defineProps({
 
 // overlay panel
 const op = ref();
+const exportStatus = ref(false);
 const accounts = ref([]);
 const totalRecords = ref(0);
 const leverages = ref();
@@ -90,43 +91,79 @@ watch(filters, debounce(() => {
     getResults(); // Call getResults function to fetch the data
 }, 1000), { deep: true });
 
+// Function to construct the URL with necessary query parameters
+const constructUrl = (exportStatus = false) => {
+    let url = `/member/getAccountListingPaginate?type=all&rows=${rows.value}&page=${page.value}`;
+
+    // Add filters if present
+    if (filters.value.global) {
+        url += `&search=${filters.value.global}`;
+    }
+
+    if (filters.value.last_logged_in_days) {
+        url += `&last_logged_in_days=${filters.value.last_logged_in_days}`;
+    }
+
+    if (filters.value.balance) {
+        url += `&balance=${filters.value.balance}`;
+    }
+
+    if (filters.value.leverage) {
+        url += `&leverage=${filters.value.leverage.value}`;
+    }
+
+    if (filters.value.account_type) {
+        url += `&account_type=${filters.value.account_type.value}`;
+    }
+
+    if (sortField.value && sortOrder.value !== null) {
+        url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
+    }
+
+    // Add exportStatus if export is required
+    if (exportStatus) {
+        url += `&exportStatus=true`;
+    }
+
+    return url;
+};
+
+// Optimized getResults function
 const getResults = async () => {
     loading.value = true;
 
     try {
-        let url = `/member/getAccountListingPaginate?type=all&rows=${rows.value}&page=${page.value}`;
+        // Construct the URL dynamically
+        const url = constructUrl();
 
-        if (filters.value.global) {
-            url += `&search=${filters.value.global}`;
-        }
-
-        if (filters.value.last_logged_in_days) {
-            url += `&last_logged_in_days=${filters.value.last_logged_in_days}`;
-        }
-
-        if (filters.value.balance) {
-            url += `&balance=${filters.value.balance}`;
-        }
-
-        if (filters.value.leverage) {
-            url += `&leverage=${filters.value.leverage.value}`;
-        }
-
-        if (filters.value.account_type) {
-            url += `&account_type=${filters.value.account_type.value}`;
-        }
-
-        if (sortField.value && sortOrder.value !== null) {
-            url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
-        }
-
+        // Make the API request
         const response = await axios.get(url);
+        
+        // Update the data and total records with the response
         accounts.value = response?.data?.data?.data;
         totalRecords.value = response?.data?.data?.total;
     } catch (error) {
         console.error('Error changing locale:', error);
     } finally {
         loading.value = false;
+    }
+};
+
+// Optimized exportAccount function
+const exportAccount = async () => {
+    exportStatus.value = true;
+
+    try {
+        // Construct the URL dynamically with exportStatus for export
+        const url = constructUrl(exportStatus.value); // Pass true to include exportStatus
+
+        // Send the request to trigger the export
+        window.location.href = url;  // This will trigger the download directly
+    } catch (e) {
+        console.error('Error occurred during export:', e);  // Log the error if any
+    } finally {
+        loading.value = false;  // Reset loading state
+        exportStatus.value = false;  // Reset export status
     }
 };
 
@@ -148,10 +185,6 @@ const onSort = (event) => {
 onMounted(() => {
     getResults();
 });
-
-const exportCSV = () => {
-    dt.value.exportCSV();
-};
 
 const toggle = (event) => {
     op.value.toggle(event);
@@ -223,7 +256,7 @@ watchEffect(() => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="exportCSV($event)"
+                            @click="exportAccount"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}

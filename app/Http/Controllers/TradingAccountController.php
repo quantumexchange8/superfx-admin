@@ -14,6 +14,8 @@ use App\Services\MetaFourService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AccountListingExport;
 use App\Services\RunningNumberService;
 use App\Services\Data\UpdateTradingUser;
 use App\Services\ChangeTraderBalanceType;
@@ -177,11 +179,11 @@ class TradingAccountController extends Controller
             $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
             $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
 
-            // // Export logic
-            // if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
-            //     $accounts = $query->clone();
-            //     return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
-            // }
+            // Export logic
+            if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
+                $accounts = $query->clone();
+                return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
+            }
 
             // Fetch the accounts with selected fields and pagination
             $accounts = $query

@@ -35,17 +35,6 @@ class MetaFourService {
         $this->token = hash('sha256', $token2);
     }
 
-    // public function getConnectionStatus()
-    // {
-    //     try {
-    //         return Http::acceptJson()->timeout(10)->get($this->baseURL . "/connect_status")->json();
-    //     } catch (ConnectionException $exception) {
-    //         // Handle the connection timeout error
-    //         // For example, returning an empty array as a default response
-    //         return [];
-    //     }
-    // }
-
     public function getUser($meta_login)
     {
         $payload = [
@@ -224,8 +213,7 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::
-        acceptJson()
+        $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
@@ -253,13 +241,37 @@ class MetaFourService {
             $url = $this->demoURL;
         }
     
-        $accountResponse = Http::
-        acceptJson()
+        $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->patch($url . "/changeinvestorpassword");
+    
+        // Return the JSON response from the API
+        return $accountResponse->json();
+    }
+    
+    public function getUserByGroup($group, $type)
+    {
+        $payload = [
+            'group' => $group,
+        ];
+
+        $jsonPayload = json_encode($payload);
+    
+        if ($type && $type === 'live') {
+            $url = $this->baseURL;
+        } else {
+            $url = $this->demoURL;
+        }
+
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload, 'application/json')
+            ->get($url . "/getuserbygroup");
     
         // Return the JSON response from the API
         return $accountResponse->json();

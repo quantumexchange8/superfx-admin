@@ -34,6 +34,7 @@ import StatusBadge from "@/Components/StatusBadge.vue";
 import Empty from "@/Components/Empty.vue";
 import debounce from "lodash/debounce.js";
 
+const exportStatus = ref(false);
 const total_members = ref(999);
 const total_ibs = ref(999);
 const total_users = ref(999);
@@ -106,39 +107,53 @@ watch([upline_id, group_id], ([newUplineId, newGroupId]) => {
     getResults(); // Trigger getResults after the changes
 });
 
+// Function to construct the URL with necessary query parameters
+const constructUrl = (exportStatus = false) => {
+    let url = `/member/getMemberListingPaginate?rows=${rows.value}&page=${page.value}`;
+
+    // Add filters if present
+    if (filters.value.global) {
+        url += `&search=${filters.value.global}`;
+    }
+
+    if (filters.value.role) {
+        url += `&role=${filters.value.role}`;
+    }
+
+    if (filters.value.upline_id) {
+        url += `&upline_id=${filters.value.upline_id}`;
+    }
+
+    if (filters.value.group_id) {
+        url += `&group_id=${filters.value.group_id}`;
+    }
+
+    if (filters.value.status) {
+        url += `&status=${filters.value.status}`;
+    }
+
+    if (filters.value.kyc_status) {
+        url += `&kyc_status=${filters.value.kyc_status}`;
+    }
+
+    if (sortField.value && sortOrder.value !== null) {
+        url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
+    }
+
+    // Add exportStatus if export is required
+    if (exportStatus) {
+        url += `&exportStatus=true`;
+    }
+
+    return url;
+};
+
+// Optimized getResults function
 const getResults = async () => {
     loading.value = true;
     try {
-        // Define the base URL
-        let url = `/member/getMemberListingPaginate?rows=${rows.value}&page=${page.value}`;
-
-        if (filters.value.global) {
-            url += `&search=${filters.value.global}`;
-        }
-
-        if (filters.value.role) {
-            url += `&role=${filters.value.role}`;
-        }
-
-        if (filters.value.upline_id) {
-            url += `&upline_id=${filters.value.upline_id}`;
-        }
-
-        if (filters.value.group_id) {
-            url += `&group_id=${filters.value.group_id}`;
-        }
-
-        if (filters.value.status) {
-            url += `&status=${filters.value.status}`;
-        }
-
-        if (filters.value.kyc_status) {
-            url += `&kyc_status=${filters.value.kyc_status}`;
-        }
-
-        if (sortField.value && sortOrder.value !== null) {
-            url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
-        }
+        // Construct the URL dynamically
+        const url = constructUrl();
 
         // Make the API request
         const response = await axios.get(url);
@@ -151,12 +166,28 @@ const getResults = async () => {
         total_users.value = response?.data?.data?.total;
 
         counterDuration.value = 1;
-        loading.value = false;
     } catch (error) {
         console.error('Error fetching leads data:', error);
-        members.value = [];
+        users.value = [];
     } finally {
         loading.value = false;
+    }
+};
+
+// Optimized exportMember function
+const exportMember = async () => {
+    exportStatus.value = true;
+    try {
+        // Construct the URL dynamically with exportStatus for export
+        const url = constructUrl(exportStatus.value);
+
+        // Send the request to trigger the export
+        window.location.href = url;  // This will trigger the download directly
+    } catch (e) {
+        console.error('Error occurred during export:', e);
+    } finally {
+        loading.value = false;  // Reset loading state
+        exportStatus.value = false;  // Reset export status
     }
 };
 
@@ -192,10 +223,6 @@ const getFilterData = async () => {
 };
 
 getFilterData();
-
-const exportCSV = () => {
-    dt.value.exportCSV();
-};
 
 // overlay panel
 const op = ref();
@@ -312,7 +339,7 @@ const paginator_caption = wTrans('public.paginator_caption');
                                 <div class="w-full flex justify-end">
                                     <Button
                                         variant="primary-outlined"
-                                        @click="exportCSV($event)"
+                                        @click="exportMember"
                                         class="w-full md:w-auto"
                                     >
                                         {{ $t('public.export') }}

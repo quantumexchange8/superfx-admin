@@ -8,15 +8,11 @@ use App\Models\AssetRevoke;
 use App\Models\TradingUser;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use App\Models\TradingAccount;
-// use App\Services\CTraderService;
-use App\Models\AssetSubscription;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Services\RunningNumberService;
 use App\Services\ChangeTraderBalanceType;
 use App\Services\MetaFourService;
-use Illuminate\Validation\ValidationException;
 
 class PendingController extends Controller
 {
@@ -39,7 +35,6 @@ class PendingController extends Controller
             ->map(function ($transaction) {
                 // Check if from_meta_login exists and fetch the latest balance
                 if ($transaction->from_meta_login) {
-                    // Only call getUserInfo in production
                     (new MetaFourService())->getUserInfo($transaction->from_meta_login);
 
                     // After calling getUserInfo, fetch the latest balance
