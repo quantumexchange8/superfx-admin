@@ -9,5 +9,7 @@ use Illuminate\Support\Facades\Schedule;
 //})->purpose('Display an inspiring quote')->hourly();
 
 //Schedule::command('distribute:sales-bonus')->weekly();
-Schedule::command('update:exchange-rate')->dailyAt('08:00');
+Schedule::command('update:exchange-rate')
+    ->timezone('Asia/Kuala_Lumpur')
+    ->at('10:00');
 Schedule::command('update:vnd-exchange-api-key')->weekly();
