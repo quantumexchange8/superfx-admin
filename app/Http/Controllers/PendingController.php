@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Wallet;
 use App\Models\AssetRevoke;
 use App\Models\TradingUser;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Services\MetaFourService;
 use Illuminate\Support\Facades\Log;
+use App\Mail\WithdrawalApprovalMail;
+use App\Models\TradingAccount;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use App\Services\RunningNumberService;
 use App\Services\ChangeTraderBalanceType;
-use App\Services\MetaFourService;
 
 class PendingController extends Controller
 {
@@ -149,6 +153,14 @@ class PendingController extends Controller
                 'type' => 'success'
             ]);
         } else {
+
+            if ($transaction->from_meta_login) {
+                $user = User::find($transaction->user_id);
+                $data = (new MetaFourService())->getUser($transaction->from_meta_login);
+                
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, $transaction->from_meta_login, $data['group'], $transaction->transaction_amount));
+            }
+
             return redirect()->back()->with('toast', [
                 'title' => trans('public.toast_approve_withdrawal_request'),
                 'type' => 'success'
