@@ -153,12 +153,14 @@ class PendingController extends Controller
                 'type' => 'success'
             ]);
         } else {
-
+            $user = User::find($transaction->user_id);
+            // Check if `meta_login` exists
             if ($transaction->from_meta_login) {
-                $user = User::find($transaction->user_id);
                 $data = (new MetaFourService())->getUser($transaction->from_meta_login);
-                
-                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, $transaction->from_meta_login, $data['group'], $transaction->transaction_amount));
+
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, $transaction->from_meta_login, $data['group'], $transaction->transaction_amount));    
+            } else {
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount));    
             }
 
             return redirect()->back()->with('toast', [

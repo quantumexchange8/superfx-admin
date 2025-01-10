@@ -273,8 +273,13 @@
                                                                     </p>
                                                                     <p style="margin: 0;">We are pleased to inform you
                                                                         via this email that your withdrawal request has
-                                                                        successfully been accepted from your SuperForex
-                                                                        trading account.</p>
+                                                                        successfully been accepted from your     
+                                                                        @if ($meta_login)
+                                                                            SuperForex trading account.
+                                                                        @else
+                                                                            SuperForex account.
+                                                                        @endif
+                                                                    </p>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -320,18 +325,19 @@
                                                                     <tbody
                                                                         style="vertical-align: top; font-size: 13px; line-height: 120%;">
                                                                         <tr>
-                                                                            <td style="padding: 10px; word-break: break-word; border-top: 1px solid #dddddd; border-right: 1px solid #dddddd; border-bottom: 1px solid #dddddd; border-left: 1px solid #dddddd;"
-                                                                                width="100%">Full Name: <strong><span
-                                                                                        style="word-break: break-word; color: #00c57d;">{{ $user->name }}</span></strong><br /><br />Account
-                                                                                Number:  <strong><span
-                                                                                        style="word-break: break-word; color: #00c57d;">{{ $meta_login }}</span></strong><br /><br />Account
-                                                                                Type: <span
-                                                                                    style="word-break: break-word; color: #00c57d;"><strong>{{ $account_type }}</strong></span><br /><br />Withdrawal
-                                                                                Amount: <span
-                                                                                    style="word-break: break-word; color: #00c57d;"><strong>{{ $amount }}</strong></span><br /><br />Currency:
-                                                                                <span
-                                                                                    style="word-break: break-word; color: #00c57d;"><strong>USD</strong></span><br />
-                                                                            </td>
+                                                                        <td style="padding: 10px; word-break: break-word; border-top: 1px solid #dddddd; border-right: 1px solid #dddddd; border-bottom: 1px solid #dddddd; border-left: 1px solid #dddddd;"width="100%">
+                                                                            Full Name: <strong><span style="word-break: break-word; color: #00c57d;">{{ $user->name }}</span></strong><br /><br />
+    
+                                                                            @if ($meta_login)
+                                                                                Account Number: <strong><span style="word-break: break-word; color: #00c57d;">{{ $meta_login }}</span></strong><br /><br />
+                                                                                Account Type: <span style="word-break: break-word; color: #00c57d;"><strong>{{ $account_type }}</strong></span><br /><br />
+                                                                            @else
+                                                                                Email: <strong><span style="word-break: break-word; color: #00c57d;">{{ $user->email }}</span></strong><br /><br />
+                                                                            @endif
+
+                                                                            Withdrawal Amount: <span style="word-break: break-word; color: #00c57d;"><strong>{{ $amount }}</strong></span><br /><br />
+                                                                            Currency: <span style="word-break: break-word; color: #00c57d;"><strong>USD</strong></span><br />
+                                                                        </td>
                                                                         </tr>
                                                                     </tbody>
                                                                 </table>
