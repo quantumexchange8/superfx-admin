@@ -31,7 +31,7 @@ class MetaFourService {
     public function __construct()
     {
         $token2 = "SuperFin-Live^" . Carbon::now('Asia/Riyadh')->toDateString() . "&SuperGlobal";
-        
+
         $this->token = hash('sha256', $token2);
     }
 
@@ -40,9 +40,9 @@ class MetaFourService {
         $payload = [
             'meta_login' => $meta_login,
         ];
-        
+
         $jsonPayload = json_encode($payload);
-    
+
         $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
         if ($tradingUser && $tradingUser->category === 'live') {
@@ -50,7 +50,7 @@ class MetaFourService {
         } else {
             $url = $this->demoURL;
         }
-    
+
         $accountResponse = Http::withoutVerifying()
             ->acceptJson()
             ->withHeaders([
@@ -58,7 +58,7 @@ class MetaFourService {
             ])
             ->withBody($jsonPayload, 'application/json')
             ->get($url . "/getuser");
-        
+
         return $accountResponse->json();
     }
 
@@ -107,20 +107,20 @@ class MetaFourService {
     {
         $payload = [
             'meta_login' => $meta_login,
-            'amount' => $amount,
+            'amount' => (float) $amount,
             'comment' => $comment,
             'type' => $type,
         ];
-    
+
         // Add expiration date for credit type only
         if ($type === 'credit') {
             $payload['expiration_date'] = "2030-12-31";  // Set expiration date for credit transactions
         } else {
             $payload['expiration_date'] = '';  // Empty expiration date for balance transactions
         }
-    
+
         $jsonPayload = json_encode($payload);
-    
+
         $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
         if ($tradingUser && $tradingUser->category === 'live') {
@@ -128,18 +128,18 @@ class MetaFourService {
         } else {
             $url = $this->demoURL;
         }
-    
+
         $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->post($url . "/transaction");
-    
+
         // Return the JSON response from the API
         return $accountResponse->json();
     }
-    
+
     public function updateLeverage($meta_login, $leverage)
     {
         $payload = [
@@ -148,7 +148,7 @@ class MetaFourService {
         ];
 
         $jsonPayload = json_encode($payload);
-    
+
         $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
         if ($tradingUser && $tradingUser->category === 'live') {
@@ -156,14 +156,14 @@ class MetaFourService {
         } else {
             $url = $this->demoURL;
         }
-    
+
         $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->patch($url . "/updateleverage");
-    
+
         // Return the JSON response from the API
         return $accountResponse->json();
     }
@@ -177,7 +177,7 @@ class MetaFourService {
         ];
 
         $jsonPayload = json_encode($payload);
-    
+
         $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
         if ($tradingUser && $tradingUser->category === 'live') {
@@ -185,14 +185,14 @@ class MetaFourService {
         } else {
             $url = $this->demoURL;
         }
-    
+
         $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->patch($url . "/updategroup");
-    
+
         // Return the JSON response from the API
         return $accountResponse->json();
     }
@@ -205,7 +205,7 @@ class MetaFourService {
         ];
 
         $jsonPayload = json_encode($payload);
-    
+
         $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
         if ($tradingUser && $tradingUser->category === 'live') {
@@ -213,14 +213,14 @@ class MetaFourService {
         } else {
             $url = $this->demoURL;
         }
-    
+
         $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->patch($url . "/changemasterpassword");
-    
+
         // Return the JSON response from the API
         return $accountResponse->json();
     }
@@ -233,7 +233,7 @@ class MetaFourService {
         ];
 
         $jsonPayload = json_encode($payload);
-    
+
         $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
 
         if ($tradingUser && $tradingUser->category === 'live') {
@@ -241,18 +241,18 @@ class MetaFourService {
         } else {
             $url = $this->demoURL;
         }
-    
+
         $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->patch($url . "/changeinvestorpassword");
-    
+
         // Return the JSON response from the API
         return $accountResponse->json();
     }
-    
+
     public function getUserByGroup($group, $type)
     {
         $payload = [
@@ -260,7 +260,7 @@ class MetaFourService {
         ];
 
         $jsonPayload = json_encode($payload);
-    
+
         if ($type && $type === 'live') {
             $url = $this->baseURL;
         } else {
@@ -273,7 +273,7 @@ class MetaFourService {
             ])
             ->withBody($jsonPayload, 'application/json')
             ->get($url . "/getuserbygroup");
-    
+
         // Return the JSON response from the API
         return $accountResponse->json();
     }

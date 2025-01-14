@@ -30,6 +30,8 @@ Route::get('/', function () {
     return redirect(route('login'));
 });
 
+Route::post('transaction_callback', [PendingController::class, 'transactionCallback'])->name('transactionCallback');
+
 Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/getPendingCounts', [DashboardController::class, 'getPendingCounts'])->name('dashboard.getPendingCounts');
