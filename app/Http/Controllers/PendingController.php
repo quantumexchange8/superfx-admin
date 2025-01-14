@@ -391,7 +391,7 @@ class PendingController extends Controller
         Log::debug("Callback Response: " , $response);
 
         $transaction = Transaction::where([
-            'transaction_number', $response['partner_order_code'],
+            'transaction_number' => $response['partner_order_code'],
             'status' => 'pending',
         ])->first();
 
