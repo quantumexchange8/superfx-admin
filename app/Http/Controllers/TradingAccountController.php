@@ -185,38 +185,6 @@ class TradingAccountController extends Controller
                 return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
             }
 
-            // Fetch the accounts with selected fields and pagination
-            $accounts = $query
-                ->select([
-                    'id',
-                    'user_id',
-                    'meta_login',
-                ])
-                ->where('acc_status', '!=', 'inactive')
-                ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
-
-            // Iterate over each account on the current page and update the account status
-            foreach ($accounts->items() as $account) {
-                try {
-                    // Attempt to fetch user data
-                    $accData = (new MetaFourService)->getUser($account->meta_login);
-
-                    // If no data is returned (null or empty), mark the account as inactive
-                    if (empty($accData)) {
-                        if ($account->acc_status !== 'inactive') {
-                            $account->update(['acc_status' => 'inactive']);
-                        }
-                    } else {
-                        // Proceed with updating account information
-                        (new UpdateTradingUser)->execute($account->meta_login, $accData);
-                        (new UpdateTradingAccount)->execute($account->meta_login, $accData);
-                    }
-                } catch (\Exception $e) {
-                    // Log the error if there was a failure (network issue, server error, etc.)
-                    Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
-                }
-            }
-
             // Now re-fetch the data after updating the statuses
             $accounts = $query->select([
                 'id',

@@ -32,12 +32,7 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.deactivate'),
             action: () => {
-                router.visit(route('accountType.updateStatus', props.accountType.id), {
-                    method: 'patch',
-                    data: {
-                        id: props.accountType.id,
-                    },
-                })
+                router.patch(route('accountType.updateStatus', props.accountType.id));
 
                 checked.value = !checked.value;
             }
@@ -49,12 +44,7 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.visit(route('accountType.updateStatus', props.accountType.id), {
-                    method: 'patch',
-                    data: {
-                        id: props.accountType.id,
-                    },
-                })
+                router.patch(route('accountType.updateStatus', props.accountType.id));
 
                 checked.value = !checked.value;
             }

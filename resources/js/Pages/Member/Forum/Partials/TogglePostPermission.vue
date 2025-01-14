@@ -28,11 +28,8 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.visit(route('member.updatePostPermission', props.ib.id), {
-                    method: 'post',
-                    data: {
-                        id: props.ib.id,
-                    },
+                router.post(route('member.updatePostPermission', props.ib.id), {
+                    id: props.ib.id,
                 })
 
                 checked.value = !checked.value;
@@ -46,11 +43,8 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.visit(route('member.updatePostPermission', props.ib.id), {
-                    method: 'post',
-                    data: {
-                        id: props.ib.id,
-                    },
+                router.post(route('member.updatePostPermission', props.ib.id), {
+                    id: props.ib.id,
                 })
 
                 checked.value = !checked.value;

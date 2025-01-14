@@ -77,7 +77,7 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.visit(route('group.markSettlementReport', props.group.id), {method: 'post'})
+                router.post(route('group.markSettlementReport', props.group.id))
             }
         },
         delete_account: {
@@ -87,7 +87,7 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.delete_confirm'),
             action: () => {
-                router.visit(route('group.delete', props.group.id), {method: 'delete'})
+                router.delete(route('group.delete', props.group.id))
             }
         },
     };

@@ -4,7 +4,6 @@ namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Illuminate\Support\Facades\DB;
 
 class AccountListingExport implements FromCollection, WithHeadings
 {
@@ -12,7 +11,7 @@ class AccountListingExport implements FromCollection, WithHeadings
 
     public function __construct($query)
     {
-        // Re-fetch the necessary columns for export (7 columns)
+        // Eager load the necessary relationships and select specific columns
         $this->accounts = $query->select([
             'id',
             'user_id',
@@ -20,6 +19,10 @@ class AccountListingExport implements FromCollection, WithHeadings
             'balance',
             'credit',
             'created_at',
+        ])
+        ->with([
+            'users:id,name,email',  // Only load necessary columns from users
+            'trading_account:id,meta_login,equity'  // Only load necessary columns from trading_account
         ])
         ->where('acc_status', 'active')
         ->get();
@@ -31,13 +34,10 @@ class AccountListingExport implements FromCollection, WithHeadings
 
         // Loop through each account to gather the necessary data
         foreach ($this->accounts as $account) {
-            // Load the related data for the user and trading account
-            $account->load(['users', 'trading_account']);
-
             // Prepare the formatted data for export
             $data[] = [
-                'name' => optional($account->users)->name ,
-                'email' => optional($account->users)->email,
+                'name' => $account->users->name ?? '',
+                'email' => $account->users->email ?? '',
                 'account' => $account->meta_login,
                 'balance' => $account->balance ? $account->balance : '0',
                 'equity' => $account->trading_account->equity ? $account->trading_account->equity : '0',
@@ -51,6 +51,6 @@ class AccountListingExport implements FromCollection, WithHeadings
 
     public function headings(): array
     {
-        return ['Name', 'Email', 'Account', 'Balance', 'Equity', 'Credit', 'Joined Date']; // The 7 columns
+        return ['Name', 'Email', 'Account', 'Balance', 'Equity', 'Credit', 'Joined Date'];
     }
 }
