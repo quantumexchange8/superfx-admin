@@ -27,7 +27,7 @@ const variantClasses = computed(() => {
         return 'bg-warning-50 text-warning-500'
     } else if (props.variant === 'info' || props.variant === 'demo' || props.variant === 'processing') {
         return 'bg-info-50 text-info-500'
-    } else if (props.variant === 'gray' || props.variant === 'inactive' ) {
+    } else if (props.variant === 'gray' || props.variant === 'inactive' || props.variant === 'pending' ) {
         return 'bg-gray-50 text-gray-500'
     }
     return 'bg-primary-600 text-gray-950'

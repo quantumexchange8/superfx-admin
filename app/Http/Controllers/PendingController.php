@@ -81,7 +81,7 @@ class PendingController extends Controller
     {
         $action = $request->action;
 
-        $status = $action == 'approve' ? 'successful' : 'rejected';
+        $status = $action == 'approve' ? 'pending' : 'rejected';
 
         $transaction = Transaction::find($request->id);
 
@@ -390,7 +390,10 @@ class PendingController extends Controller
 
         Log::debug("Callback Response: " , $response);
 
-        $transaction = Transaction::firstWhere('transaction_number', $response['partner_order_code']);
+        $transaction = Transaction::where([
+            'transaction_number', $response['partner_order_code'],
+            'status' => 'pending',
+        ])->first();
 
         switch ($transaction->payment_platform) {
             case 'bank':
