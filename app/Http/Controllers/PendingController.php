@@ -169,7 +169,7 @@ class PendingController extends Controller
             $conversion_rate = null;
             $conversion_amount = $transaction->amount;
 
-            if ($transaction->payment_platform === 'bank') {
+            if ($transaction->payment_platform == 'bank') {
                 $conversion_rate = CurrencyConversionRate::firstWhere('base_currency', 'VND');
 
                 if ($conversion_rate) {
