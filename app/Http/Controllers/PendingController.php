@@ -276,7 +276,7 @@ class PendingController extends Controller
 
             // Handle error scenario if "code" is not present in the response
             return redirect()->back()->with('toast', [
-                'title' => trans('public.connect_payment_gateway_error'),
+                'title' => $responseData['msg'] ?? 'Payment gateway error',
                 'type' => 'error',
             ]);
         }
