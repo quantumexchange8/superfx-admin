@@ -323,7 +323,7 @@ const handleFilter = (e) => {
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3 items-start w-full pt-4">
+                <div v-if="pendingData.payment_platform === 'crypto' || !pendingData.payment_platform" class="flex flex-col gap-3 items-start w-full pt-4">
                     <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
                         <div class="w-[140px] text-gray-500 text-xs font-medium">
                             {{ $t('public.wallet_name') }}
@@ -338,6 +338,26 @@ const handleFilter = (e) => {
                         </div>
                         <div class="text-gray-950 text-sm break-words font-medium">
                             {{ pendingData.wallet_address }}
+                        </div>
+                    </div>
+                </div>
+                <div v-if="pendingData.payment_platform === 'bank'" class="flex flex-col gap-3 items-start w-full pt-4">
+                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                        <div class="w-[140px] text-gray-500 text-xs font-medium">
+                            {{ $t('public.bank_name') }}
+                        </div>
+                        <div class="text-gray-950 text-sm font-medium">
+                            {{ pendingData.wallet_name }}
+                            <span class="text-xs text-gray-500">{{ ` (${pendingData.bank_code})` }}</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                        <div class="min-w-[140px] text-gray-500 text-xs font-medium">
+                            {{ pendingData.payment_account_type === 'card' ? $t('public.card_name') : $t('public.account_name') }}
+                        </div>
+                        <div class="text-gray-950 text-sm break-words font-medium">
+                            {{ pendingData.payment_account_name }}
+                            <span class="text-xs text-gray-500">{{ ` (${pendingData.payment_account_no})` }}</span>
                         </div>
                     </div>
                 </div>

@@ -66,6 +66,12 @@ class PendingController extends Controller
                     'transaction_amount' => $transaction->transaction_amount,
                     'wallet_name' => $transaction->payment_account?->payment_account_name,
                     'wallet_address' => $transaction->payment_account?->account_no,
+                    'payment_account_name' => $transaction->payment_account_name,
+                    'payment_platform' => $transaction->payment_platform,
+                    'payment_platform_name' => $transaction->payment_platform_name,
+                    'payment_account_no' => $transaction->payment_account_no,
+                    'payment_account_type' => $transaction->payment_account_type,
+                    'bank_code' => $transaction->bank_code,
                 ];
             });
 

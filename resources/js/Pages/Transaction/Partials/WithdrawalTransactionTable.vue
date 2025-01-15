@@ -486,16 +486,31 @@ const handleFilter = (e) => {
             </div>
         </div>
 
-        <div class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
+        <div v-if="data.payment_platform === 'crypto' || !data.payment_platform" class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
-                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.wallet_name') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ data.to_wallet_name }}</span>
+                <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.wallet_name') }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ data.to_wallet_name }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.receiving_address') }}</span>
                 <div class="flex justify-center items-center self-stretch" @click="copyToClipboard(data.to_wallet_address)">
                     <span class="flex-grow overflow-hidden text-gray-950 text-ellipsis text-sm font-medium break-words">{{ data.to_wallet_address }}</span>
                 </div>
+            </div>
+        </div>
+
+        <div v-if="data.payment_platform === 'bank'" class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.bank_name') }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ `${data.payment_platform_name}` }}
+                    <span class="text-xs text-gray-500">{{ ` (${data.bank_code})` }}</span>
+                </span>
+            </div>
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ data.payment_account_type === 'card' ? $t('public.card_name') : $t('public.account_name') }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ `${data.payment_account_name}` }}
+                    <span class="text-xs text-gray-500">{{ ` (${data.payment_account_no})` }}</span>
+                </span>
             </div>
         </div>
 
