@@ -391,13 +391,13 @@ class PendingController extends Controller
     public function transactionCallback(Request $request)
     {
         $rawBody = $request->getContent();
+        Log::debug($rawBody);
 
         $response = json_decode($rawBody, true);
-
         Log::debug("Callback Response: " , $response);
 
         // If response is null, set transaction status to failed
-        if (is_null($response) || empty($response)) {
+        if (empty($response)) {
             $transaction = Transaction::where([
                 'transaction_number' => $request->input('partner_order_code'),
                 'status' => 'pending',
@@ -408,7 +408,7 @@ class PendingController extends Controller
                     'status' => 'failed',
                     'approved_at' => now(),
                 ]);
-                
+
                 // Handle different categories
                 if ($transaction->category == 'rebate_wallet') {
                     $rebate_wallet = Wallet::where('user_id', $transaction->user_id)
