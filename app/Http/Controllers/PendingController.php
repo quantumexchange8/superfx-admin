@@ -173,13 +173,13 @@ class PendingController extends Controller
             ])->first();
 
             $conversion_rate = null;
-            $conversion_amount = $transaction->amount;
+            $conversion_amount = $transaction->transaction_amount;
 
             if ($transaction->payment_platform == 'bank') {
                 $conversion_rate = CurrencyConversionRate::firstWhere('base_currency', 'VND');
 
                 if ($conversion_rate) {
-                    $conversion_amount = round((float) $transaction->amount * $conversion_rate->withdrawal_rate);
+                    $conversion_amount = round((float) $transaction->transaction_amount * $conversion_rate->withdrawal_rate);
 
                     $transaction->update([
                         'from_currency' => $conversion_rate->base_currency,
@@ -395,6 +395,79 @@ class PendingController extends Controller
         $response = json_decode($rawBody, true);
 
         Log::debug("Callback Response: " , $response);
+
+        // If response is null, set transaction status to failed
+        if (is_null($response) || empty($response)) {
+            $transaction = Transaction::where([
+                'transaction_number' => $request->input('partner_order_code'),
+                'status' => 'pending',
+            ])->first();
+
+            if ($transaction) {
+                $transaction->update([
+                    'status' => 'failed',
+                    'approved_at' => now(),
+                ]);
+                
+                // Handle different categories
+                if ($transaction->category == 'rebate_wallet') {
+                    $rebate_wallet = Wallet::where('user_id', $transaction->user_id)
+                        ->where('type', 'rebate_wallet')
+                        ->first();
+
+                    $transaction->update([
+                        'old_wallet_amount' => $rebate_wallet->balance,
+                        'new_wallet_amount' => $rebate_wallet->balance += $transaction->amount,
+                    ]);
+
+                    $rebate_wallet->save();
+                }
+
+                if ($transaction->category == 'bonus_wallet') {
+                    $bonus_wallet = Wallet::where('user_id', $transaction->user_id)
+                        ->where('type', 'bonus_wallet')
+                        ->first();
+
+                    $transaction->update([
+                        'old_wallet_amount' => $bonus_wallet->balance,
+                        'new_wallet_amount' => $bonus_wallet->balance += $transaction->amount,
+                    ]);
+
+                    $bonus_wallet->save();
+                }
+
+                if ($transaction->category == 'trading_account') {
+                    try {
+                        $trade = (new MetaFourService)->createTrade($transaction->from_meta_login, $transaction->amount, $transaction->remarks, ChangeTraderBalanceType::DEPOSIT);
+
+                        $transaction->update([
+                            'ticket' => $trade['ticket'],
+                        ]);
+                    } catch (\Throwable $e) {
+                        // Log the main error
+                        Log::error('Error creating trade: ' . $e->getMessage());
+
+                        // Attempt to get the account and mark account as inactive if not found
+                        $account = (new MetaFourService())->getUser($transaction->meta_login);
+                        if (!$account) {
+                            TradingUser::where('meta_login', $transaction->meta_login)
+                                ->update(['acc_status' => 'inactive']);
+                        }
+
+                        return back()
+                            ->with('toast', [
+                                'title' => 'Trading account error',
+                                'type' => 'error'
+                            ]);
+                    }
+                }
+
+                return response()->json([
+                    'status' => 'fail',
+                    'message' => 'Transaction failed due to null response',
+                ]);
+            }
+        }
 
         $transaction = Transaction::where([
             'transaction_number' => $response['partner_order_code'],
