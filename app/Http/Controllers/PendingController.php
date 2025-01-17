@@ -391,86 +391,15 @@ class PendingController extends Controller
     public function transactionCallback(Request $request)
     {
         $rawBody = $request->getContent();
-        Log::debug($rawBody);
 
         $response = json_decode($rawBody, true);
+
         Log::debug("Callback Response: " , $response);
 
-        // If response is null, set transaction status to failed
-        if (empty($response)) {
-            $transaction = Transaction::where([
-                'transaction_number' => $request->input('partner_order_code'),
-                'status' => 'pending',
-            ])->first();
-
-            if ($transaction) {
-                $transaction->update([
-                    'status' => 'failed',
-                    'approved_at' => now(),
-                ]);
-
-                // Handle different categories
-                if ($transaction->category == 'rebate_wallet') {
-                    $rebate_wallet = Wallet::where('user_id', $transaction->user_id)
-                        ->where('type', 'rebate_wallet')
-                        ->first();
-
-                    $transaction->update([
-                        'old_wallet_amount' => $rebate_wallet->balance,
-                        'new_wallet_amount' => $rebate_wallet->balance += $transaction->amount,
-                    ]);
-
-                    $rebate_wallet->save();
-                }
-
-                if ($transaction->category == 'bonus_wallet') {
-                    $bonus_wallet = Wallet::where('user_id', $transaction->user_id)
-                        ->where('type', 'bonus_wallet')
-                        ->first();
-
-                    $transaction->update([
-                        'old_wallet_amount' => $bonus_wallet->balance,
-                        'new_wallet_amount' => $bonus_wallet->balance += $transaction->amount,
-                    ]);
-
-                    $bonus_wallet->save();
-                }
-
-                if ($transaction->category == 'trading_account') {
-                    try {
-                        $trade = (new MetaFourService)->createTrade($transaction->from_meta_login, $transaction->amount, $transaction->remarks, ChangeTraderBalanceType::DEPOSIT);
-
-                        $transaction->update([
-                            'ticket' => $trade['ticket'],
-                        ]);
-                    } catch (\Throwable $e) {
-                        // Log the main error
-                        Log::error('Error creating trade: ' . $e->getMessage());
-
-                        // Attempt to get the account and mark account as inactive if not found
-                        $account = (new MetaFourService())->getUser($transaction->meta_login);
-                        if (!$account) {
-                            TradingUser::where('meta_login', $transaction->meta_login)
-                                ->update(['acc_status' => 'inactive']);
-                        }
-
-                        return back()
-                            ->with('toast', [
-                                'title' => 'Trading account error',
-                                'type' => 'error'
-                            ]);
-                    }
-                }
-
-                return response()->json([
-                    'status' => 'fail',
-                    'message' => 'Transaction failed due to null response',
-                ]);
-            }
-        }
+        $transaction_number = $response['partner_order_code'] ?? $response['outwithdrawno'];
 
         $transaction = Transaction::where([
-            'transaction_number' => $response['partner_order_code'],
+            'transaction_number' => $transaction_number,
             'status' => 'pending',
         ])->first();
 
@@ -478,8 +407,8 @@ class PendingController extends Controller
             case 'bank':
 
                 $result = [
-                    'status' => $response['transfer_record']['status'] ?? null,
-                    'fail_reason' => $response['transfer_record']['fail_reason'] ?? null,
+                    'status' => $response['transfer_record']['status'] ?? $response['is_state'],
+                    'fail_reason' => $response['transfer_record']['fail_reason'] ?? $response['error'],
                 ];
 
                 $status = $result['status'] == '2' ? 'successful' : 'failed';
@@ -508,7 +437,7 @@ class PendingController extends Controller
 
                 $result = [
                     'txid' => $response['payment']['txid'] ?? null,
-                    'status' => $response['payment']['status'] ?? null,
+                    'status' => $response['payment']['status'] ?? $response['is_state'],
                 ];
 
                 $status = $result['status'] == 'success' ? 'successful' : 'failed';
