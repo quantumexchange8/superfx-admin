@@ -391,8 +391,15 @@ class PendingController extends Controller
     public function transactionCallback(Request $request)
     {
         $rawBody = $request->getContent();
+        Log::debug($request->header());
 
-        $response = json_decode($rawBody, true);
+        if ($request->header('Content-Type') == 'application/x-www-form-urlencoded') {
+            // Parse form-encoded data
+            parse_str($rawBody, $response);
+        } else {
+            // Attempt JSON decoding as fallback
+            $response = json_decode($rawBody, true);
+        }
 
         Log::debug("Callback Response: " , $response);
 
@@ -407,11 +414,9 @@ class PendingController extends Controller
             case 'bank':
 
                 $result = [
-                    'status' => $response['transfer_record']['status'] ?? $response['is_state'],
-                    'fail_reason' => $response['transfer_record']['fail_reason'] ?? $response['error'],
+                    'status' => $response['transfer_record']['status'] ?? null,
+                    'fail_reason' => $response['transfer_record']['fail_reason'] ?? null,
                 ];
-
-                $status = $result['status'] == '2' ? 'successful' : 'failed';
 
                 $failReasons = [
                     "0" => "SUCCESS",
@@ -436,15 +441,27 @@ class PendingController extends Controller
             case 'crypto':
 
                 $result = [
-                    'txid' => $response['payment']['txid'] ?? null,
-                    'status' => $response['payment']['status'] ?? $response['is_state'],
+                    'status' => $response['is_state'] ?? null,
+                    'fail_reason' => $response['error'] ?? null,
                 ];
 
-                $status = $result['status'] == 'success' ? 'successful' : 'failed';
+                $failReasons = [
+                    "0" => "Withdrawal successful",
+                    "1" => "Incorrect receiving address",
+                    "2" => "Amount exceeds limit",
+                    "3" => "Mainchain network error",
+                    "4" => "Unknown error",
+                ];
 
-                $transaction->update([
-                    'txn_hash' => $result['txid'],
-                ]);
+                if ($result['fail_reason'] != '0') {
+                    $fail_reason = $failReasons[$result['fail_reason']] ?? $failReasons['4'];
+                    Log::error("Transaction failed: " . $fail_reason);
+
+                    $transaction->update([
+                        'remarks' => $fail_reason,
+                    ]);
+                }
+
                 break;
 
             default:
@@ -454,6 +471,7 @@ class PendingController extends Controller
                     'message' => 'Transaction failed: unknown payment platform',
                 ]);
         }
+        $status = $result['status'] == '2' ? 'successful' : 'failed';
 
         $transaction->update([
             'status' => $status,
