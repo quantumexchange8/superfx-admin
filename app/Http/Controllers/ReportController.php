@@ -18,7 +18,9 @@ class ReportController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Report/Report');
+        return Inertia::render('Report/Report', [
+            'uplines' => (new GeneralController())->getUplines(true),
+        ]);
     }
 
     // public function getRebateSummary(Request $request)
@@ -281,8 +283,8 @@ class ReportController extends Controller
     public function getRebateHistory(Request $request)
     {
         $query = TradeRebateHistory::with([
-                'downline',
-                'of_account_type'
+                'downline:id,name,email,id_number',
+                'of_account_type:id,slug,color'
             ])
             ->where('t_status', 'approved');
 
@@ -318,6 +320,10 @@ class ReportController extends Controller
             $end_close_date = Carbon::createFromFormat('Y/m/d', $endClosedDate)->endOfDay();
 
             $query->whereBetween('closed_time', [$start_close_date, $end_close_date]);
+        }
+
+        if ($request->input('upline_id')) {
+            $query->where('upline_user_id', $request->input('upline_id'));
         }
 
         if ($request->input('type')) {

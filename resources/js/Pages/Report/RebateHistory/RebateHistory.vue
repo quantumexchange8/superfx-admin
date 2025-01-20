@@ -12,6 +12,7 @@ import DataTable from "primevue/datatable";
 import Tag from "primevue/tag";
 import {IconCircleXFilled, IconSearch, IconX, IconAdjustments} from "@tabler/icons-vue";
 import InputText from "primevue/inputtext";
+import Dropdown from "primevue/dropdown";
 import Calendar from "primevue/calendar";
 import Empty from "@/Components/Empty.vue";
 import Loader from "@/Components/Loader.vue";
@@ -20,7 +21,12 @@ import ColumnGroup from "primevue/columngroup";
 import Row from "primevue/row";
 import OverlayPanel from 'primevue/overlaypanel';
 import StatusBadge from '@/Components/StatusBadge.vue';
+import Badge from '@/Components/Badge.vue';
 import RadioButton from 'primevue/radiobutton';
+
+const props = defineProps({
+  uplines: Array,
+});
 
 const exportStatus = ref(false);
 const isLoading = ref(false);
@@ -43,7 +49,24 @@ const filters = ref({
     end_date: null,
     start_close_date: null,
     end_close_date: null,
+    upline_id: null,
     t_type: null,
+});
+const upline_id = ref(null)
+const uplines = ref()
+
+// Watch for changes in props.uplines
+watch(() => props.uplines, (newUplines) => {
+    // Whenever uplines change, update the local ref
+    uplines.value = newUplines;
+  }, { immediate: true }
+);
+
+// Watch for individual changes in upline_id and apply it to filters
+watch([upline_id], ([newUplineId]) => {
+    if (newUplineId !== null) {
+        filters.value['upline_id'] = newUplineId.value;
+    }
 });
 
 // Watch for changes on the entire 'filters' object and debounce the API call
@@ -78,6 +101,10 @@ const constructUrl = (exportStatus = false) => {
     if (selectedCloseDate.value && selectedCloseDate.value.length === 2) {
         url += `&startClosedDate=${formatDate(selectedCloseDate.value[0])}`;
         url += `&endClosedDate=${formatDate(selectedCloseDate.value[1])}`;
+    }
+
+    if (filters.value.upline_id) {
+        url += `&upline_id=${filters.value.upline_id}`;
     }
 
     if (filters.value.t_type) {
@@ -245,6 +272,7 @@ const clearFilter = () => {
         end_date: null,
         start_close_date: null,
         end_close_date: null,
+        upline_id: null,
         t_type: null,
     };
     
@@ -323,6 +351,9 @@ const clearFilter = () => {
                                     <div class="text-sm text-gray-950 font-medium">
                                         {{ $t('public.filter') }}
                                     </div>
+                                    <Badge class="w-5 h-5 text-xs text-white" variant="numberbadge">
+                                        {{ filterCount }}
+                                    </Badge>
                                 </Button>
                             </div>
                            <div class="w-full flex justify-end">
@@ -610,6 +641,53 @@ const clearFilter = () => {
                         <IconX size="20" />
                     </div>
                 </div>
+            </div>
+
+            <!-- Filter Upline-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_upline') }}
+                </div>
+                <Dropdown
+                    v-model="upline_id"
+                    :options="uplines"
+                    filter
+                    :filterFields="['name']"
+                    optionLabel="name"
+                    :placeholder="$t('public.select_upline')"
+                    class="w-full"
+                    scroll-height="236px"
+                >
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded-full overflow-hidden">
+                                    <template v-if="slotProps.value.profile_photo">
+                                        <img :src="slotProps.value.profile_photo" alt="profile_picture" />
+                                    </template>
+                                    <template v-else>
+                                        <DefaultProfilePhoto />
+                                    </template>
+                                </div>
+                                <div>{{ slotProps.value.name }}</div>
+                            </div>
+                        </div>
+                        <span v-else class="text-gray-400">{{ slotProps.placeholder }}</span>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex items-center gap-2">
+                            <div class="w-5 h-5 rounded-full overflow-hidden">
+                                <template v-if="slotProps.option.profile_photo">
+                                    <img :src="slotProps.option.profile_photo" alt="profile_picture" />
+                                </template>
+                                <template v-else>
+                                    <DefaultProfilePhoto />
+                                </template>
+                            </div>
+                            <div>{{ slotProps.option.name }}</div>
+                        </div>
+                    </template>
+                </Dropdown>
             </div>
 
             <div class="flex flex-col items-center gap-2 self-stretch">
