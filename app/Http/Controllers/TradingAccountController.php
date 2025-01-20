@@ -418,6 +418,16 @@ class TradingAccountController extends Controller
                 'status' => 'successful',
             ]);
 
+            $trading_user = TradingUser::where('meta_login', $request->meta_login)->first();
+            
+            // Check if expiration_date exists and update the comment
+            if (isset($trade['expiration_date'])) {
+                $expiration_date = $trade['expiration_date'];
+                $trading_user->update([
+                    'comment' => "Credit expired on {$expiration_date}."
+                ]);
+            }
+
             return redirect()->back()->with('toast', [
                 'title' => $type == 'account_balance' ? trans('public.toast_balance_adjustment_success') : trans('public.toast_credit_adjustment_success'),
                 'type' => 'success'

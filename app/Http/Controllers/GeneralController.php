@@ -3,18 +3,19 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\Bank;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Country;
 use App\Models\AccountType;
-use App\Models\LeaderboardBonus;
 use App\Models\TeamHasUser;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Models\TeamSettlement;
 use App\Models\TradingAccount;
 use App\Models\SettingLeverage;
+use App\Models\LeaderboardBonus;
 use App\Services\CTraderService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -320,6 +321,26 @@ class GeneralController extends Controller
             'countries' => $countries,
         ]);
     }
+
+    public function getBanks($returnAsArray = false)
+    {
+        $banks = Bank::get()->map(function ($bank) {
+            return [
+                'id' => $bank->id,
+                'bank_name' => $bank->bank_name,
+                'bank_code' => $bank->bank_code,
+            ];
+        });
+
+        if ($returnAsArray) {
+            return $banks;
+        }
+
+        return response()->json([
+            'banks' => $banks,
+        ]);
+    }
+
 
     // public function getGroups($returnAsArray = false)
     // {

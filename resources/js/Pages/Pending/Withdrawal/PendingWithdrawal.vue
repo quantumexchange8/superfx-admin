@@ -219,7 +219,7 @@ const handleFilter = (e) => {
                         <span class="hidden md:block items-center justify-center">{{ $t('public.amount') }} ($)</span>
                     </template>
                     <template #body="slotProps">
-                        {{ formatAmount(slotProps.data.amount) }}
+                        {{ formatAmount(slotProps.data.transaction_amount) }}
                     </template>
                 </Column>
                 <ColumnGroup type="footer">
@@ -257,7 +257,7 @@ const handleFilter = (e) => {
                                 </div>
                             </div>
                             <div class="overflow-hidden text-right text-ellipsis font-semibold">
-                                {{ slotProps.data.amount ?  '$&nbsp;' + formatAmount(slotProps.data.amount) : '' }}
+                                {{ slotProps.data.transaction_amount ?  '$&nbsp;' + formatAmount(slotProps.data.transaction_amount) : '' }}
                             </div>
                         </div>
                     </template>
@@ -292,7 +292,7 @@ const handleFilter = (e) => {
                         </div>
                     </div>
                     <div class="min-w-[180px] text-gray-950 font-semibold text-xl md:text-right">
-                        $ {{ formatAmount(pendingData.amount) }}
+                        $ {{ formatAmount(pendingData.transaction_amount) }}
                     </div>
                 </div>
 
@@ -303,6 +303,14 @@ const handleFilter = (e) => {
                         </div>
                         <div class="text-gray-950 text-sm font-medium">
                             {{ dayjs(pendingData.created_at).format('YYYY/MM/DD HH:mm:ss') }}
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                        <div class="w-[140px] text-gray-500 text-xs font-medium">
+                            {{ $t('public.withdrawal_fee') }}
+                        </div>
+                        <div class="text-gray-950 text-sm font-medium">
+                            $ {{ formatAmount(pendingData.transaction_charges) }}
                         </div>
                     </div>
                     <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
@@ -413,7 +421,7 @@ const handleFilter = (e) => {
                         </div>
                     </div>
                     <div class="min-w-[180px] text-gray-950 font-semibold text-xl md:text-right">
-                        $ {{ formatAmount(pendingData.amount) }}
+                        $ {{ formatAmount(pendingData.transaction_amount) }}
                     </div>
                 </div>
 

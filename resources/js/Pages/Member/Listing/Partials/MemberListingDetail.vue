@@ -10,7 +10,7 @@ import MemberFinancialInfo from '@/Pages/Member/Listing/Partials/MemberFinancial
 import MemberTradingAccounts from '@/Pages/Member/Listing/Partials/MemberTradingAccounts.vue';
 import ProfileInfo from "@/Pages/Member/Listing/MemberDetail/ProfileInfo.vue";
 import KycVerification from "@/Pages/Member/Listing/MemberDetail/KycVerification.vue";
-import CryptoWalletInfo from "@/Pages/Member/Listing/MemberDetail/CryptoWalletInfo.vue";
+import PaymentAccount from "@/Pages/Member/Listing/MemberDetail/PaymentAccount.vue";
 import {wTrans} from "laravel-vue-i18n";
 import AdjustmentHistory from "@/Pages/Member/Listing/MemberDetail/AdjustmentHistory.vue";
 
@@ -104,7 +104,7 @@ const updateType = (event) => {
                     <KycVerification
                         :userDetail="userDetail"
                     />
-                    <CryptoWalletInfo
+                    <PaymentAccount
                         :userDetail="userDetail"
                         :paymentAccounts="paymentAccounts"
                     />

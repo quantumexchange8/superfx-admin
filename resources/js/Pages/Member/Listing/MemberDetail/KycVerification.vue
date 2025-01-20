@@ -44,7 +44,7 @@ const handleApproval = (action) => {
 </script>
 
 <template>
-    <div class="flex flex-col items-start px-8 pt-4 pb-6 gap-3 flex-grow self-stretch rounded-2xl bg-white shadow-toast">
+    <div class="flex flex-col items-start px-8 pt-4 pb-6 gap-3 self-stretch rounded-2xl bg-white shadow-toast">
         <div class="flex h-9 items-center gap-7 self-stretch">
             <div class="flex flex-grow text-gray-950 text-sm font-bold">{{ $t('public.kyc_verification') }}</div>
         </div>

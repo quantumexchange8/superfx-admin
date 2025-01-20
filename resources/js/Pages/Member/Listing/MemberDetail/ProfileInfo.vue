@@ -202,6 +202,16 @@ const handleMemberStatus = () => {
             </div>
             <div class="flex justify-center items-center gap-5 self-stretch">
                 <div class="flex flex-col justify-center items-start gap-2 w-1/2">
+                    <div class="text-gray-500 text-xs w-full truncate">{{ $t('public.country') }}</div>
+                    <div class="truncate text-gray-950 text-sm font-medium w-full">{{ userDetail.country ?? '-' }}</div>
+                </div>
+                <div class="flex flex-col justify-center items-start gap-2 w-1/2">
+                    <div class="text-gray-500 text-xs w-full truncate">{{ $t('public.nationality') }}</div>
+                    <div class="truncate text-gray-950 text-sm font-medium w-full">{{ userDetail.nationality ?? '-' }}</div>
+                </div>
+            </div>
+            <div class="flex justify-center items-center gap-5 self-stretch">
+                <div class="flex flex-col justify-center items-start gap-2 w-1/2">
                     <div class="text-gray-500 text-xs w-full truncate">{{ $t('public.group') }}</div>
                     <div
                         v-if="userDetail.group_id"

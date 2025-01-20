@@ -477,6 +477,10 @@ const handleFilter = (e) => {
                 <span class="self-stretch text-gray-950 text-sm font-medium">{{ formatDateTime(data.approved_at) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.withdrawal_fee') }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data.transaction_charges) }}</span>
+            </div>
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.from') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium"> {{ data.from_meta_login ? data.from_meta_login : data ? $t(`public.${data.from_wallet_name}`) : '' }}</span>
             </div>

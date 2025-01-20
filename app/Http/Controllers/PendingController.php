@@ -75,7 +75,7 @@ class PendingController extends Controller
                 ];
             });
 
-        $totalAmount = $pendingWithdrawals->sum('amount');
+        $totalAmount = $pendingWithdrawals->sum('transaction_amount');
 
         return response()->json([
             'pendingWithdrawals' => $pendingWithdrawals,
@@ -107,58 +107,8 @@ class PendingController extends Controller
 
         if ($transaction->status == 'rejected') {
 
-            if ($transaction->category == 'rebate_wallet') {
-                $rebate_wallet = Wallet::where('user_id', $transaction->user_id)
-                    ->where('type', 'rebate_wallet')
-                    ->first();
-
-                $transaction->update([
-                    'old_wallet_amount' => $rebate_wallet->balance,
-                    'new_wallet_amount' => $rebate_wallet->balance += $transaction->amount,
-                ]);
-
-                $rebate_wallet->save();
-            }
-
-            if ($transaction->category == 'bonus_wallet') {
-                $bonus_wallet = Wallet::where('user_id', $transaction->user_id)
-                    ->where('type', 'bonus_wallet')
-                    ->first();
-
-                $transaction->update([
-                    'old_wallet_amount' => $bonus_wallet->balance,
-                    'new_wallet_amount' => $bonus_wallet->balance += $transaction->amount,
-                ]);
-
-                $bonus_wallet->save();
-            }
-
-            if ($transaction->category == 'trading_account') {
-
-                try {
-                    $trade = (new MetaFourService)->createTrade($transaction->from_meta_login, $transaction->amount, $transaction->remarks, ChangeTraderBalanceType::DEPOSIT);
-
-                    $transaction->update([
-                        'ticket' => $trade['ticket'],
-                    ]);
-                } catch (\Throwable $e) {
-                    // Log the main error
-                    Log::error('Error creating trade: ' . $e->getMessage());
-
-                    // Attempt to get the account and mark account as inactive if not found
-                    $account = (new MetaFourService())->getUser($transaction->meta_login);
-                    if (!$account) {
-                        TradingUser::where('meta_login', $transaction->meta_login)
-                            ->update(['acc_status' => 'inactive']);
-                    }
-
-                    return back()
-                        ->with('toast', [
-                            'title' => 'Trading account error',
-                            'type' => 'error'
-                        ]);
-                }
-            }
+            // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
+            $this->handleTransactionUpdate($transaction);
 
             return redirect()->back()->with('toast', [
                 'title' => trans('public.toast_reject_withdrawal_request'),
@@ -495,58 +445,8 @@ class PendingController extends Controller
                 'message' => 'Transaction success',
             ]);
         } else {
-            if ($transaction->category == 'rebate_wallet') {
-                $rebate_wallet = Wallet::where('user_id', $transaction->user_id)
-                    ->where('type', 'rebate_wallet')
-                    ->first();
-
-                $transaction->update([
-                    'old_wallet_amount' => $rebate_wallet->balance,
-                    'new_wallet_amount' => $rebate_wallet->balance += $transaction->amount,
-                ]);
-
-                $rebate_wallet->save();
-            }
-
-            if ($transaction->category == 'bonus_wallet') {
-                $bonus_wallet = Wallet::where('user_id', $transaction->user_id)
-                    ->where('type', 'bonus_wallet')
-                    ->first();
-
-                $transaction->update([
-                    'old_wallet_amount' => $bonus_wallet->balance,
-                    'new_wallet_amount' => $bonus_wallet->balance += $transaction->amount,
-                ]);
-
-                $bonus_wallet->save();
-            }
-
-            if ($transaction->category == 'trading_account') {
-
-                try {
-                    $trade = (new MetaFourService)->createTrade($transaction->from_meta_login, $transaction->amount, $transaction->remarks, ChangeTraderBalanceType::DEPOSIT);
-
-                    $transaction->update([
-                        'ticket' => $trade['ticket'],
-                    ]);
-                } catch (\Throwable $e) {
-                    // Log the main error
-                    Log::error('Error creating trade: ' . $e->getMessage());
-
-                    // Attempt to get the account and mark account as inactive if not found
-                    $account = (new MetaFourService())->getUser($transaction->meta_login);
-                    if (!$account) {
-                        TradingUser::where('meta_login', $transaction->meta_login)
-                            ->update(['acc_status' => 'inactive']);
-                    }
-
-                    return back()
-                        ->with('toast', [
-                            'title' => 'Trading account error',
-                            'type' => 'error'
-                        ]);
-                }
-            }
+            // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
+            $this->handleTransactionUpdate($transaction);
 
             return response()->json([
                 'status' => 'fail',
@@ -554,4 +454,58 @@ class PendingController extends Controller
             ]);
         }
     }
+
+    private function handleTransactionUpdate($transaction)
+    {
+        // Wallet handling logic here
+        $wallets = ['rebate_wallet', 'bonus_wallet'];
+
+        foreach ($wallets as $walletType) {
+            if ($transaction->category == $walletType) {
+                $wallet = Wallet::where('user_id', $transaction->user_id)
+                    ->where('type', $walletType)
+                    ->first();
+
+                if ($wallet) {
+                    $transaction->update([
+                        'old_wallet_amount' => $wallet->balance,
+                        'new_wallet_amount' => $wallet->balance + $transaction->amount,
+                    ]);
+
+                    $wallet->balance += $transaction->amount;
+                    $wallet->save();
+                }
+            }
+        }
+
+        // Trading account logic
+        if ($transaction->category == 'trading_account') {
+            try {
+                $trade = (new MetaFourService)->createTrade(
+                    $transaction->from_meta_login,
+                    $transaction->amount,
+                    $transaction->remarks,
+                    ChangeTraderBalanceType::DEPOSIT
+                );
+
+                $transaction->update([
+                    'ticket' => $trade['ticket'],
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Error creating trade: ' . $e->getMessage());
+
+                $account = (new MetaFourService())->getUser($transaction->meta_login);
+                if (!$account) {
+                    TradingUser::where('meta_login', $transaction->meta_login)
+                        ->update(['acc_status' => 'inactive']);
+                }
+
+                return back()->with('toast', [
+                    'title' => 'Trading account error',
+                    'type' => 'error'
+                ]);
+            }
+        }
+    }
+
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Exception;
+use App\Models\Bank;
 use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Wallet;
@@ -171,6 +172,7 @@ class MemberController extends Controller
             'countries' => (new DropdownOptionService())->getCountries(),
             'uplines' => (new DropdownOptionService())->getUplines(),
             'groups' => (new DropdownOptionService())->getGroups(),
+            'banks' => (new GeneralController())->getBanks(true),
         ]);
     }
 
@@ -530,7 +532,7 @@ class MemberController extends Controller
 
     public function getUserData(Request $request)
     {
-        $user = User::with(['groupHasUser', 'upline:id,name'])->find($request->id);
+        $user = User::with(['groupHasUser', 'upline:id,name', 'country:id,name,phone_code'])->find($request->id);
 
         $userData = [
             'id' => $user->id,
@@ -538,6 +540,8 @@ class MemberController extends Controller
             'email' => $user->email,
             'dial_code' => $user->dial_code,
             'phone' => $user->phone,
+            'country' => $user->country->name,
+            'nationality' => $user->nationality,
             'upline_id' => $user->upline_id,
             'role' => $user->role,
             'id_number' => $user->id_number,
@@ -557,15 +561,7 @@ class MemberController extends Controller
 
         $paymentAccounts = $user->paymentAccounts()
             ->latest()
-            ->limit(3)
-            ->get()
-            ->map(function ($account) {
-                return [
-                    'id' => $account->id,
-                    'payment_account_name' => $account->payment_account_name,
-                    'account_no' => $account->account_no,
-                ];
-            });
+            ->get();
 
         return response()->json([
             'userDetail' => $userData,
@@ -670,6 +666,65 @@ class MemberController extends Controller
         ]);
     }
 
+    public function updatePaymentAccount(Request $request)
+    {
+        $attributeNames = [
+            'payment_platform' => trans('public.payment_account_type'),
+            'payment_account_name' => $request->payment_platform == 'crypto'
+                ? trans('public.wallet_name')
+                : ($request->payment_account_type == 'account' ? trans('public.account_name') : trans('public.card_name')),
+            'payment_account_type' => trans('public.account_type'),
+            'payment_platform_name' => trans('public.bank'),
+            'account_no' => $request->payment_platform == 'crypto'
+                ? trans('public.token_address')
+                : ($request->payment_account_type == 'account' ? trans('public.account_no') : trans('public.card_no')),
+            'bank_code' => trans('public.bank_code'),
+        ];
+
+        Validator::make($request->all(), [
+            'payment_platform' => ['required'],
+            'payment_account_name' => ['required'],
+            'payment_account_type' => ['required'],
+            'payment_platform_name' => ['required'],
+            'account_no' => ['required'],
+            'bank_code' => ['required_if:payment_platform,bank'],
+        ])->setAttributeNames($attributeNames)
+            ->validate();
+
+        $payment_account = PaymentAccount::find($request->payment_account_id);
+
+        $payment_account->update([
+            'payment_account_name' => $request->payment_account_name,
+            'payment_platform' => $request->payment_platform,
+            'payment_platform_name' => $request->payment_platform_name,
+            'account_no' => $request->account_no,
+            'payment_account_type' => $request->payment_account_type,
+            'status' => 'active',
+        ]);
+
+        if ($payment_account->payment_platform == 'bank') {
+            $bank = Bank::firstWhere('bank_code', $request->bank_code);
+
+            $payment_account->update([
+                'bank_code' => $bank->bank_code,
+                'country_id' => $bank->country_id,
+                'currency' => $bank->currency,
+            ]);
+        } else {
+            $payment_account->update([
+                'bank_code' => null,
+                'country_id' => null,
+                'payment_platform_name' => 'USDT (' . strtoupper($payment_account->payment_account_type) . ')',
+                'currency' => 'USDT',
+            ]);
+        }
+
+        return redirect()->back()->with('toast', [
+            'title' => trans('public.toast_update_payment_account_success'),
+            'type' => 'success'
+        ]);
+    }
+        
     public function updateKYCStatus(Request $request)
     {
         $action = $request->input('action');

@@ -90,6 +90,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
 
         Route::post('/updateContactInfo', [MemberController::class, 'updateContactInfo'])->name('member.updateContactInfo');
         Route::post('/updateCryptoWalletInfo', [MemberController::class, 'updateCryptoWalletInfo'])->name('member.updateCryptoWalletInfo');
+        Route::post('/updatePaymentAccount', [MemberController::class, 'updatePaymentAccount'])->name('member.updatePaymentAccount');
         Route::post('/updateKYCStatus', [MemberController::class, 'updateKYCStatus'])->name('member.updateKYCStatus');
         Route::post('/walletAdjustment', [MemberController::class, 'walletAdjustment'])->name('member.walletAdjustment');
 

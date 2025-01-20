@@ -82,6 +82,11 @@ class User extends Authenticatable implements HasMedia
     }
 
     // Relations
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(Country::class, 'country_id', 'id');
+    }
+
     public function groupHasUser(): HasOne
     {
         return $this->hasOne(GroupHasUser::class, 'user_id');
