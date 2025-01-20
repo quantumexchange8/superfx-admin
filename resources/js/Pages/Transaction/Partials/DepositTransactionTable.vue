@@ -12,6 +12,8 @@ import Column from "primevue/column";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
 import {FilterMatchMode} from "primevue/api";
 import { transactionFormat } from '@/Composables/index.js';
+import dayjs from "dayjs";
+import { trans, wTrans } from "laravel-vue-i18n";
 import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
 import Badge from '@/Components/Badge.vue';
@@ -39,6 +41,7 @@ const totalTransactionAmount = ref(null);
 const minFilterAmount = ref(0);
 const maxFilterAmount = ref(0);
 const maxAmount = ref(null);
+const filteredValue = ref();
 const filteredValueCount = ref(0);
 
 onMounted(() => {
@@ -149,6 +152,7 @@ const clearFilter = () => {
         transaction_amount: { value: [null, null], matchMode: FilterMatchMode.BETWEEN },
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
     };
+    filteredValue.value = null; 
 };
 
 const clearFilterGlobal = () => {
@@ -182,7 +186,76 @@ watch([totalTransaction, totalTransactionAmount, maxAmount], () => {
 });
 
 const handleFilter = (e) => {
+    filteredValue.value = e.filteredValue;
     filteredValueCount.value = e.filteredValue.length;
+};
+
+const exportXLSX = () => {
+    // Retrieve the array from the reactive proxy
+    const data = filteredValue.value;
+
+    // Specify the headers
+    const headers = [
+        trans('public.date'),
+        trans('public.name'),
+        trans('public.email'),
+        trans('public.id'),
+        trans('public.account'),
+        trans('public.amount') + ' ($)',
+        trans('public.status'),
+        trans('public.receiving_address'),
+        trans('public.platform'),
+        trans('public.bank_name'),
+        trans('public.bank_code'),
+        trans('public.payment_account_type'),
+        trans('public.account_no'),
+    ];
+
+    // Map the array data to XLSX rows
+    const rows = data.map(obj => {
+        const toDisplay = obj.to_meta_login ? obj.to_meta_login : (obj.to_wallet_name ? trans('public.' + obj.to_wallet_name) : '');
+        const accountTypeLabel = obj.payment_account_type === 'card' ? trans('public.card_name') : trans('public.account_name');
+
+        return [
+            obj.created_at !== undefined ? dayjs(obj.created_at).format('YYYY/MM/DD') : '',
+            obj.name !== undefined ? obj.name : '',
+            obj.email !== undefined ? obj.email : '',
+            obj.transaction_number !== undefined ? obj.transaction_number : '',
+            toDisplay,
+            obj.transaction_amount !== undefined ? obj.transaction_amount : '',
+            obj.status !== undefined ? trans('public.' + obj.status) : '',
+            obj.to_wallet_address !== undefined ? obj.to_wallet_address : '',
+            obj.payment_platform !== null && obj.payment_platform !== undefined ? trans('public.' + obj.payment_platform) : '',
+            obj.payment_platform_name !== undefined ? obj.payment_platform_name : '',
+            obj.bank_code !== undefined ? obj.bank_code : '',
+            accountTypeLabel,
+            obj.payment_account_no !== undefined ? obj.payment_account_no : '',
+        ];
+    });
+
+    // Combine headers and rows into a single data array
+    const sheetData = [headers, ...rows];
+
+    // Create the XLSX content
+    let csvContent = "data:text/xlsx;charset=utf-8,";
+    
+    sheetData.forEach((rowArray) => {
+        const row = rowArray.join("\t"); // Use tabs for column separation
+        csvContent += row + "\r\n"; // Add a new line after each row
+    });
+
+    // Create a temporary link element
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "export.xlsx");
+
+    // Append the link to the document and trigger the download
+    document.body.appendChild(link);
+    link.click();
+
+    // Clean up by removing the link
+    document.body.removeChild(link);
 };
 
 </script>
@@ -238,7 +311,7 @@ const handleFilter = (e) => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="exportCSV($event)"
+                            @click="filteredValueCount > 0 ? exportXLSX() : null"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}
@@ -467,7 +540,7 @@ const handleFilter = (e) => {
             </div>
         </div>
 
-        <div v-if="data.status !== 'processing' && data.payment_platform === 'crypto' || data.status !== 'processing' && !data.payment_platform" class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
+        <div v-if="data.status !== 'processing'" class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
             <!-- <div v-if="data.status != 'failed'" class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.sent_address') }}</span>
                 <div class="flex justify-center items-center self-stretch" @click="copyToClipboard(data.from_wallet_address)">
@@ -492,8 +565,8 @@ const handleFilter = (e) => {
 
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ data.payment_account_type === 'card' ? $t('public.card_name') : $t('public.account_name') }}</span>
-                <span class="w-full text-gray-950 text-sm font-medium">{{ `${data.payment_account_name}` }}
-                    <span class="text-xs text-gray-500">{{ ` (${data.payment_account_no})` }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ `${data.payment_account_no}` }}
+                    <!-- <span class="text-xs text-gray-500">{{ ` (${data.payment_account_no})` }}</span> -->
                 </span>
             </div>
         </div>

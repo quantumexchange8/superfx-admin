@@ -9,6 +9,7 @@ use App\Http\Controllers\ForumController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\RebateController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\PendingController;
@@ -211,6 +212,19 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::get('/getTransactionListingData', [TransactionController::class, 'getTransactionListingData'])->name('transaction.getTransactionListingData');
         Route::get('/getTransactionMonths', [TransactionController::class, 'getTransactionMonths'])->name('transaction.getTransactionMonths');
 
+    });
+
+    /**
+     * ==============================
+     *          Report
+     * ==============================
+     */
+    Route::prefix('report')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('report');
+        // Route::get('/getRebateSummary', [ReportController::class, 'getRebateSummary'])->name('report.getRebateSummary');
+        // Route::get('/getRebateListing', [ReportController::class, 'getRebateListing'])->name('report.getRebateListing');
+        // Route::get('/getGroupTransaction', [ReportController::class, 'getGroupTransaction'])->name('report.getGroupTransaction');
+        Route::get('/getRebateHistory', [ReportController::class, 'getRebateHistory'])->name('report.getRebateHistory');
     });
 
     /**

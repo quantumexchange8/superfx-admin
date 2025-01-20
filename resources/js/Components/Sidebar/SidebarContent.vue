@@ -11,6 +11,7 @@ import {
     IconUserCircle,
     IconUsersGroup,
     IconReceiptDollar,
+    IconFileAnalytics,
     IconId,
     IconCoinMonero,
     IconBusinessplan,
@@ -168,6 +169,17 @@ watchEffect(() => {
                 <IconReceiptDollar :size="20" stroke-width="1.25" />
             </template>
         </SidebarLink>
+
+        <!-- Report -->
+       <SidebarLink
+           :title="$t('public.report')"
+           :href="route('report')"
+           :active="route().current('report')"
+       >
+           <template #icon>
+               <IconFileAnalytics :size="20" stroke-width="1.25" />
+           </template>
+       </SidebarLink>
 
         <!-- Account Type -->
         <SidebarLink

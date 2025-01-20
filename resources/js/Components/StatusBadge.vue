@@ -19,7 +19,7 @@ const baseClasses = [
 const variantClasses = computed(() => {
     if (props.variant === 'primary' || props.variant === 'member') {
         return 'bg-primary-50 text-primary-500'
-    } else if (props.variant === 'successful' || props.variant === 'approved' || props.variant === 'active' || props.variant === 'live') {
+    } else if (props.value === 'success' || props.variant === 'successful' || props.variant === 'approved' || props.variant === 'active' || props.variant === 'live') {
         return 'bg-success-50 text-success-500'
     } else if (props.variant === 'error' || props.variant === 'failed' || props.variant === 'rejected') {
         return 'bg-error-50 text-error-500'
