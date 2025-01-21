@@ -18,6 +18,9 @@ class UpdateAllAccountJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    // Set the job timeout to null to make it run indefinitely
+    public $timeout = null;
+
     public function __construct()
     {
         $this->queue = 'refresh_accounts';

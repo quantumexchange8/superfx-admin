@@ -296,7 +296,8 @@ const clearFilter = () => {
                 paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
                 :currentPageReportTemplate="$t('public.paginator_caption')"
                 :first="first"
-                :rows="10"
+                :page="page"
+                :rows="1"
                 ref="dt"
                 dataKey="id"
                 :totalRecords="totalRecords"
@@ -393,6 +394,37 @@ const clearFilter = () => {
                     >
                         <template #body="slotProps">
                             {{ dayjs(slotProps.data.created_at).format('YYYY/MM/DD') }}
+                        </template>
+                    </Column>
+                    <Column
+                        field="upline"
+                        :header="$t('public.upline')"
+                        class="hidden md:table-cell"
+                    >
+                        <template #body="slotProps">
+                            <div class="flex items-center gap-3">
+                                <div class="flex flex-col items-start">
+                                    <div class="font-medium">
+                                        {{ slotProps.data.upline.name }}
+                                    </div>
+                                    <div class="text-gray-500 text-xs">
+                                        {{ slotProps.data.upline.email }}
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </Column>
+                    <Column
+                        field="upline_id"
+                        :header="$t('public.upline_id')"
+                        class="hidden md:table-cell"
+                    >
+                        <template #body="slotProps">
+                            <div class="flex items-center gap-3">
+                                <div class="flex flex-col items-start">
+                                    {{ slotProps.data.upline.id_number }}
+                                </div>
+                            </div>
                         </template>
                     </Column>
                     <Column

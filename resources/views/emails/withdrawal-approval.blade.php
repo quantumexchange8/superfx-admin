@@ -328,15 +328,21 @@
                                                                         <td style="padding: 10px; word-break: break-word; border-top: 1px solid #dddddd; border-right: 1px solid #dddddd; border-bottom: 1px solid #dddddd; border-left: 1px solid #dddddd;"width="100%">
                                                                             Full Name: <strong><span style="word-break: break-word; color: #00c57d;">{{ $user->name }}</span></strong><br /><br />
     
-                                                                            @if ($meta_login)
-                                                                                Account Number: <strong><span style="word-break: break-word; color: #00c57d;">{{ $meta_login }}</span></strong><br /><br />
+                                                                            @if ($payment_platform === 'bank')
+                                                                                Account Number Transfer: <strong><span style="word-break: break-word; color: #00c57d;">{{ $meta_login }}</span></strong><br /><br />
+                                                                                Account Number Receive: <span style="word-break: break-word; color: #00c57d;"><strong>{{ $account_no }}</strong></span><br /><br />
                                                                                 Account Type: <span style="word-break: break-word; color: #00c57d;"><strong>{{ $account_type }}</strong></span><br /><br />
-                                                                            @else
-                                                                                Email: <strong><span style="word-break: break-word; color: #00c57d;">{{ $user->email }}</span></strong><br /><br />
+                                                                            @elseif ($payment_platform === 'crypto')
+                                                                                @if ($meta_login)
+                                                                                    Account Number: <strong><span style="word-break: break-word; color: #00c57d;">{{ $meta_login }}</span></strong><br /><br />
+                                                                                    Account Type: <span style="word-break: break-word; color: #00c57d;"><strong>{{ $account_type }}</strong></span><br /><br />
+                                                                                @else
+                                                                                    Email: <strong><span style="word-break: break-word; color: #00c57d;">{{ $user->email }}</span></strong><br /><br />
+                                                                                @endif
                                                                             @endif
 
                                                                             Withdrawal Amount: <span style="word-break: break-word; color: #00c57d;"><strong>{{ $amount }}</strong></span><br /><br />
-                                                                            Currency: <span style="word-break: break-word; color: #00c57d;"><strong>USD</strong></span><br />
+                                                                            Currency: <span style="word-break: break-word; color: #00c57d;"><strong>USDT</strong></span><br />
                                                                         </td>
                                                                         </tr>
                                                                     </tbody>

@@ -435,9 +435,16 @@ class PendingController extends Controller
             if ($transaction->from_meta_login) {
                 $data = (new MetaFourService())->getUser($transaction->from_meta_login);
 
-                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, $transaction->from_meta_login, $data['group'], $transaction->transaction_amount));
+                Mail::to($user->email)->send(new WithdrawalApprovalMail(
+                    $user, 
+                    $transaction->from_meta_login, 
+                    $data['group'], 
+                    $transaction->transaction_amount, 
+                    $transaction->payment_account_no, 
+                    $transaction->payment_platform)
+                );
             } else {
-                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount));
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform));
             }
 
             return response()->json([

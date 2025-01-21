@@ -634,4 +634,5 @@ return [
     "sell" => "卖出",
     "completed" => "已完成",
     "platform" => "平台",
+    "sell_limit" => "卖出限制",
 ];

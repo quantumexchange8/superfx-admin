@@ -283,6 +283,7 @@ class ReportController extends Controller
     public function getRebateHistory(Request $request)
     {
         $query = TradeRebateHistory::with([
+                'upline:id,name,email,id_number',
                 'downline:id,name,email,id_number',
                 'of_account_type:id,slug,color'
             ])
