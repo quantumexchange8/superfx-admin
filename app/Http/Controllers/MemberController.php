@@ -589,7 +589,7 @@ class MemberController extends Controller
         $user = User::find($request->user_id);
 
         $user->update([
-            'first_name' => $request->name,
+            'name' => $request->name,
             'email' => $request->email,
             'dial_code' => $request->dial_code['phone_code'],
             'phone' => $request->phone,
