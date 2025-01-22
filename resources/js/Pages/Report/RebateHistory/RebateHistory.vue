@@ -278,6 +278,7 @@ const clearFilter = () => {
     
     selectedDate.value = [minDate.value, maxDate.value];
     selectedCloseDate.value = null;
+    upline_id.value = null;
 };
 
 </script>
@@ -297,7 +298,7 @@ const clearFilter = () => {
                 :currentPageReportTemplate="$t('public.paginator_caption')"
                 :first="first"
                 :page="page"
-                :rows="1"
+                :rows="10"
                 ref="dt"
                 dataKey="id"
                 :totalRecords="totalRecords"
@@ -610,7 +611,7 @@ const clearFilter = () => {
                     </Column>
                     <ColumnGroup type="footer">
                         <Row>
-                            <Column class="hidden md:table-cell" :footer="$t('public.total') + ':'" :colspan="13" footerStyle="text-align:right" />
+                            <Column class="hidden md:table-cell" :footer="$t('public.total') + ':'" :colspan="16" footerStyle="text-align:right" />
                             <Column class="hidden md:table-cell" :footer="'$' + formatAmount(totalRebateAmount ?? 0)" />
                         </Row>
                     </ColumnGroup>
