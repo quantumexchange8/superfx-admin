@@ -633,4 +633,5 @@ return [
     "completed" => "已完成",
     "platform" => "平台",
     "sell_limit" => "Sell Limit",
+    "upline_id" => "上级代理交易序号",
 ];

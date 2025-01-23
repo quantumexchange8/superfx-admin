@@ -33,7 +33,7 @@ const exportStatus = ref(false);
 const isLoading = ref(false);
 const dt = ref(null);
 const histories = ref();
-const selectedUplines = ref([]);
+const selectedUplines = ref();
 const { formatDate, formatAmount } = transactionFormat();
 const { formatRgbaColor } = generalFormat();
 const totalRecords = ref(0);
@@ -64,22 +64,33 @@ watch(() => props.uplines, (newUplines) => {
   }, { immediate: true }
 );
 
-// Watch for individual changes in upline_id and apply it to filters
 watch([selectedUplines], (newUplineId) => {
-    if (newUplineId !== null) {
-        // console.log(newUplineId)
-        filters.value['upline_id'] = newUplineId;
+    if (newUplineId && newUplineId?.length > 0) {
+        // Update only if it's not empty
+        filters.value['upline_id'] = newUplineId[0].map(item => item.value);
     }
 });
 
 // Watch for changes on the entire 'filters' object and debounce the API call
 watch(filters, debounce(() => {
     // Count active filters, excluding null, undefined, empty strings, and empty arrays
-    filterCount.value = Object.values(filters.value).filter(filter => {
+    filterCount.value = Object.entries(filters.value).filter(([key, filter]) => {
+        // If both start_date and end_date have values, count them as 1 (treat as a pair)
+        if ((key === 'start_date' || key === 'end_date') && filters.value.start_date && filters.value.end_date) {
+            return key === 'start_date'; // Count once for the pair (count start_date only)
+        }
+
+        // If both start_close_date and end_close_date have values, count them as 1 (treat as a pair)
+        if ((key === 'start_close_date' || key === 'end_close_date') && filters.value.start_close_date && filters.value.end_close_date) {
+            return key === 'start_close_date'; // Count once for the pair (count start_close_date only)
+        }
+
+        // For other filters, count them if they are not null, undefined, or empty
         if (Array.isArray(filter)) {
             return filter.length > 0;  // Check if the array is not empty
         }
-        return filter !== null && filter !== '';  // Check if the value is not null or an empty string
+
+        return filter !== null && filter !== '';  // Check if the value is not null or empty string
     }).length;
 
     page.value = 0; // Reset to first page when filters change
@@ -96,18 +107,18 @@ const constructUrl = (exportStatus = false) => {
     }
 
     // Dynamically use selectedDate and selectedCloseDate for date filters
-    if (selectedDate.value && selectedDate.value.length === 2) {
-        url += `&startDate=${formatDate(selectedDate.value[0])}`;
-        url += `&endDate=${formatDate(selectedDate.value[1])}`;
+    if (filters.value.start_date && filters.value.end_date) {
+        url += `&startDate=${formatDate(filters.value.start_date)}`;
+        url += `&endDate=${formatDate(filters.value.end_date)}`;
     }
 
-    if (selectedCloseDate.value && selectedCloseDate.value.length === 2) {
-        url += `&startClosedDate=${formatDate(selectedCloseDate.value[0])}`;
-        url += `&endClosedDate=${formatDate(selectedCloseDate.value[1])}`;
+    if (filters.value.start_close_date && filters.value.end_close_date) {
+        url += `&startClosedDate=${formatDate(filters.value.start_close_date)}`;
+        url += `&endClosedDate=${formatDate(filters.value.end_close_date)}`;
     }
 
     if (filters.value.upline_id && filters.value.upline_id.length > 0) {
-        const uplineIdValues = filters.value.upline_id[0].map(item => item.value).join(',');
+        const uplineIdValues = filters.value.upline_id.map(item => item).join(',');
         url += `&upline_id=${uplineIdValues}`;
     }
 
@@ -220,54 +231,63 @@ const clearCloseDate = () => {
     selectedCloseDate.value = null;
 }
 
+// Watch for changes in selectedDate
 watch(selectedDate, (newDateRange) => {
     if (Array.isArray(newDateRange)) {
         const [startDate, endDate] = newDateRange;
         // Check if both start and end dates are valid
         if (startDate && endDate) {
-            getResults();
+            filters.value.start_date = startDate;
+            filters.value.end_date = endDate;
         } 
         // Handle case where one of the dates is missing
         else if (startDate || endDate) {
-            // If either startDate or endDate is available, use them for the date range
-            getResults();
+            filters.value.start_date = startDate || filters.value.start_date;
+            filters.value.end_date = endDate || filters.value.end_date;
         } 
         // If no dates are selected, pass an empty array
         else {
-            getResults();
+            filters.value.start_date = null;
+            filters.value.end_date = null;
         }
     }
     else if (newDateRange === null) {
-        getResults();
+        filters.value.start_date = null;
+        filters.value.end_date = null;
     }
     else {
         console.warn('Invalid date range format:', newDateRange);
     }
-})
+});
 
+// Watch for changes in selectedCloseDate
 watch(selectedCloseDate, (newDateRange) => {
     if (Array.isArray(newDateRange)) {
         const [startCloseDate, endCloseDate] = newDateRange;
-        // Check if both start and end dates are valid
+        // Check if both start and end close dates are valid
         if (startCloseDate && endCloseDate) {
-            getResults();
+            filters.value.start_close_date = startCloseDate;
+            filters.value.end_close_date = endCloseDate;
         } 
         // Handle case where one of the dates is missing
         else if (startCloseDate || endCloseDate) {
-            getResults();
+            filters.value.start_close_date = startCloseDate || filters.value.start_close_date;
+            filters.value.end_close_date = endCloseDate || filters.value.end_close_date;
         } 
         // If no dates are selected, pass an empty array
         else {
-            getResults();
+            filters.value.start_close_date = null;
+            filters.value.end_close_date = null;
         }
     } 
     else if (newDateRange === null) {
-        getResults();
+        filters.value.start_close_date = null;
+        filters.value.end_close_date = null;
     }
     else {
         console.warn('Invalid date range format:', newDateRange);
     }
-})
+});
 
 const clearFilter = () => {
     filters.value = {
@@ -690,7 +710,7 @@ const clearFilter = () => {
                     :options="uplines"
                     :placeholder="$t('public.filter_by_sales_team')"
                     :maxSelectedLabels="1"
-                    :selectedItemsLabel="`${selectedUplines.length} ${$t('public.uplines_selected')}`"
+                    :selectedItemsLabel="`${selectedUplines?.length} ${$t('public.uplines_selected')}`"
                     class="w-full md:w-64 font-normal"
                 >
                     <template #header>
@@ -702,11 +722,11 @@ const clearFilter = () => {
                         <span>{{ option.name }}</span>
                     </template>
                     <template #value>
-                        <div v-if="selectedUplines.length === 1">
+                        <div v-if="selectedUplines?.length === 1">
                             <span>{{ selectedUplines[0].name }}</span>
                         </div>
-                        <span v-else-if="selectedUplines.length > 1">
-                            {{ selectedUplines.length }} {{ $t('public.uplines_selected') }}
+                        <span v-else-if="selectedUplines?.length > 1">
+                            {{ selectedUplines?.length }} {{ $t('public.uplines_selected') }}
                         </span>
                         <span v-else class="text-gray-400">
                             {{ $t('public.filter_upline') }}
