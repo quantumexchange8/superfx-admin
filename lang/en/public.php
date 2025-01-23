@@ -635,5 +635,4 @@ return [
     "completed" => "Completed",
     "platform" => "Platform",
     "sell_limit" => "Sell Limit",
-    "upline_id" => "Upline Id",
 ];

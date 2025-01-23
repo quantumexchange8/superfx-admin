@@ -19,7 +19,7 @@ class ReportController extends Controller
     public function index()
     {
         return Inertia::render('Report/Report', [
-            'uplines' => (new GeneralController())->getUplines(true),
+            'uplines' => (new GeneralController())->getRebateUplines(true),
         ]);
     }
 
@@ -324,7 +324,8 @@ class ReportController extends Controller
         }
 
         if ($request->input('upline_id')) {
-            $query->where('upline_user_id', $request->input('upline_id'));
+            $uplineIds = explode(',', $request->input('upline_id'));
+            $query->whereIn('upline_user_id', $uplineIds);
         }
 
         if ($request->input('type')) {

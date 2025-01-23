@@ -13,6 +13,7 @@ import Tag from "primevue/tag";
 import {IconCircleXFilled, IconSearch, IconX, IconAdjustments} from "@tabler/icons-vue";
 import InputText from "primevue/inputtext";
 import Dropdown from "primevue/dropdown";
+import MultiSelect from 'primevue/multiselect';
 import Calendar from "primevue/calendar";
 import Empty from "@/Components/Empty.vue";
 import Loader from "@/Components/Loader.vue";
@@ -32,6 +33,7 @@ const exportStatus = ref(false);
 const isLoading = ref(false);
 const dt = ref(null);
 const histories = ref();
+const selectedUplines = ref([]);
 const { formatDate, formatAmount } = transactionFormat();
 const { formatRgbaColor } = generalFormat();
 const totalRecords = ref(0);
@@ -49,10 +51,10 @@ const filters = ref({
     end_date: null,
     start_close_date: null,
     end_close_date: null,
-    upline_id: null,
+    upline_id: [],
     t_type: null,
 });
-const upline_id = ref(null)
+
 const uplines = ref()
 
 // Watch for changes in props.uplines
@@ -63,9 +65,10 @@ watch(() => props.uplines, (newUplines) => {
 );
 
 // Watch for individual changes in upline_id and apply it to filters
-watch([upline_id], ([newUplineId]) => {
+watch([selectedUplines], (newUplineId) => {
     if (newUplineId !== null) {
-        filters.value['upline_id'] = newUplineId.value;
+        // console.log(newUplineId)
+        filters.value['upline_id'] = newUplineId;
     }
 });
 
@@ -103,8 +106,9 @@ const constructUrl = (exportStatus = false) => {
         url += `&endClosedDate=${formatDate(selectedCloseDate.value[1])}`;
     }
 
-    if (filters.value.upline_id) {
-        url += `&upline_id=${filters.value.upline_id}`;
+    if (filters.value.upline_id && filters.value.upline_id.length > 0) {
+        const uplineIdValues = filters.value.upline_id[0].map(item => item.value).join(',');
+        url += `&upline_id=${uplineIdValues}`;
     }
 
     if (filters.value.t_type) {
@@ -272,13 +276,13 @@ const clearFilter = () => {
         end_date: null,
         start_close_date: null,
         end_close_date: null,
-        upline_id: null,
+        upline_id: [],
         t_type: null,
     };
     
     selectedDate.value = [minDate.value, maxDate.value];
     selectedCloseDate.value = null;
-    upline_id.value = null;
+    selectedUplines.value = [];
 };
 
 </script>
@@ -681,50 +685,38 @@ const clearFilter = () => {
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_upline') }}
                 </div>
-                <Dropdown
-                    v-model="upline_id"
+                <MultiSelect
+                    v-model="selectedUplines"
                     :options="uplines"
-                    filter
-                    :filterFields="['name']"
-                    optionLabel="name"
-                    :placeholder="$t('public.select_upline')"
-                    class="w-full"
-                    scroll-height="236px"
+                    :placeholder="$t('public.filter_by_sales_team')"
+                    :maxSelectedLabels="1"
+                    :selectedItemsLabel="`${selectedUplines.length} ${$t('public.uplines_selected')}`"
+                    class="w-full md:w-64 font-normal"
                 >
-                    <template #value="slotProps">
-                        <div v-if="slotProps.value" class="flex items-center gap-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-5 h-5 rounded-full overflow-hidden">
-                                    <template v-if="slotProps.value.profile_photo">
-                                        <img :src="slotProps.value.profile_photo" alt="profile_picture" />
-                                    </template>
-                                    <template v-else>
-                                        <DefaultProfilePhoto />
-                                    </template>
-                                </div>
-                                <div>{{ slotProps.value.name }}</div>
-                            </div>
-                        </div>
-                        <span v-else class="text-gray-400">{{ slotProps.placeholder }}</span>
-                    </template>
-                    <template #option="slotProps">
-                        <div class="flex items-center gap-2">
-                            <div class="w-5 h-5 rounded-full overflow-hidden">
-                                <template v-if="slotProps.option.profile_photo">
-                                    <img :src="slotProps.option.profile_photo" alt="profile_picture" />
-                                </template>
-                                <template v-else>
-                                    <DefaultProfilePhoto />
-                                </template>
-                            </div>
-                            <div>{{ slotProps.option.name }}</div>
+                    <template #header>
+                        <div class="absolute flex left-10 top-2">
+                            {{ $t('public.select_all') }}
                         </div>
                     </template>
-                </Dropdown>
+                    <template #option="{option}">
+                        <span>{{ option.name }}</span>
+                    </template>
+                    <template #value>
+                        <div v-if="selectedUplines.length === 1">
+                            <span>{{ selectedUplines[0].name }}</span>
+                        </div>
+                        <span v-else-if="selectedUplines.length > 1">
+                            {{ selectedUplines.length }} {{ $t('public.uplines_selected') }}
+                        </span>
+                        <span v-else class="text-gray-400">
+                            {{ $t('public.filter_upline') }}
+                        </span>
+                    </template>
+                </MultiSelect>
             </div>
 
             <div class="flex flex-col items-center gap-2 self-stretch">
-                <span class="self-stretch text-gray-950 text-xs font-bold">{{ $t('public.filter_type') }}</span>
+                <span class="self-stretch text-gray-950 text-xs font-semibold">{{ $t('public.filter_type') }}</span>
                 <div class="flex flex-col gap-1 self-stretch">
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <RadioButton v-model="filters['t_type']" inputId="trade_buy" value="buy" class="w-4 h-4" />
