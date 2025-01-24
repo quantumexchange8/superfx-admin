@@ -655,7 +655,6 @@ const clearFilter = () => {
                         v-model="selectedDate"
                         selectionMode="range"
                         :manualInput="false"
-                        :minDate="minDate"
                         :maxDate="maxDate"
                         dateFormat="dd/mm/yy"
                         showIcon
@@ -682,7 +681,6 @@ const clearFilter = () => {
                         v-model="selectedCloseDate"
                         selectionMode="range"
                         :manualInput="false"
-                        :minDate="minDate"
                         :maxDate="maxDate"
                         dateFormat="dd/mm/yy"
                         showIcon
@@ -714,7 +712,7 @@ const clearFilter = () => {
                     class="w-full md:w-64 font-normal"
                 >
                     <template #header>
-                        <div class="absolute flex left-10 top-2">
+                        <div class="absolute flex left-10 top-3">
                             {{ $t('public.select_all') }}
                         </div>
                     </template>

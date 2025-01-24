@@ -372,6 +372,7 @@ return [
     "zero_fee" => "Zero fee",
     "loading_asset_master_caption" => "Loading Asset Masters data. Please wait.",
     "select_upline" => "Select upline",
+    "uplines_selected" => "uplines selected",
     "delete_member" => "Delete Member",
     "delete_member_desc" => "Are you sure you want to delete this member? This action cannot be undone.",
     "toast_delete_member_success" => "Member has been deleted!",

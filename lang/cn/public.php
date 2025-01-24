@@ -43,6 +43,8 @@ return [
     "enter_email" => "输入邮件地址",
     "phone_number" => "输入号码",
     "phone_code" => "区号",
+    "country" => "国家",
+    "nationality" => "国籍",
     "upline" => "上级代理",
     "upline_placeholder" => "选择代理",
     "kyc_verification" => "身分验证",

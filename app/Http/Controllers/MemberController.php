@@ -590,6 +590,17 @@ class MemberController extends Controller
         ]);
         $validator->validate();
 
+        $user = User::find($request->user_id);
+
+        // Update user contact information
+        $user->update([
+            'email' => $request->email,
+            'name' => $request->name,
+            'dial_code' => $request->dial_code['phone_code'],
+            'phone' => $request->phone,
+            'phone_number' => $request->phone_number,
+        ]);
+
         return redirect()->back()->with('toast', [
             'title' => trans('public.update_contact_info_alert'),
             'type' => 'success'
