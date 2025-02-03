@@ -130,11 +130,6 @@ class PendingController extends Controller
 
                 if ($conversion_rate) {
                     $conversion_amount = round((float) $transaction->transaction_amount * $conversion_rate->withdrawal_rate);
-
-                    $transaction->update([
-                        'from_currency' => $conversion_rate->base_currency,
-                        'to_currency' => $conversion_rate->target_currency ?? null,
-                    ]);
                 }
             } else {
                 $transaction->update([
@@ -341,7 +336,6 @@ class PendingController extends Controller
     public function transactionCallback(Request $request)
     {
         $rawBody = $request->getContent();
-        Log::debug($request->header());
 
         if ($request->header('Content-Type') == 'application/x-www-form-urlencoded') {
             // Parse form-encoded data
@@ -436,11 +430,11 @@ class PendingController extends Controller
                 $data = (new MetaFourService())->getUser($transaction->from_meta_login);
 
                 Mail::to($user->email)->send(new WithdrawalApprovalMail(
-                    $user, 
-                    $transaction->from_meta_login, 
-                    $data['group'], 
-                    $transaction->transaction_amount, 
-                    $transaction->payment_account_no, 
+                    $user,
+                    $transaction->from_meta_login,
+                    $data['group'],
+                    $transaction->transaction_amount,
+                    $transaction->payment_account_no,
                     $transaction->payment_platform)
                 );
             } else {
