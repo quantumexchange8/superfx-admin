@@ -273,7 +273,7 @@
                                                                     </p>
                                                                     <p style="margin: 0;">We are pleased to inform you
                                                                         via this email that your withdrawal request has
-                                                                        successfully been accepted from your     
+                                                                        successfully been accepted from your
                                                                         @if ($meta_login)
                                                                             SuperForex trading account.
                                                                         @else
@@ -327,7 +327,7 @@
                                                                         <tr>
                                                                         <td style="padding: 10px; word-break: break-word; border-top: 1px solid #dddddd; border-right: 1px solid #dddddd; border-bottom: 1px solid #dddddd; border-left: 1px solid #dddddd;"width="100%">
                                                                             Full Name: <strong><span style="word-break: break-word; color: #00c57d;">{{ $user->name }}</span></strong><br /><br />
-    
+
                                                                             @if ($payment_platform === 'bank')
                                                                                 Account Number Transfer: <strong><span style="word-break: break-word; color: #00c57d;">{{ $meta_login }}</span></strong><br /><br />
                                                                                 Account Number Receive: <span style="word-break: break-word; color: #00c57d;"><strong>{{ $account_no }}</strong></span><br /><br />
@@ -1316,7 +1316,7 @@
                                                                 <div
                                                                     style="color:#989898;direction:ltr;font-family:Arial, 'Helvetica Neue', Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:120%;text-align:center;mso-line-height-alt:19.2px;">
                                                                     <p style="margin: 0;"><a
-                                                                            href="{{ config('member_production_url') }}"
+                                                                            href="{{ url(config('app.member_production_url')) }}"
                                                                             rel="noopener"
                                                                             style="text-decoration: underline; color: #989898;"
                                                                             target="_blank">Dashboard</a></p>
