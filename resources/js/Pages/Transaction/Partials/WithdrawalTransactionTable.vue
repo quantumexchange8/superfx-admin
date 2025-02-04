@@ -202,7 +202,7 @@ const handleFilter = (e) => {
         tableStyle="md:min-width: 50rem"
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-        :globalFilterFields="['name']"
+        :globalFilterFields="['transaction_number', 'name', 'email', 'from_meta_login']"
         ref="dt"
         selectionMode="single"
         @row-click="(event) => openDialog(event.data)"
@@ -260,13 +260,13 @@ const handleFilter = (e) => {
         </template>
         <template v-if="transactions?.length > 0 && filteredValueCount > 0">
             <Column
-                field="approved_at"
+                field="created_at"
                 sortable
-                :header="$t('public.date')"
+                :header="$t('public.requested_on')"
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">
-                    {{ formatDateTime(slotProps.data.approved_at) }}
+                    {{ slotProps.data.created_at ? formatDateTime(slotProps.data.created_at) : null }}
                 </template>
             </Column>
             <Column
@@ -326,12 +326,22 @@ const handleFilter = (e) => {
                 </template>
             </Column>
             <Column
+                field="approved_at"
+                sortable
+                :header="$t('public.approval_on')"
+                class="hidden md:table-cell"
+            >
+                <template #body="slotProps">
+                    {{ slotProps.data.approved_at ? formatDateTime(slotProps.data.approved_at) : null }}
+                </template>
+            </Column>
+            <Column
                 field="status"
                 :header="$t('public.status')"
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">
-                    <StatusBadge class="w-fit" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
+                    <StatusBadge class="w-fit text-nowrap" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
                 </template>
             </Column>
             <Column class="md:hidden">

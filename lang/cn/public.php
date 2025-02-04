@@ -196,7 +196,7 @@ return [
     "transaction_id" => "交易序号",
     "transaction_date" => "日期",
     "account" => "账户号码",
-    "status" => "Status",
+    "status" => "状态",
     "sent_address" => "发款地址",
     "receiving_address" => "收款地址",
     "remarks" => "备注",
@@ -636,4 +636,9 @@ return [
     "platform" => "平台",
     "sell_limit" => "Sell Limit",
     "upline_id" => "上级代理交易序号",
+    "required_confirmation" => "需要确认",
+    "withdrawal_confirmed" => "提款已确认",
+    "invalid_token" => "无效的令牌",
+    "requested_on" => "申请于",
+    "approval_on" => "批准于",
 ];

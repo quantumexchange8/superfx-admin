@@ -271,7 +271,7 @@ const exportXLSX = () => {
         tableStyle="md:min-width: 50rem"
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-        :globalFilterFields="['name']"
+        :globalFilterFields="['name', 'email', 'to_meta_login', 'transaction_number']"
         ref="dt"
         selectionMode="single"
         @row-click="(event) => openDialog(event.data)"
@@ -400,7 +400,7 @@ const exportXLSX = () => {
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">
-                    <StatusBadge class="w-fit" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
+                    <StatusBadge class="w-fit text-nowrap" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
                 </template>
             </Column>
             <Column class="md:hidden">

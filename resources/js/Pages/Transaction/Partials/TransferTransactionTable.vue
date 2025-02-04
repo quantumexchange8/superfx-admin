@@ -200,7 +200,7 @@ const handleFilter = (e) => {
         tableStyle="md:min-width: 50rem"
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-        :globalFilterFields="['name']"
+        :globalFilterFields="['transaction_number', 'name', 'email', 'from_meta_login', 'to_meta_login']"
         ref="dt"
         selectionMode="single"
         @row-click="(event) => openDialog(event.data)"

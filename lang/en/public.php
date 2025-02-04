@@ -637,4 +637,9 @@ return [
     "platform" => "Platform",
     "sell_limit" => "Sell Limit",
     "upline_id" => "Upline Id",
+    "required_confirmation" => "Confirmation Required",
+    "withdrawal_confirmed" => "Withdrawal Confirmed",
+    "invalid_token" => "Invalid Token",
+    "requested_on" => "Requested On",
+    "approval_on" => "Approval On",
 ];
