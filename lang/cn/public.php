@@ -577,6 +577,7 @@ return [
     "std10" => "STD10",
     "std15" => "STD15",
     "std20" => "STD20",
+    "prime" => "PRIME",
     "rebate_exceed_upline" => "返佣超过上线:name : :value",
     "rebate_exceed_downline" => "返佣低于下线:name : :value",
     "empty_rebate_title" => "尚未有返佣纪录",

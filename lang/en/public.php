@@ -578,6 +578,7 @@ return [
     "std10" => "STD10",
     "std15" => "STD15",
     "std20" => "STD20",
+    "prime" => "PRIME",
     "rebate_exceed_upline" => "Rebate is more than upline :name : :value",
     "rebate_exceed_downline" => "Rebate is less than downline :name : :value",
     "empty_rebate_title" => "No Rebate Found",
