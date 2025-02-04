@@ -14,6 +14,4 @@ Schedule::command('update:exchange-rate')
     ->timezone('Asia/Kuala_Lumpur')
     ->at('10:00');
 Schedule::command('update:vnd-exchange-api-key')->weekly();
-Schedule::call(function () {
-    dispatch(new UpdateAllAccountJob());
-})->timezone('Asia/Kuala_Lumpur')->at('8:00');
+Schedule::command('refresh_accounts')->timezone('Asia/Kuala_Lumpur')->at('8:00');

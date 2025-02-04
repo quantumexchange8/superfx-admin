@@ -1,33 +1,28 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Console\Commands;
 
 use App\Models\TradingUser;
-use Illuminate\Bus\Queueable;
-use App\Models\TradingAccount;
+use Illuminate\Console\Command;
 use App\Services\MetaFourService;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Queue\SerializesModels;
 use App\Services\Data\UpdateTradingUser;
-use Illuminate\Queue\InteractsWithQueue;
 use App\Services\Data\UpdateTradingAccount;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
 
-class UpdateAllAccountJob implements ShouldQueue
+class UpdateAllAccountsCommand extends Command
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    protected $signature = 'refresh_accounts';
 
-    // Set the job timeout to null to make it run indefinitely
-    public $timeout = null;
+    protected $description = 'Update accounts for active trading accounts';
 
-    public function __construct()
-    {
-        $this->queue = 'refresh_accounts';
-    }
+    // Disable the Laravel command timeout
+    protected $timeout = null;
 
     public function handle(): void
     {
+        // Disable PHP execution timeout (unlimited time)
+        ini_set('max_execution_time', 0);  // No timeout for PHP script execution
+
         $trading_accounts = TradingUser::where('acc_status', 'active')->get();
 
         foreach ($trading_accounts as $account) {
@@ -35,7 +30,7 @@ class UpdateAllAccountJob implements ShouldQueue
                 // Attempt to fetch user data
                 $accData = (new MetaFourService)->getUser($account->meta_login);
 
-                // If no data is returned (null or empty), mark the account as inactive
+                // If no data is returned (null or empty), mark the account as inactive and delete associated records
                 if (empty($accData)) {
                     if ($account->acc_status !== 'inactive') {
                         $account->update(['acc_status' => 'inactive']);
@@ -53,7 +48,7 @@ class UpdateAllAccountJob implements ShouldQueue
                     (new UpdateTradingAccount)->execute($account->meta_login, $accData);
                 }
             } catch (\Exception $e) {
-                // Log the error if there was a failure (network issue, server error, etc.)
+                // Log the error if there was a failure
                 Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
             }
         }
