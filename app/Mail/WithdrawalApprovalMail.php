@@ -45,7 +45,6 @@ class WithdrawalApprovalMail extends Mailable implements ShouldQueue
                 'account_no' => $this->account_no,
                 'payment_platform' => $this->payment_platform,
             ])
-            ->from('info@superforexs.com')
             ->subject('Withdrawal Approval Notification');
     }
 
