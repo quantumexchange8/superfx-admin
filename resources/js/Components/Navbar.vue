@@ -28,6 +28,7 @@ const locales = [
     {'label': 'English', 'value': 'en'},
     {'label': '简体中文', 'value': 'cn'},
     {'label': '繁體中文', 'value': 'tw'},
+    {'label': 'tiếng Việt', 'value': 'vn'},
 ];
 
 const changeLanguage = async (langVal) => {
@@ -103,7 +104,7 @@ const requireConfirmation = (action_type) => {
             >
                 <IconLogout size="20" stroke-width="1.25" />
             </Link> -->
-            <div 
+            <div
                 class="w-12 h-12 p-3.5 flex items-center justify-center rounded-full hover:cursor-pointer hover:bg-gray-100 text-gray-800"
                 @click.prevent="requireConfirmation('logout')"
             >

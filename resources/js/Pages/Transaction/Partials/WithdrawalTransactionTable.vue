@@ -263,7 +263,7 @@ const handleFilter = (e) => {
                 field="created_at"
                 sortable
                 :header="$t('public.requested_on')"
-                class="hidden md:table-cell"
+                class="hidden md:table-cell max-w-[84px]"
             >
                 <template #body="slotProps">
                     {{ slotProps.data.created_at ? formatDateTime(slotProps.data.created_at) : null }}
@@ -329,10 +329,10 @@ const handleFilter = (e) => {
                 field="approved_at"
                 sortable
                 :header="$t('public.approval_on')"
-                class="hidden md:table-cell"
+                class="hidden md:table-cell max-w-[84px]"
             >
                 <template #body="slotProps">
-                    {{ slotProps.data.approved_at ? formatDateTime(slotProps.data.approved_at) : null }}
+                    {{ slotProps.data.approved_at ? formatDateTime(slotProps.data.approved_at) : '-' }}
                 </template>
             </Column>
             <Column
@@ -484,7 +484,7 @@ const handleFilter = (e) => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.approval_date') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ formatDateTime(data.approved_at) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ data.approved_at ? formatDateTime(data.approved_at) : '-' }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.withdrawal_fee') }}</span>
