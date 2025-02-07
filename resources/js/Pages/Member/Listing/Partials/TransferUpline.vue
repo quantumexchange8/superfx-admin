@@ -120,7 +120,7 @@ const requireConfirmation = (action_type) => {
                         v-model="upline"
                         :options="uplines"
                         filter
-                        :filterFields="['name']"
+                        :filterFields="['name','email','id_number']"
                         optionLabel="name"
                         :placeholder="$t('public.select_upline')"
                         class="w-full font-normal"
