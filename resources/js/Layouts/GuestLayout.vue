@@ -16,6 +16,7 @@ const locales = [
     {'label': 'English', 'value': 'en'},
     {'label': '简体中文', 'value': 'cn'},
     {'label': '繁體中文', 'value': 'tw'},
+    {'label': 'tiếng Việt', 'value': 'vn'},
 ];
 
 const changeLanguage = async (langVal) => {
