@@ -482,9 +482,13 @@ class PendingController extends Controller
         // Trading account logic
         if ($transaction->category == 'trading_account') {
             try {
+                $tradingUser = TradingUser::where('meta_login', $transaction->from_meta_login)->with('trading_account', 'accountType')->first();
+                $multiplier = $tradingUser->accountType ? $tradingUser->accountType->balance_multiplier : 1;
+                $adjustedAmount = $transaction->amount * $multiplier;
+    
                 $trade = (new MetaFourService)->createTrade(
                     $transaction->from_meta_login,
-                    $transaction->amount,
+                    $adjustedAmount,
                     $transaction->remarks,
                     ChangeTraderBalanceType::DEPOSIT
                 );
@@ -495,9 +499,9 @@ class PendingController extends Controller
             } catch (\Throwable $e) {
                 Log::error('Error creating trade: ' . $e->getMessage());
 
-                $account = (new MetaFourService())->getUser($transaction->meta_login);
+                $account = (new MetaFourService())->getUser($transaction->from_meta_login);
                 if (!$account) {
-                    TradingUser::where('meta_login', $transaction->meta_login)
+                    TradingUser::where('meta_login', $transaction->from_meta_login)
                         ->update(['acc_status' => 'inactive']);
                 }
 
