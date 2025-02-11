@@ -597,7 +597,7 @@ const clearFilter = () => {
                         class="hidden md:table-cell"
                     >
                         <template #body="slotProps">
-                            {{ formatAmount(slotProps.data.revenue) }}
+                            {{ formatAmount(slotProps.data.revenue, 3) }}
                         </template>
                     </Column>
                     <Column

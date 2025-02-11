@@ -130,7 +130,7 @@ watchEffect(() => {
                             class="flex items-center w-full self-stretch py-2 text-gray-950"
                         >
                             <div class="text-sm px-2 w-full">{{ $t(`public.${rebateDetail.symbol_group.display}`) }}</div>
-                            <div class="text-sm px-2 w-full">{{ formatAmount(rebateDetail.amount, 0) }}</div>
+                            <div class="text-sm px-2 w-full">{{ formatAmount(rebateDetail.amount) }}</div>
                         </div>
                         <div
                             v-else

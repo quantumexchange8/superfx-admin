@@ -20,6 +20,8 @@ import Dialog from "primevue/dialog";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
 import toast from '@/Composables/toast';
 import debounce from "lodash/debounce.js";
+import { transactionFormat } from "@/Composables/index.js";
+const { formatAmount } = transactionFormat()
 
 const props = defineProps({
     accountTypes: Array,
@@ -324,7 +326,7 @@ watchEffect(() => {
                     <span class="w-12 truncate lg:w-auto">{{ $t('public.forex') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data[1]['1'] }}
+                    {{ formatAmount(slotProps.data[1]['1']) }}
                 </template>
                 <template #editor="{ data, field }">
                     <InputNumber
@@ -341,7 +343,7 @@ watchEffect(() => {
                     <span class="w-12 truncate lg:w-auto">{{ $t('public.indexes') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data[1]['2'] }}
+                    {{ formatAmount(slotProps.data[1]['2']) }}
                 </template>
                 <template #editor="{ data, field }">
                     <InputNumber
@@ -358,7 +360,7 @@ watchEffect(() => {
                     <span class="w-12 truncate lg:w-auto">{{ $t('public.commodities') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data[1]['3'] }}
+                    {{ formatAmount(slotProps.data[1]['3']) }}
                 </template>
                 <template #editor="{ data, field }">
                     <InputNumber
@@ -375,7 +377,7 @@ watchEffect(() => {
                     <span class="w-12 truncate lg:w-auto">{{ $t('public.metals') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data[1]['4'] }}
+                    {{ formatAmount(slotProps.data[1]['4']) }}
                 </template>
                 <template #editor="{ data, field }">
                     <InputNumber
@@ -392,7 +394,7 @@ watchEffect(() => {
                     <span class="w-12 truncate lg:w-auto">{{ $t('public.cryptocurrency') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data[1]['5'] }}
+                    {{ formatAmount(slotProps.data[1]['5']) }}
                 </template>
                 <template #editor="{ data, field }">
                     <InputNumber
@@ -409,7 +411,7 @@ watchEffect(() => {
                     <span class="w-12 truncate lg:w-auto">{{ $t('public.shares') }}</span>
                 </template>
                 <template #body="slotProps">
-                    {{ slotProps.data[1]['6'] }}
+                    {{ formatAmount(slotProps.data[1]['6']) }}
                 </template>
                 <template #editor="{ data, field }">
                     <InputNumber

@@ -244,6 +244,7 @@ return [
     "minimum_level" => "发展最少阶层",
     "maximum_level" => "发展最多阶层",
     "rebate_details" => "返佣明细",
+    "edit_rebate_details" => "编辑返佣明细",
     "product" => "产品",
     "volume" => "交易量",
     "total" => "总额",

@@ -29,8 +29,8 @@ watch(
     () => props.rebateDetails,
     (newRebate) => {
         if (props.rebateDetails.length > 0) {
-            form.id = newRebate.map((rebate, index) => rebate.id || form.id[index] || '');
-            form.amount = newRebate.map((rebate, index) => Number(rebate.amount) || form.amount[index] || 0);
+            form.id = newRebate.map((rebate, index) => rebate.id ?? form.id[index] ?? '');
+            form.amount = newRebate.map((rebate, index) => Number(rebate.amount) ?? form.amount[index] ?? 0);
         }
     },
     { immediate: true }
@@ -60,7 +60,7 @@ const submitForm = () => {
     <Dialog
         v-model:visible="visible"
         modal
-        :header="$t('public.crypto_wallet_information')"
+        :header="$t('public.edit_rebate_details')"
         class="dialog-xs md:dialog-sm"
     >
         <form>

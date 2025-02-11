@@ -244,6 +244,7 @@ return [
     "minimum_level" => "Minimum Level",
     "maximum_level" => "Maximum Level",
     "rebate_details" => "Rebate Details",
+    "edit_rebate_details" => "Edit Rebate Details",
     "product" => "Product",
     "volume" => "Volume",
     "total" => "Total",

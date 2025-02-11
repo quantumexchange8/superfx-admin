@@ -244,6 +244,7 @@ return [
     "minimum_level" => "Cấp độ tối thiểu",
     "maximum_level" => "Cấp độ tối đa",
     "rebate_details" => "Chi tiết rebate",
+    "edit_rebate_details" => "Chỉnh sửa chi tiết rebate",
     "product" => "Sản phẩm",
     "volume" => "Khối lượng",
     "total" => "Tổng cộng",
