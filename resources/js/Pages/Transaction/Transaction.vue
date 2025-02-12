@@ -44,27 +44,27 @@ onMounted(() => {
 })
 
 const tabs = ref([
-    {   
+    {
         title: wTrans('public.deposit'),
-        component: h(DepositTransactionTable, 
-        { copyToClipboard: copyToClipboard }), 
-        type: 'deposit' 
+        component: h(DepositTransactionTable,
+        { copyToClipboard: copyToClipboard }),
+        type: 'deposit'
     },
-    {   
+    {
         title: wTrans('public.withdrawal'),
-        component: h(WithdrawalTransactionTable, 
-        { copyToClipboard: copyToClipboard }), 
-        type: 'withdrawal' 
+        component: h(WithdrawalTransactionTable,
+        { copyToClipboard: copyToClipboard }),
+        type: 'withdrawal'
     },
-    {   
+    {
         title: wTrans('public.transfer'),
-        component: h(TransferTransactionTable), 
-        type: 'transfer' 
+        component: h(TransferTransactionTable),
+        type: 'transfer'
     },
-    {   
+    {
         title: wTrans('public.payout'),
-        component: h(PayoutTransactionTable), 
-        type: 'payout' 
+        component: h(PayoutTransactionTable),
+        type: 'payout'
     },
 ]);
 
@@ -173,15 +173,15 @@ const handleUpdateTotals = (data) => {
                     <component :is="item.icon" class="w-12 h-12 grow-0 shrink-0" />
                     <div class="flex flex-col items-center gap-1 flex-grow md:flex-grow-0 md:self-stretch">
                         <div class="self-stretch text-gray-950 text-lg font-semibold md:text-xl md:text-center">
-                            <vue3-autocounter 
-                                ref="counter" 
-                                :startAmount="0" 
-                                :endAmount="item.total" 
-                                :duration="counterDuration" 
-                                separator="," 
-                                decimalSeparator="." 
-                                :decimals="item.label === 'total_transaction' ? 0 : 2" 
-                                :autoinit="true" 
+                            <vue3-autocounter
+                                ref="counter"
+                                :startAmount="0"
+                                :endAmount="item.total"
+                                :duration="counterDuration"
+                                separator=","
+                                decimalSeparator="."
+                                :decimals="item.label === 'total_transaction' ? 0 : (item.label === 'total_payout_amount' ? 3 : 2)"
+                                :autoinit="true"
                             />
                         </div>
                         <span class="self-stretch text-gray-500 text-xs md:text-sm md:text-center">{{ $t('public.' + item.label) }}</span>

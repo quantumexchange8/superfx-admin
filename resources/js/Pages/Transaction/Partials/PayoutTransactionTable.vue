@@ -323,7 +323,7 @@ const handleFilter = (e) => {
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">
-                    {{ formatAmount(slotProps.data.rebate) }}
+                    {{ formatAmount(slotProps.data.rebate, 3) }}
                 </template>
             </Column>
             <Column class="md:hidden">
@@ -348,7 +348,7 @@ const handleFilter = (e) => {
                             </div>
                         </div>
                         <div class="overflow-hidden text-right text-ellipsis font-semibold">
-                            $&nbsp;{{ formatAmount(slotProps.data.rebate) }}
+                            $&nbsp;{{ formatAmount(slotProps.data.rebate, 3) }}
                         </div>
                     </div>
                 </template>
