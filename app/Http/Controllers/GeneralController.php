@@ -89,13 +89,13 @@ class GeneralController extends Controller
     //             ]
     //         ]);
     //     }
-        
+
     //     try {
     //         // Fetch updated account info using CTraderService
     //         (new CTraderService)->getUserInfo($request->meta_login);
-    
+
     //         $updatedAccount = TradingAccount::where('meta_login', $request->meta_login)->first();
-    
+
     //         return response()->json([
     //             'meta_login' => $updatedAccount->meta_login,
     //             'balance' => $updatedAccount->balance - $updatedAccount->credit,
@@ -103,7 +103,7 @@ class GeneralController extends Controller
     //         ]);
     //     } catch (\Throwable $e) {
     //         Log::error("Error processing account {$request->meta_login}: " . $e->getMessage());
-    
+
     //         return response()->json([
     //             'meta_login' => $request->meta_login,
     //             'balance' => 0,
@@ -111,7 +111,7 @@ class GeneralController extends Controller
     //         ]);
     //     }
     // }
-    
+
     public function getLeverages($returnAsArray = false)
     {
         $leverages = SettingLeverage::where('status', 'active')->get()
@@ -145,22 +145,22 @@ class GeneralController extends Controller
     //             return '01 ' . $month;
     //         })
     //         ->values();
-    
+
     //     // Add the current month at the end if it's not already in the list
     //     $currentMonth = '01 ' . Carbon::now()->format('F Y');
     //     if (!$months->contains($currentMonth)) {
     //         $months->push($currentMonth);
     //     }
-    
+
     //     if ($returnAsArray) {
     //         return $months;
     //     }
-    
+
     //     return response()->json([
     //         'months' => $months,
     //     ]);
     // }
-    
+
     public function getTransactionMonths($returnAsArray = false)
     {
         // Fetch the created_at dates of all transactions
@@ -312,6 +312,7 @@ class GeneralController extends Controller
                     'value' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'id_number' => $user->id_number,
                     // 'profile_photo' => $user->getFirstMediaUrl('profile_photo')
                 ];
             });

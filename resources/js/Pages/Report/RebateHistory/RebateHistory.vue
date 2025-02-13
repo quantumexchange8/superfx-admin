@@ -40,7 +40,7 @@ const totalRecords = ref(0);
 const first = ref(0);
 const rows = ref(10);
 const page = ref(0);
-const sortField = ref(null);  
+const sortField = ref(null);
 const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 
 const totalRebateAmount = ref();
@@ -239,12 +239,12 @@ watch(selectedDate, (newDateRange) => {
         if (startDate && endDate) {
             filters.value.start_date = startDate;
             filters.value.end_date = endDate;
-        } 
+        }
         // Handle case where one of the dates is missing
         else if (startDate || endDate) {
             filters.value.start_date = startDate || filters.value.start_date;
             filters.value.end_date = endDate || filters.value.end_date;
-        } 
+        }
         // If no dates are selected, pass an empty array
         else {
             filters.value.start_date = null;
@@ -268,18 +268,18 @@ watch(selectedCloseDate, (newDateRange) => {
         if (startCloseDate && endCloseDate) {
             filters.value.start_close_date = startCloseDate;
             filters.value.end_close_date = endCloseDate;
-        } 
+        }
         // Handle case where one of the dates is missing
         else if (startCloseDate || endCloseDate) {
             filters.value.start_close_date = startCloseDate || filters.value.start_close_date;
             filters.value.end_close_date = endCloseDate || filters.value.end_close_date;
-        } 
+        }
         // If no dates are selected, pass an empty array
         else {
             filters.value.start_close_date = null;
             filters.value.end_close_date = null;
         }
-    } 
+    }
     else if (newDateRange === null) {
         filters.value.start_close_date = null;
         filters.value.end_close_date = null;
@@ -299,7 +299,7 @@ const clearFilter = () => {
         upline_id: [],
         t_type: null,
     };
-    
+
     selectedDate.value = [minDate.value, maxDate.value];
     selectedCloseDate.value = null;
     selectedUplines.value = [];
@@ -707,17 +707,17 @@ const clearFilter = () => {
                     v-model="selectedUplines"
                     :options="uplines"
                     :placeholder="$t('public.filter_by_sales_team')"
+                    filter
+                    :filterFields="['name', 'email', 'id_number']"
                     :maxSelectedLabels="1"
                     :selectedItemsLabel="`${selectedUplines?.length} ${$t('public.uplines_selected')}`"
                     class="w-full md:w-64 font-normal"
                 >
-                    <template #header>
-                        <div class="absolute flex left-10 top-3">
-                            {{ $t('public.select_all') }}
-                        </div>
-                    </template>
                     <template #option="{option}">
-                        <span>{{ option.name }}</span>
+                        <div class="flex flex-col">
+                            <span>{{ option.name }}</span>
+                            <span class="text-xs text-gray-400 max-w-52 truncate">{{ option.email }}</span>
+                        </div>
                     </template>
                     <template #value>
                         <div v-if="selectedUplines?.length === 1">

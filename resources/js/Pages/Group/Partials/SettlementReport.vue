@@ -117,9 +117,7 @@ const collapseAll = () => {
                                     :maxSelectedLabels="1"
                                     :selectedItemsLabel="`${selectedMonths.length} ${$t('public.months_selected')}`"
                                     class="w-full md:w-60 font-normal"
-                                >
-                                    <template #filtericon>{{ $t('public.select_all') }}</template>
-                                </MultiSelect>
+                                />
                             </IconField>
                         </div>
                         <Button

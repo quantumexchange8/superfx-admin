@@ -158,8 +158,13 @@ const handleUpdateTotals = (data) => {
                 </TabView>
                 <IconField iconPosition="left" class="relative flex items-center w-full md:w-60">
                     <CalendarIcon class="z-20 w-5 h-5 text-gray-400" />
-                    <MultiSelect v-model="selectedMonths" filter :options="months" :placeholder="$t('public.month_placeholder')" :maxSelectedLabels="1" :selectedItemsLabel="`${selectedMonths.length} ${$t('public.months_selected')}`" class="w-full md:w-60">
-                        <template #filtericon>{{ $t('public.select_all') }}</template>
+                    <MultiSelect
+                        v-model="selectedMonths"
+                        :options="months"
+                        :placeholder="$t('public.month_placeholder')"
+                        :maxSelectedLabels="1"
+                        :selectedItemsLabel="`${selectedMonths.length} ${$t('public.months_selected')}`"
+                        class="w-full md:w-60">
                     </MultiSelect>
                 </IconField>
 

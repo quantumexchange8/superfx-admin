@@ -7,7 +7,6 @@ export default {
             // Display and Position
             'inline-flex',
             'relative',
-            'items-center',
 
             // Shape
             'rounded-lg',
@@ -127,7 +126,6 @@ export default {
     header: {
         class: [
             //Flex
-            // 'flex items-center justify-between',
             'flex items-center',
 
             // Spacing
@@ -135,7 +133,7 @@ export default {
             'm-0',
 
             //Shape
-            'border-b',
+            'border-b-0',
             'rounded-tl-lg',
             'rounded-tr-lg',
 
@@ -231,7 +229,7 @@ export default {
                 'peer',
 
                 // Size
-                'w-full ',
+                'w-full',
                 'h-full',
 
                 // Position
@@ -424,10 +422,11 @@ export default {
     },
     item: ({ context }) => ({
         class: [
+            'flex',
             'relative',
 
             // Spacing
-            'm-0 p-3',
+            'm-0 px-3 py-2',
             'last:mb-2',
 
             // Shape
@@ -469,7 +468,7 @@ export default {
         ]
     },
     filtercontainer: {
-        class: 'relative'
+        class: 'relative w-full'
     },
     filterinput: {
         class: [
@@ -501,7 +500,6 @@ export default {
 
             // Misc
             'appearance-none',
-            'hidden',
         ]
     },
     filtericon: {
