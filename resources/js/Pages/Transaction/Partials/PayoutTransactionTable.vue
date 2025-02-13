@@ -317,7 +317,7 @@ const handleFilter = (e) => {
                 </template>
             </Column>
             <Column
-                field="payout"
+                field="rebate"
                 sortable
                 :header="`${$t('public.payout')}&nbsp;($)`"
                 class="hidden md:table-cell"
