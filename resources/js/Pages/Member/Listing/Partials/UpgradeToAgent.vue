@@ -87,11 +87,13 @@ const prepareSubmissionData = () => {
 const form = useForm({
     user_id: props.member.id,
     id_number: '',
+    upline_id: null,
     amounts: {}
 });
 
 const submitForm = () => {
     form.id_number = newIdNumber.value;
+    form.upline_id = availableUpline.value.id
     form.amounts = prepareSubmissionData();
     form.post(route('member.upgradeIB'), {
         onSuccess: () => {
@@ -202,7 +204,7 @@ const closeDialog = () => {
                     class="flex items-center w-full self-stretch py-2 text-gray-950"
                 >
                     <div class="text-sm px-2 w-[120px] md:w-full truncate">{{ $t(`public.${rebateDetail.symbol_group.display}`) }}</div>
-                    <div class="text-sm px-2 w-20 md:w-full">{{ formatAmount(rebateDetail.amount, 0) }}</div>
+                    <div class="text-sm px-2 w-20 md:w-full">{{ formatAmount(rebateDetail.amount, 2) }}</div>
                     <div class="text-sm px-2 w-[88px] md:w-full">
                         <InputNumber
                             v-model="accountRebateData[selectedAccountType.id][rebateDetail.id].amount"

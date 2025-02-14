@@ -425,7 +425,7 @@ class MemberController extends Controller
 
         // Find the upline user and their rebate allocations
         $user = User::find($user_id);
-        $upline_user = $user->upline;
+        $upline_user = User::find($request->upline_id);
         $uplineRebates = RebateAllocation::where('user_id', $upline_user->id)->get();
 
         // Get the account_type_id and symbol_group_id combinations for the upline
