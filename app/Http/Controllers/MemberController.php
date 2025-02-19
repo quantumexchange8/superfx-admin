@@ -14,6 +14,8 @@ use App\Models\Transaction;
 use Illuminate\Support\Str;
 use App\Models\GroupHasUser;
 use Illuminate\Http\Request;
+use App\Mail\KycApprovalMail;
+use App\Mail\KycRejectedMail;
 use App\Models\PaymentAccount;
 use App\Models\TradingAccount;
 use Illuminate\Support\Carbon;
@@ -25,6 +27,7 @@ use Illuminate\Support\Facades\Log;
 use App\Exports\MemberListingExport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Services\RunningNumberService;
 use App\Http\Requests\AddMemberRequest;
@@ -752,6 +755,12 @@ class MemberController extends Controller
         }
         $user->save();
 
+        if ($action == 'approve') {
+            Mail::to($user->email)->queue(new KycApprovalMail($user));
+        } elseif ($action == 'reject') {
+            Mail::to($user->email)->queue(new KycRejectedMail($user));
+        }
+    
         return redirect()->back()->with('toast', [
             'title' => $action == 'approve' ? trans('public.toast_kyc_approved') : trans('public.toast_kyc_rejected'),
             'type' => 'success'
