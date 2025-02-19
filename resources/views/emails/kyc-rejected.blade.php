@@ -191,7 +191,7 @@
                                                                         <td
                                                                             style="vertical-align: middle; text-align: center; padding-top: 5px; padding-bottom: 5px; padding-left: 5px; padding-right: 6px;">
                                                                             <img align="center" class="icon"
-                                                                                height="auto" src="images/unnamed_1.png"
+                                                                                height="auto" src="{{ asset('email/images/unnamed_1.png') }}"
                                                                                 style="display: block; height: auto; margin: 0 auto; border: 0;"
                                                                                 width="156" />
                                                                         </td>
@@ -431,7 +431,7 @@
                                                                 <div align="center" class="alignment"
                                                                     style="line-height:10px">
                                                                     <div style="max-width: 337.5px;"><img alt=""
-                                                                            height="auto" src="images/10_fn.jpg"
+                                                                            height="auto" src="{{ asset('email/images/10_fn.jpg') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%; border-radius: 20px 20px 20px 20px;"
                                                                             title="" width="337.5" /></div>
                                                                 </div>
@@ -466,7 +466,7 @@
                                                                 <div align="center" class="alignment"
                                                                     style="line-height:10px">
                                                                     <div style="max-width: 337.5px;"><img alt=""
-                                                                            height="auto" src="images/unnamed-3.png"
+                                                                            height="auto" src="{{ asset('email/images/unnamed-3.png') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%; border-radius: 20px 20px 20px 20px;"
                                                                             title="" width="337.5" /></div>
                                                                 </div>
@@ -698,7 +698,7 @@
                                                                                     href="https://www.facebook.com/superforexglobal/"
                                                                                     target="_blank"><img alt="Facebook"
                                                                                         height="auto"
-                                                                                        src="images/facebook2x.png"
+                                                                                        src="{{ asset('email/images/facebook2x.png') }}"
                                                                                         style="display: block; height: auto; border: 0;"
                                                                                         title="facebook"
                                                                                         width="32" /></a></td>
@@ -706,7 +706,7 @@
                                                                                     href="https://www.linkedin.com/"
                                                                                     target="_blank"><img alt="Linkedin"
                                                                                         height="auto"
-                                                                                        src="images/linkedin2x.png"
+                                                                                        src="{{ asset('email/images/linkedin2x.png') }}"
                                                                                         style="display: block; height: auto; border: 0;"
                                                                                         title="linkedin"
                                                                                         width="32" /></a></td>
@@ -714,7 +714,7 @@
                                                                                     href="https://www.instagram.com/"
                                                                                     target="_blank"><img alt="Instagram"
                                                                                         height="auto"
-                                                                                        src="images/instagram2x.png"
+                                                                                        src="{{ asset('email/images/instagram2x.png') }}"
                                                                                         style="display: block; height: auto; border: 0;"
                                                                                         title="instagram"
                                                                                         width="32" /></a></td>
@@ -722,7 +722,7 @@
                                                                                     href="https://www.youtube.com/"
                                                                                     target="_blank"><img alt="YouTube"
                                                                                         height="auto"
-                                                                                        src="images/youtube2x.png"
+                                                                                        src="{{ asset('email/images/youtube2x.png') }}"
                                                                                         style="display: block; height: auto; border: 0;"
                                                                                         title="YouTube"
                                                                                         width="32" /></a></td>
@@ -730,7 +730,7 @@
                                                                                     href="https://telegram.org"
                                                                                     target="_blank"><img alt="Telegram"
                                                                                         height="auto"
-                                                                                        src="images/telegram2x.png"
+                                                                                        src="{{ asset('email/images/telegram2x.png') }}"
                                                                                         style="display: block; height: auto; border: 0;"
                                                                                         title="Telegram"
                                                                                         width="32" /></a></td>
@@ -798,7 +798,7 @@
                                                                     style="line-height:10px">
                                                                     <div style="max-width: 238.333px;"><img alt=""
                                                                             height="auto"
-                                                                            src="images/unnamed__2_-removebg-preview.png"
+                                                                            src="{{ asset('email/images/unnamed__2_-removebg-preview.png') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%;"
                                                                             title="" width="238.333" /></div>
                                                                 </div>
@@ -819,7 +819,7 @@
                                                                     style="line-height:10px">
                                                                     <div style="max-width: 238.333px;"><img alt=""
                                                                             height="auto"
-                                                                            src="images/unnamed__3_-removebg-preview.png"
+                                                                            src="{{ asset('email/images/unnamed__3_-removebg-preview.png') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%;"
                                                                             title="" width="238.333" /></div>
                                                                 </div>
@@ -840,7 +840,7 @@
                                                                     style="line-height:10px">
                                                                     <div style="max-width: 238.333px;"><img alt=""
                                                                             height="auto"
-                                                                            src="images/unnamed__4_-removebg-preview.png"
+                                                                            src="{{ asset('email/images/unnamed__4_-removebg-preview.png') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%;"
                                                                             title="" width="238.333" /></div>
                                                                 </div>
@@ -1074,7 +1074,7 @@
                                                                 <div align="center" class="alignment"
                                                                     style="line-height:10px">
                                                                     <div style="max-width: 80px;"><img alt=""
-                                                                            height="auto" src="images/unnamed_5.png"
+                                                                            height="auto" src="{{ asset('email/images/unnamed_5.png') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%;"
                                                                             title="" width="80" /></div>
                                                                 </div>
