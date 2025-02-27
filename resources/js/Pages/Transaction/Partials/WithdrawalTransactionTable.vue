@@ -391,8 +391,10 @@ const exportXLSX = () => {
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">
-                    {{ formatAmount(slotProps.data.transaction_amount) }}
-                    <div v-if="slotProps.data.payment_account_type" class="inline-flex rounded-md p-1 bg-primary-500 text-white text-xs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
+                    <div class="flex gap-1 flex-nowrap items-center">
+                        {{ slotProps.data.transaction_amount ? formatAmount(slotProps.data.transaction_amount) : '-' }}
+                        <div v-if="slotProps.data.payment_account_type" class="rounded-md p-1 bg-primary-500 text-white text-xxs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
+                    </div>
                 </template>
             </Column>
             <Column
@@ -435,9 +437,9 @@ const exportXLSX = () => {
                                 </div>
                             </div>
                         </div>
-                        <div class="overflow-hidden text-right text-ellipsis font-semibold">
+                        <div class="overflow-hidden text-right text-ellipsis font-semibold flex flex-col items-end">
                             $&nbsp;{{ formatAmount(slotProps.data.transaction_amount) }}
-                            <div v-if="slotProps.data.payment_account_type" class="inline-flex rounded-md p-1 bg-primary-500 text-white text-xs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
+                            <div v-if="slotProps.data.payment_account_type" class="rounded-md px-1 bg-primary-500 text-white text-xxs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
                         </div>
                     </div>
                 </template>
