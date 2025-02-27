@@ -12,6 +12,8 @@ import Column from "primevue/column";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
 import {FilterMatchMode} from "primevue/api";
 import { transactionFormat } from '@/Composables/index.js';
+import dayjs from "dayjs";
+import { trans, wTrans } from "laravel-vue-i18n";
 import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
 import Badge from '@/Components/Badge.vue';
@@ -39,6 +41,7 @@ const totalTransactionAmount = ref(null);
 const minFilterAmount = ref(0);
 const maxFilterAmount = ref(0);
 const maxAmount = ref(null);
+const filteredValue = ref();
 const filteredValueCount = ref(0);
 
 onMounted(() => {
@@ -74,10 +77,6 @@ const getResults = async (type, selectedMonths = []) => {
     }
 };
 
-const exportCSV = () => {
-    dt.value.exportCSV();
-};
-
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
@@ -85,6 +84,7 @@ const filters = ref({
     transaction_amount: { value: [minFilterAmount.value, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
     category: { value: null, matchMode: FilterMatchMode.EQUALS },
     status: { value: null, matchMode: FilterMatchMode.EQUALS },
+    payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
 // overlay panel
@@ -118,7 +118,8 @@ const recalculateTotals = () => {
             (!filters.value.role?.value || transaction.role === filters.value.role.value) &&
             (!filters.value.transaction_amount?.value[0] || !filters.value.transaction_amount?.value[1] || (transaction.transaction_amount >= filters.value.transaction_amount.value[0] && transaction.transaction_amount <= filters.value.transaction_amount.value[1])) &&
             (!filters.value.category?.value || transaction.category === filters.value.category.value) &&
-            (!filters.value.status?.value || transaction.status === filters.value.status.value)
+            (!filters.value.status?.value || transaction.status === filters.value.status.value) &&
+            (!filters.value.payment_platform?.value || transaction.payment_platform === filters.value.payment_platform.value)
         );
     });
     totalTransaction.value = filtered.length;
@@ -153,6 +154,7 @@ const clearFilter = () => {
         transaction_amount: { value: [null, null], matchMode: FilterMatchMode.BETWEEN },
         category: { value: null, matchMode: FilterMatchMode.EQUALS },
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
+        payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
     };
 };
 
@@ -186,7 +188,74 @@ watch([totalTransaction, totalTransactionAmount, maxAmount], () => {
 });
 
 const handleFilter = (e) => {
+    filteredValue.value = e.filteredValue;
     filteredValueCount.value = e.filteredValue.length;
+};
+
+const exportXLSX = () => {
+    const data = filteredValue.value;
+
+    const headers = [
+        trans('public.requested_date'),
+        trans('public.approval_date'),
+        trans('public.name'),
+        trans('public.email'),
+        trans('public.id'),
+        trans('public.from'),
+        trans('public.amount') + ' ($)',
+        trans('public.status'),
+        trans('public.receiving_address'),
+        trans('public.platform'),
+        trans('public.bank_name'),
+        trans('public.bank_code'),
+        trans('public.payment_account_type'),
+        trans('public.account_no'),
+        trans('public.wallet_name'),
+        trans('public.wallet_address'),
+    ];
+
+    const rows = data.map(obj => {
+        const fromDisplay = obj.from_meta_login ? obj.from_meta_login : (obj.from_wallet_name ? trans('public.' + obj.from_wallet_name) : '');
+        const accountTypeLabel = obj.payment_account_type === 'card' ? trans('public.card') : trans('public.account');
+
+        return [
+            obj.created_at ? dayjs(obj.created_at).format('YYYY/MM/DD') : '',
+            obj.approved_at ? dayjs(obj.approved_at).format('YYYY/MM/DD') : '',
+            obj.name ?? '',
+            obj.email ?? '',
+            obj.transaction_number ?? '',
+            fromDisplay,
+            obj.transaction_amount ?? '',
+            obj.status ? trans('public.' + obj.status) : '',
+            obj.to_wallet_address ?? '',
+            obj.payment_platform ? trans('public.' + obj.payment_platform) : '',
+            obj.payment_platform_name ?? '',
+            obj.bank_code ?? '',
+            accountTypeLabel,
+            obj.payment_account_no ?? '',
+            obj.to_wallet_name ?? '',
+            obj.to_wallet_address ?? '',
+        ];
+    });
+
+    // Convert data to an HTML table format (Excel can read this)
+    let table = "<table><tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+    rows.forEach(row => {
+        table += "<tr>" + row.map(value => `<td>${value}</td>`).join("") + "</tr>";
+    });
+    table += "</table>";
+
+    // Base64 encode the table data
+    const uri = 'data:application/vnd.ms-excel;base64,' + btoa(unescape(encodeURIComponent(table)));
+
+    // Create and trigger the download
+    const link = document.createElement("a");
+    link.href = uri;
+    link.download = "export.xlsx";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 };
 
 </script>
@@ -242,7 +311,7 @@ const handleFilter = (e) => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="exportCSV($event)"
+                            @click="filteredValueCount > 0 ? exportXLSX() : null"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}
@@ -323,6 +392,7 @@ const handleFilter = (e) => {
             >
                 <template #body="slotProps">
                     {{ formatAmount(slotProps.data.transaction_amount) }}
+                    <div v-if="slotProps.data.payment_account_type" class="inline-flex rounded-md p-1 bg-primary-500 text-white text-xs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
                 </template>
             </Column>
             <Column
@@ -439,6 +509,23 @@ const handleFilter = (e) => {
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <RadioButton v-model="filters['status'].value" inputId="status_rejected" value="rejected" class="w-4 h-4" />
                         <label for="status_rejected">{{ $t('public.rejected') }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Payment Platform-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_payment_platform') }}
+                </div>
+                <div  class="flex flex-col gap-1 self-stretch">
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <RadioButton v-model="filters['payment_platform'].value" inputId="bank" value="bank" class="w-4 h-4" />
+                        <label for="bank">{{ $t('public.bank') }}</label>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <RadioButton v-model="filters['payment_platform'].value" inputId="crypto" value="crypto" class="w-4 h-4" />
+                        <label for="crypto">{{ $t('public.crypto') }}</label>
                     </div>
                 </div>
             </div>

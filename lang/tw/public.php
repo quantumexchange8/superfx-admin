@@ -150,6 +150,7 @@ return [
     "crypto_wallet_information" => "加密貨幣錢包詳情",
     "wallet" => "錢包",
     "wallet_name" => "錢包名稱",
+    "wallet_address" => "錢包地址",
     "bank_name" => "銀行名稱",
     "card_name" => "卡片名稱",
     "account_name" => "賬戶名稱",
@@ -647,4 +648,5 @@ return [
     "invalid_token" => "無效的令牌",
     "requested_on" => "申请于",
     "approval_on" => "批准于",
+    "filter_payment_platform" => "按支付平台篩選",
 ];

@@ -150,6 +150,7 @@ return [
     "crypto_wallet_information" => "Crypto Wallet Information",
     "wallet" => "Wallet",
     "wallet_name" => "Wallet Name",
+    "wallet_address" => "Wallet Address",
     "bank_name" => "Bank Name",
     "card_name" => "Card Name",
     "account_name" => "Account Name",
@@ -648,4 +649,5 @@ return [
     "invalid_token" => "Invalid Token",
     "requested_on" => "Requested On",
     "approval_on" => "Approval On",
+    "filter_payment_platform" => "Filter by payment platform",
 ];

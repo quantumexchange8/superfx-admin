@@ -75,16 +75,13 @@ const getResults = async (type, selectedMonths = []) => {
     }
 };
 
-const exportCSV = () => {
-    dt.value.exportCSV();
-};
-
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     role: { value: null, matchMode: FilterMatchMode.EQUALS },
     transaction_amount: { value: [minFilterAmount.value, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
     status: { value: null, matchMode: FilterMatchMode.EQUALS },
+    payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
 // Watch minFilterAmount and maxFilterAmount to update the amount filter
@@ -117,7 +114,8 @@ const recalculateTotals = () => {
             (!filters.value.name?.value || transaction.name.startsWith(filters.value.name.value)) &&
             (!filters.value.role?.value || transaction.role === filters.value.role.value) &&
             (!filters.value.transaction_amount?.value[0] || !filters.value.transaction_amount?.value[1] || (transaction.transaction_amount >= filters.value.transaction_amount.value[0] && transaction.transaction_amount <= filters.value.transaction_amount.value[1])) &&
-            (!filters.value.status?.value || transaction.status === filters.value.status.value)
+            (!filters.value.status?.value || transaction.status === filters.value.status.value) &&
+            (!filters.value.payment_platform?.value || transaction.payment_platform === filters.value.payment_platform.value)
         );
     });
 
@@ -151,6 +149,7 @@ const clearFilter = () => {
         role: { value: null, matchMode: FilterMatchMode.EQUALS },
         transaction_amount: { value: [null, null], matchMode: FilterMatchMode.BETWEEN },
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
+        payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
     };
     filteredValue.value = null; 
 };
@@ -392,6 +391,7 @@ const exportXLSX = () => {
             >
                 <template #body="slotProps">
                     {{ slotProps.data.transaction_amount ? formatAmount(slotProps.data.transaction_amount) : '-' }}
+                    <div v-if="slotProps.data.payment_account_type" class="inline-flex rounded-md p-1 bg-primary-500 text-white text-xs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
                 </template>
             </Column>
             <Column
@@ -485,6 +485,23 @@ const exportXLSX = () => {
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <RadioButton v-model="filters['status'].value" inputId="status_inactive" value="rejected" class="w-4 h-4" />
                         <label for="status_inactive">{{ $t('public.failed') }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Payment Platform-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_payment_platform') }}
+                </div>
+                <div  class="flex flex-col gap-1 self-stretch">
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <RadioButton v-model="filters['payment_platform'].value" inputId="bank" value="bank" class="w-4 h-4" />
+                        <label for="bank">{{ $t('public.bank') }}</label>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <RadioButton v-model="filters['payment_platform'].value" inputId="crypto" value="crypto" class="w-4 h-4" />
+                        <label for="crypto">{{ $t('public.crypto') }}</label>
                     </div>
                 </div>
             </div>
