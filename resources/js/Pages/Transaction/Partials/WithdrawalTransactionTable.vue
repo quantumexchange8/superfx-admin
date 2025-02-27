@@ -217,7 +217,7 @@ const exportXLSX = () => {
 
     const rows = data.map(obj => {
         const fromDisplay = obj.from_meta_login ? obj.from_meta_login : (obj.from_wallet_name ? trans('public.' + obj.from_wallet_name) : '');
-        const accountTypeLabel = obj.payment_account_type === 'card' ? trans('public.card') : trans('public.account');
+        const accountTypeLabel = obj.payment_platform === 'bank' ? (obj.payment_account_type === 'card' ? trans('public.card') : trans('public.account')) : trans('public.' + obj.payment_account_type);
 
         return [
             obj.created_at ? dayjs(obj.created_at).format('YYYY/MM/DD') : '',
