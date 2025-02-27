@@ -425,7 +425,8 @@ const exportXLSX = () => {
                             </div>
                         </div>
                         <div class="overflow-hidden text-right text-ellipsis font-semibold">
-                        {{ slotProps.data.transaction_amount ?  '$&nbsp;' + formatAmount(slotProps.data.transaction_amount) : '-' }}
+                            {{ slotProps.data.transaction_amount ?  '$&nbsp;' + formatAmount(slotProps.data.transaction_amount) : '-' }}
+                            <div v-if="slotProps.data.payment_account_type" class="inline-flex rounded-md p-1 bg-primary-500 text-white text-xs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
                         </div>
                     </div>
                 </template>
