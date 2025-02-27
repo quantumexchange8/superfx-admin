@@ -19,6 +19,7 @@ import Loader from "@/Components/Loader.vue";
 import Badge from '@/Components/Badge.vue';
 import {IconSearch, IconCircleXFilled, IconAdjustments, IconX} from '@tabler/icons-vue';
 import Slider from 'primevue/slider';
+import Tag from 'primevue/tag';
 
 const { formatDateTime, formatAmount } = transactionFormat();
 
@@ -393,7 +394,11 @@ const exportXLSX = () => {
                 <template #body="slotProps">
                     <div class="flex gap-1 flex-nowrap items-center">
                         {{ slotProps.data.transaction_amount ? formatAmount(slotProps.data.transaction_amount) : '-' }}
-                        <div v-if="slotProps.data.payment_account_type" class="rounded-md p-1 bg-primary-500 text-white text-xxs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
+                        <Tag v-if="slotProps.data.payment_account_type" :severity="slotProps.data.payment_platform === 'bank' ? 'secondary' : 'info'">
+                            <div class="text-xxs">
+                                {{ $t('public.' + slotProps.data.payment_account_type) }}
+                            </div>
+                        </Tag>
                     </div>
                 </template>
             </Column>
@@ -438,8 +443,12 @@ const exportXLSX = () => {
                             </div>
                         </div>
                         <div class="overflow-hidden text-right text-ellipsis font-semibold flex flex-col items-end">
-                            $&nbsp;{{ formatAmount(slotProps.data.transaction_amount) }}
-                            <div v-if="slotProps.data.payment_account_type" class="rounded-md px-1 bg-primary-500 text-white text-xxs">{{ $t('public.' + slotProps.data.payment_account_type) }}</div>
+                            {{ slotProps.data.transaction_amount ?  '$&nbsp;' + formatAmount(slotProps.data.transaction_amount) : '-' }}
+                            <Tag v-if="slotProps.data.payment_account_type" :severity="slotProps.data.payment_platform === 'bank' ? 'secondary' : 'info'">
+                                <div class="text-xxs">
+                                    {{ $t('public.' + slotProps.data.payment_account_type) }}
+                                </div>
+                            </Tag>
                         </div>
                     </div>
                 </template>
