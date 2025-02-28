@@ -69,8 +69,8 @@ class TransactionController extends Controller
             $query->where(function ($query) use ($selectedMonthsArray) {
                 foreach ($selectedMonthsArray as $range) {
                     [$month, $year] = explode('/', $range);
-                    $startDate = "$year-$month-01";
-                    $endDate = date("Y-m-t", strtotime($startDate)); // Last day of the month
+                    $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+                    $endDate = Carbon::create($year, $month, 1)->endOfMonth();
                     $query->orWhereBetween('created_at', [$startDate, $endDate]);
                 }
             });
@@ -160,8 +160,8 @@ class TransactionController extends Controller
                 $query->where(function ($q) use ($selectedMonthsArray) {
                     foreach ($selectedMonthsArray as $range) {
                         [$month, $year] = explode('/', $range);
-                        $startDate = "$year-$month-01";
-                        $endDate = date("Y-m-t", strtotime($startDate)); // Last day of the month
+                        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+                        $endDate = Carbon::create($year, $month, 1)->endOfMonth();
 
                         // Add a condition to match transactions for this specific month-year
                         $q->orWhereBetween('created_at', [$startDate, $endDate]);
