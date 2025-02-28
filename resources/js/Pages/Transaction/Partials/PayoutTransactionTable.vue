@@ -74,11 +74,11 @@ const exportCSV = () => {
 };
 
 // Get current date
-const today = new Date();
+const today = ref(new Date());
 
 // Define minDate and maxDate
-const minDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
-const maxDate = ref(today);
+const minDate = ref(new Date(today.value.getFullYear(), today.value.getMonth(), 1));
+const maxDate = ref(today.value);
 
 // Function to get the start of the month from a date string
 const getStartOfMonth = (dateStr) => {
@@ -95,7 +95,7 @@ const clearDate = () => {
 };
 
 watch(() => props.selectedMonths, (newValue) => {
-    let computedMinDate = new Date(today.getFullYear(), today.getMonth(), 1); // Default to start of current month
+    let computedMinDate = new Date(today.value.getFullYear(), today.value.getMonth(), 1); // Default to start of current month
 
     if (newValue.length > 0) {
         const startDates = newValue.map(dateStr => getStartOfMonth(dateStr));
@@ -104,7 +104,7 @@ watch(() => props.selectedMonths, (newValue) => {
     }
 
     minDate.value = computedMinDate;
-    maxDate.value = today;
+    maxDate.value = today.value;
     selectedDate.value = [maxDate.value, maxDate.value];
 
     if (newValue.length === 0) {

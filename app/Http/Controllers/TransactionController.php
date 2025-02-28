@@ -65,16 +65,6 @@ class TransactionController extends Controller
             // Initialize query for TradeRebateSummary
             $query = TradeRebateSummary::with('upline_user', 'account_type');
 
-            // Apply monthly filters
-            $query->where(function ($query) use ($selectedMonthsArray) {
-                foreach ($selectedMonthsArray as $range) {
-                    [$month, $year] = explode('/', $range);
-                    $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-                    $endDate = Carbon::create($year, $month, 1)->endOfMonth();
-                    $query->orWhereBetween('created_at', [$startDate, $endDate]);
-                }
-            });
-
             // Apply date filter based on availability of startDate and/or endDate
             if ($startDate && $endDate) {
                 // Both startDate and endDate are provided
