@@ -584,6 +584,7 @@ return [
     "cent5" => "Cent5",
     "cent10" => "Cent10",
     "cent15" => "Cent15",
+    'dollar' => "Dollar",
     "rebate_exceed_upline" => "返傭超過上線:name : :value",
     "rebate_exceed_downline" => "返傭低於下線:name : :value",
     "empty_rebate_title" => "尚未有返傭紀錄",
@@ -595,6 +596,7 @@ return [
     "toast_change_leverage_success" => "賬戶槓桿已更改!",
     "toast_change_leverage_failed" => "賬戶槓桿更改失敗！請再試一次。",
     "free" => "免費",
+    "all" => "所有",
     "change_account_type" => "修改賬戶類別",
     "account_type_placeholder" => "選擇",
     "toast_change_account_type_warning" => "此賬戶的類別無法更改!",
@@ -649,4 +651,5 @@ return [
     "requested_on" => "申请于",
     "approval_on" => "批准于",
     "filter_payment_platform" => "按支付平台篩選",
+    "min_deposit" => "最低存款",
 ];

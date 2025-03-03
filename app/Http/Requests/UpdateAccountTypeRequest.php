@@ -28,18 +28,21 @@ class UpdateAccountTypeRequest extends FormRequest
             'leverage' => ['required', 'numeric'],
             'trade_delay_duration' => ['required'],
             'max_account' => ['required', 'numeric'],
+            'min_deposit' => ['required', 'numeric', 'min:0'],
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'account_type_name' => 'account_type_name',
-            'category' => 'category',
-            'descriptions' => 'description',
-            'leverage' => 'leverage',
-            'trade_delay_duration' => 'trade_delay_duration',
-            'max_account' => 'max_account',
+            'account_type_name' => trans('public.account_type_name'),
+            'category' => trans('public.category'),
+            'descriptions.en' => trans('public.description_en'),
+            'descriptions.tw' => trans('public.description_tw'),
+            'leverage' => trans('public.leverage'),
+            'trade_delay_duration' => trans('public.trade_delay_duration'),
+            'max_account' => trans('public.max_account'),
+            'min_deposit' => trans('public.min_deposit'),
         ];
     }
 }

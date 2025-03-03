@@ -120,7 +120,11 @@ class GeneralController extends Controller
                     'name' => $leverage->display,
                     'value' => $leverage->value,
                 ];
-            });
+            })
+            ->prepend([
+                'name' => trans('public.all'),
+                'value' => 0,
+            ]);
 
         if ($returnAsArray) {
             return $leverages;

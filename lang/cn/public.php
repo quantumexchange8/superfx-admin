@@ -584,6 +584,7 @@ return [
     "cent5" => "Cent5",
     "cent10" => "Cent10",
     "cent15" => "Cent15",
+    'dollar' => "Dollar",
     "rebate_exceed_upline" => "返佣超过上线:name : :value",
     "rebate_exceed_downline" => "返佣低于下线:name : :value",
     "empty_rebate_title" => "尚未有返佣纪录",
@@ -595,6 +596,7 @@ return [
     "toast_change_leverage_success" => "账户杠杆已更改!",
     "toast_change_leverage_failed" => "账户杠杆更改失败！请再试一次。",
     "free" => "免费",
+    "all" => "所有",
     "change_account_type" => "修改账户类别",
     "account_type_placeholder" => "选择",
     "toast_change_account_type_warning" => "此账户的类别无法更改!",
@@ -649,4 +651,5 @@ return [
     "requested_on" => "申请于",
     "approval_on" => "批准于",
     "filter_payment_platform" => "按支付平台筛选",
+    "min_deposit" => "最低存款",
 ];

@@ -9,6 +9,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import { useForm } from '@inertiajs/vue3';
 import ColorPicker from 'primevue/colorpicker';
+import InputNumber from 'primevue/inputnumber';
 
 const props = defineProps({
     accountType: Object,
@@ -17,7 +18,7 @@ const props = defineProps({
 })
 
 const visible = ref(false);
-const categories = ref(['individual', 'manage']);
+const categories = ref(['cent', 'dollar']);
 const trade_delay_duration_dropdown = ref([
     {name: '0 sec', value: '0'},
     {name: '1 sec', value: '1'},
@@ -51,6 +52,7 @@ const form = useForm({
     id: props.accountType.id,
     account_type_name: props.accountType.name,
     category: props.accountType.category,
+    min_deposit: Number(props.accountType.minimum_deposit ?? 0),
     descriptions: { en: props.accountType.description_en, tw: props.accountType.description_tw },
     leverage: props.accountType.leverage,
     trade_delay_duration: props.accountType.trade_open_duration,
@@ -140,38 +142,60 @@ const emit = defineEmits(['detailsVisible']);
                                 </Dropdown>
                                 <InputError :message="form.errors.category" />
                             </div>
-                            <div class="flex flex-col items-start gap-1 flex-1">
-                                <InputLabel for="descriptions_en" :invalid="!!form.errors['descriptions.en']">
-                                    {{ $t('public.description_en') }}
-                                </InputLabel>
-                                <InputText
-                                    v-model="form.descriptions.en"
-                                    id="descriptions_en"
-                                    type="text"
-                                    class="w-full"
-                                    :placeholder="$t('public.descriptions_en_placeholder')"
-                                    :disabled="props.loading"
-                                />
-                                <InputError :message="form.errors['descriptions.en']" />
-                            </div>
-                            <div class="flex flex-col items-start gap-1 flex-1">
-                                <InputLabel for="descriptions_tw" :invalid="!!form.errors['descriptions.tw']">
-                                    {{ $t('public.description_tw') }}
-                                </InputLabel>
-                                <InputText
-                                    v-model="form.descriptions.tw"
-                                    id="descriptions_tw"
-                                    type="text"
-                                    class="w-full"
-                                    :placeholder="$t('public.descriptions_cn_placeholder')"
-                                    :disabled="props.loading"
-                                />
-                                <InputError :message="form.errors['descriptions.tw']" />
-                            </div>
-                        </div>
 
-                        <div class="self-stretch text-gray-500 text-xs">
-                            {{ $t('public.description_caption') }}
+                            <div class="md:col-span-2 w-full flex flex-col gap-1">
+                                <div class="md:col-span-2 grid justify-center items-start content-start gap-3 self-stretch flex-wrap grid-cols-1 md:grid-cols-2 md:gap-5">
+                                    <div class="flex flex-col items-start gap-1 flex-1">
+                                        <InputLabel for="descriptions_en" :invalid="!!form.errors['descriptions.en']">
+                                            {{ $t('public.description_en') }}
+                                        </InputLabel>
+                                        <InputText
+                                            v-model="form.descriptions.en"
+                                            id="descriptions_en"
+                                            type="text"
+                                            class="w-full"
+                                            :placeholder="$t('public.descriptions_en_placeholder')"
+                                            :disabled="props.loading"
+                                        />
+                                        <InputError :message="form.errors['descriptions.en']" />
+                                    </div>
+                                    <div class="flex flex-col items-start gap-1 flex-1">
+                                        <InputLabel for="descriptions_tw" :invalid="!!form.errors['descriptions.tw']">
+                                            {{ $t('public.description_tw') }}
+                                        </InputLabel>
+                                        <InputText
+                                            v-model="form.descriptions.tw"
+                                            id="descriptions_tw"
+                                            type="text"
+                                            class="w-full"
+                                            :placeholder="$t('public.descriptions_cn_placeholder')"
+                                            :disabled="props.loading"
+                                        />
+                                        <InputError :message="form.errors['descriptions.tw']" />
+                                    </div>
+                                </div>
+                                <div class="self-stretch text-gray-500 text-xs">
+                                    {{ $t('public.description_caption') }}
+                                </div>
+                            </div>
+
+                            <div class="md:col-span-2 flex flex-col items-start gap-1 flex-1">
+                                <InputLabel for="min_deposit" :invalid="!!form.errors.min_deposit">
+                                    {{ $t('public.min_deposit') }}
+                                </InputLabel>
+                                <InputNumber
+                                    v-model="form.min_deposit"
+                                    id="min_deposit"
+                                    :min="0"
+                                    :minFractionDigits="2"
+                                    prefix="$ "
+                                    class="w-full"
+                                    inputClass="w-full py-3 px-4"
+                                    placeholder="0"
+                                />
+                                <InputError :message="form.errors.min_deposit" />
+                            </div>
+
                         </div>
                     </div>
                 </div>

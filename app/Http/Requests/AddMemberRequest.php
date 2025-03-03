@@ -28,11 +28,11 @@ class AddMemberRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name' => 'Full Name',
-            'email' => 'Email',
-            'phone' => 'Phone Number',
-            'password' => 'Password',
-            'upline' => 'Upline',
+            'name' => trans('public.full_name'),
+            'email' => trans('public.email'),
+            'phone' => trans('public.phone_number'),
+            'password' => trans('public.password'),
+            'upline' => trans('public.upline'),
         ];
     }
 }

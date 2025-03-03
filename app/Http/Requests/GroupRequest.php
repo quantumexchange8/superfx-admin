@@ -32,10 +32,10 @@ class GroupRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'group_name' => 'Group Name',
-            'fee_charges' => 'Fee Charges',
-            'color' => 'Color',
-            'ib' => 'IB',
+            'group_name' => trans('public.group_name'),
+            'fee_charges' => trans('public.fee_charges'),
+            'color' => trans('public.color'),
+            'ib' => trans('public.ib'),
         ];
     }
 }

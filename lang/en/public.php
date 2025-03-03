@@ -585,6 +585,7 @@ return [
     "cent5" => "Cent5",
     "cent10" => "Cent10",
     "cent15" => "Cent15",
+    'dollar' => "Dollar",
     "rebate_exceed_upline" => "Rebate is more than upline :name : :value",
     "rebate_exceed_downline" => "Rebate is less than downline :name : :value",
     "empty_rebate_title" => "No Rebate Found",
@@ -596,6 +597,7 @@ return [
     "toast_change_leverage_success" => "Leverage updated successfully!",
     "toast_change_leverage_failed" => "Leverage update failed! Please try again.",
     "free" => "Free",
+    "all" => "All",
     "change_account_type" => "Change Account Type",
     "account_type_placeholder" => "Select",
     "toast_change_account_type_warning" => "The account type for this account cannot be changed!",
@@ -650,4 +652,5 @@ return [
     "requested_on" => "Requested On",
     "approval_on" => "Approval On",
     "filter_payment_platform" => "Filter by payment platform",
+    "min_deposit" => "Minimum Deposit",
 ];
