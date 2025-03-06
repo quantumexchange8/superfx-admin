@@ -349,6 +349,7 @@ class ReportController extends Controller
             return Excel::download(new RebateHistoryExport($rebateHistory), now() . '-rebate-report.xlsx');
         }
 
+        $totalVolume = (clone $query)->sum('volume');
         $totalRebateAmount = (clone $query)->sum('revenue');
 
         $histories = $query->paginate($rowsPerPage, ['*'], 'page', $currentPage);
@@ -356,6 +357,7 @@ class ReportController extends Controller
         return response()->json([
             'success' => true,
             'data' => $histories,
+            'totalVolume' => $totalVolume,
             'totalRebateAmount' => $totalRebateAmount,
         ]);
     }

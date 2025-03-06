@@ -43,7 +43,19 @@ const page = ref(0);
 const sortField = ref(null);
 const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 
+// Define emits
+const emit = defineEmits(['update-totals']);
+
 const totalRebateAmount = ref();
+const totalVolume = ref();
+
+// Emit the totals whenever they change
+watch([totalRebateAmount, totalVolume], () => {
+    emit('update-totals', {
+        totalVolume: totalVolume.value,
+        totalRebateAmount: totalRebateAmount.value,
+    });
+});
 
 const filters = ref({
     global: null,
@@ -150,8 +162,8 @@ const getResults = async () => {
         // Update the data and total records with the response
         histories.value = response?.data?.data?.data;
         totalRecords.value = response?.data?.data?.total;
+        totalVolume.value = response?.data?.totalVolume;
         totalRebateAmount.value = response?.data?.totalRebateAmount;
-
     } catch (error) {
         histories.value = [];
         totalRecords.value = 0;
@@ -193,6 +205,15 @@ const onSort = (event) => {
 };
 
 onMounted(() => {
+    // Ensure filters are populated before fetching data
+    if (Array.isArray(selectedDate.value)) {
+        const [startDate, endDate] = selectedDate.value;
+        if (startDate && endDate) {
+            filters.value.start_date = startDate;
+            filters.value.end_date = endDate;
+        }
+    }
+
     getResults();
 });
 
@@ -242,8 +263,8 @@ watch(selectedDate, (newDateRange) => {
         }
         // Handle case where one of the dates is missing
         else if (startDate || endDate) {
-            filters.value.start_date = startDate || filters.value.start_date;
-            filters.value.end_date = endDate || filters.value.end_date;
+            filters.value.start_date = startDate || endDate;
+            filters.value.end_date = endDate || startDate;
         }
         // If no dates are selected, pass an empty array
         else {
@@ -271,8 +292,8 @@ watch(selectedCloseDate, (newDateRange) => {
         }
         // Handle case where one of the dates is missing
         else if (startCloseDate || endCloseDate) {
-            filters.value.start_close_date = startCloseDate || filters.value.start_close_date;
-            filters.value.end_close_date = endCloseDate || filters.value.end_close_date;
+            filters.value.start_close_date = startCloseDate || endCloseDate;
+            filters.value.end_close_date = endCloseDate || startCloseDate;
         }
         // If no dates are selected, pass an empty array
         else {
@@ -633,12 +654,6 @@ const clearFilter = () => {
                             </div>
                         </template>
                     </Column>
-                    <ColumnGroup type="footer">
-                        <Row>
-                            <Column class="hidden md:table-cell" :footer="$t('public.total') + ':'" :colspan="16" footerStyle="text-align:right" />
-                            <Column class="hidden md:table-cell" :footer="'$' + formatAmount(totalRebateAmount ?? 0)" />
-                        </Row>
-                    </ColumnGroup>
                 </template>
             </DataTable>
         </div>

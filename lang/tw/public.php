@@ -652,4 +652,6 @@ return [
     "approval_on" => "批准于",
     "filter_payment_platform" => "按支付平台篩選",
     "min_deposit" => "最低存款",
+    "total_volume" => "總交易量",
+    "total_rebate" => "總返佣",
 ];

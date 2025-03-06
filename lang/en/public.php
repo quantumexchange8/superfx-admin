@@ -653,4 +653,6 @@ return [
     "approval_on" => "Approval On",
     "filter_payment_platform" => "Filter by payment platform",
     "min_deposit" => "Minimum Deposit",
+    "total_volume" => "Total Volume",
+    "total_rebate" => "Total Rebate",
 ];
