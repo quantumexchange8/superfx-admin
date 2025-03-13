@@ -13,6 +13,7 @@ import Dialog from 'primevue/dialog';
 
 const props = defineProps({
     leverages: Array,
+    users: Array,
 })
 
 const accountTypes = ref();
@@ -73,6 +74,11 @@ const rowClicked = (data) => {
                     removableSort
                     :loading="loading"
                     @row-click="rowClicked($event.data)"
+                    :paginator="accountTypes?.length > 0"
+                    :rows="10"
+                    :rowsPerPageOptions="[10, 20, 50, 100]"
+                    paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
+                    :currentPageReportTemplate="$t('public.paginator_caption')"
                 >
                     <template #empty>
                         <Empty :title="$t('public.no_account_type_header')"
@@ -124,7 +130,8 @@ const rowClicked = (data) => {
                                 <div class="py-2 px-3 flex justify-center items-center gap-2 flex-1">
                                     <AccountTypeAction 
                                         :accountType="slotProps.data" 
-                                        :leverages="props.leverages" 
+                                        :leverages="props.leverages"
+                                        :users="props.users" 
                                         :loading="loading"
                                     />
                                 </div>

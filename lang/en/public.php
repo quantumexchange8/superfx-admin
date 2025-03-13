@@ -655,4 +655,7 @@ return [
     "min_deposit" => "Minimum Deposit",
     "total_volume" => "Total Volume",
     "total_rebate" => "Total Rebate",
+    "access_to" => "Access To",
+    "filter_user" => "Filter by user",
+    "users_selected" => "users selected",
 ];

@@ -236,6 +236,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::get('/', [AccountTypeController::class, 'show'])->name('accountType');
         Route::get('/getAccountTypes', [AccountTypeController::class, 'getAccountTypes'])->name('accountType.getAccountTypes');
         Route::get('/syncAccountTypes', [AccountTypeController::class, 'syncAccountTypes'])->name('accountType.syncAccountTypes');
+        Route::get('/getAccountTypeUsers', [AccountTypeController::class, 'getAccountTypeUsers'])->name('accountType.getAccountTypeUsers');
 
         Route::post('/update/{id}', [AccountTypeController::class, 'updateAccountType'])->name('accountType.update');
 

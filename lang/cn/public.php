@@ -654,4 +654,7 @@ return [
     "min_deposit" => "最低存款",
     "total_volume" => "总交易量",
     "total_rebate" => "总返佣",
+    "access_to" => "访问权限",
+    "filter_user" => "过滤用户",
+    "users_selected" => "个选择的用户",
 ];

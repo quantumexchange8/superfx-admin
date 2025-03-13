@@ -12,6 +12,7 @@ import AccountTypeSetting from "@/Pages/AccountType/Partials//AccountTypeSetting
 const props = defineProps({
     accountType: Object,
     leverages: Array,
+    users: Array,
     loading: Boolean,
 })
 
@@ -85,6 +86,7 @@ const handleAccountTypeStatus = () => {
         <AccountTypeSetting 
             :accountType="props.accountType" 
             :leverages="props.leverages"
+            :users="props.users"
             :loading="props.loading"
         />
     </div>

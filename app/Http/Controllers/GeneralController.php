@@ -387,4 +387,27 @@ class GeneralController extends Controller
     //         'groups' => $groups,
     //     ]);
     // }
+
+    public function getAllUsers($returnAsArray = false)
+    {
+        $users = User::whereIn('role', ['ib', 'member'])
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'value' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'id_number' => $user->id_number,
+                ];
+            });
+
+        if ($returnAsArray) {
+            return $users;
+        }
+
+        return response()->json([
+            'users' => $users,
+        ]);
+    }
+
 }

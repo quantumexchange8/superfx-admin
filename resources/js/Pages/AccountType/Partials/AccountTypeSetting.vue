@@ -10,13 +10,16 @@ import InputLabel from '@/Components/InputLabel.vue';
 import { useForm } from '@inertiajs/vue3';
 import ColorPicker from 'primevue/colorpicker';
 import InputNumber from 'primevue/inputnumber';
+import MultiSelect from 'primevue/multiselect';
 
 const props = defineProps({
     accountType: Object,
     leverages: Array,
+    users: Array,
     loading: Boolean,
 })
 
+const isLoading = ref(false);
 const visible = ref(false);
 const categories = ref(['cent', 'dollar']);
 const trade_delay_duration_dropdown = ref([
@@ -38,10 +41,13 @@ const trade_delay_duration_dropdown = ref([
     {name: '5 min', value: '300'},
 ])
 const leverages = ref(props.leverages);
+const selectedUser = ref();
 
 const openDialog = () => {
     visible.value = true;
     form.reset();
+    selectedUser.value = null;
+    getAccountTypeUsers();
 }
 
 const closeDialog = () => {
@@ -58,9 +64,28 @@ const form = useForm({
     trade_delay_duration: props.accountType.trade_open_duration,
     max_account: props.accountType.maximum_account_number,
     color: props.accountType.color,
+    user_access: [],
 })
 
+const getAccountTypeUsers = async () => {
+    isLoading.value = true;
+
+    try {
+        const response = await axios.get(`/account_type/getAccountTypeUsers?account_type_id=${props.accountType.id}`);
+        selectedUser.value = response.data.users;
+        console.log(selectedUser.value)
+    } catch (error) {
+        console.error('Error getting account type users:', error);
+    } finally {
+        isLoading.value = false;
+    }
+}
+
 const submitForm = () => {
+    if (selectedUser?.value?.length) {
+        form.user_access = selectedUser.value.map(user => user.value);
+    }
+    
     form.post(route('accountType.update', props.accountType.id), {
         preserveScroll: true,
         onSuccess: () => {
@@ -254,13 +279,46 @@ const emit = defineEmits(['detailsVisible']);
                             <ColorPicker v-model="form.color" id="Color"/>
                             <InputError :message="form.errors.color" />
                         </div>
+                        <div class="flex flex-col items-start gap-1 flex-1">
+                            <InputLabel for="user_access" :value="$t('public.access_to')" :invalid="!!form.errors.user_access"/>
+                            <MultiSelect
+                                v-model="selectedUser"
+                                :options="props.users"
+                                :placeholder="$t('public.filter_user')"
+                                filter
+                                :filterFields="['name', 'email', 'id_number']"
+                                :maxSelectedLabels="1"
+                                :selectedItemsLabel="`${selectedUser?.length} ${$t('public.users_selected')}`"
+                                class="w-full md:w-64 font-normal"
+                                :disabled="isLoading"
+                            >
+                                <template #option="{option}">
+                                    <div class="flex flex-col">
+                                        <span>{{ option.name }}</span>
+                                        <span class="text-xs text-gray-400 max-w-52 truncate">{{ option.email }}</span>
+                                    </div>
+                                </template>
+                                <template #value>
+                                    <div v-if="selectedUser?.length === 1">
+                                        <span>{{ selectedUser[0].name }}</span>
+                                    </div>
+                                    <span v-else-if="selectedUser?.length > 1">
+                                        {{ selectedUser?.length }} {{ $t('public.users_selected') }}
+                                    </span>
+                                    <span v-else class="text-gray-400">
+                                        {{ $t('public.filter_user') }}
+                                    </span>
+                                </template>
+                            </MultiSelect>
+                            <InputError :message="form.errors.color" />
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="pt-5 md:pt-7 flex flex-col items-end self-stretch">
                 <Button
                     variant="primary-flat"
-                    :disabled="form.processing || props.loading"
+                    :disabled="form.processing || props.loading || isLoading"
                 >
                     {{ $t('public.save') }}
                 </Button>

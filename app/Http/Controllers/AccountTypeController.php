@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UpdateAccountTypeRequest;
-use App\Models\AccountType;
-use App\Services\DropdownOptionService;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\AccountType;
+use Illuminate\Http\Request;
+use App\Models\AccountTypeAccess;
+use App\Services\DropdownOptionService;
+use App\Http\Requests\UpdateAccountTypeRequest;
 
 class AccountTypeController extends Controller
 {
@@ -14,6 +15,7 @@ class AccountTypeController extends Controller
     {
         return Inertia::render('AccountType/AccountType', [
             'leverages' => (new GeneralController())->getLeverages(true),
+            'users' => (new GeneralController())->getAllUsers(true),
         ]);
     }
 
@@ -55,22 +57,49 @@ class AccountTypeController extends Controller
 
     public function updateAccountType(UpdateAccountTypeRequest $request, $id)
     {
-        $account_type = AccountType::find($id);
-        $account_type->category = $request->category;
-        $account_type->descriptions = json_encode($request->descriptions);
-        $account_type->leverage = $request->leverage;
-        $account_type->trade_open_duration = $request->trade_delay_duration;
-        $account_type->maximum_account_number = $request->max_account;
-        $account_type->minimum_deposit = $request->min_deposit;
-        $account_type->status = 'active';
-        $account_type->save();
-
+        $account_type = AccountType::findOrFail($id);
+    
+        // Update AccountType fields
+        $account_type->update([
+            'category' => $request->category,
+            'descriptions' => json_encode($request->descriptions),
+            'leverage' => $request->leverage,
+            'trade_open_duration' => $request->trade_delay_duration,
+            'maximum_account_number' => $request->max_account,
+            'minimum_deposit' => $request->min_deposit,
+            'status' => 'active',
+        ]);
+    
+        // Handle user access updates
+        $userAccess = $request->user_access ?? [];
+    
+        if ($userAccess) {
+            $existingUserAccessIds = AccountTypeAccess::where('account_type_id', $id)
+                ->pluck('user_id')
+                ->toArray();
+    
+            $incomingUserIds = collect($userAccess)->toArray();
+    
+            if (!empty(array_diff($existingUserAccessIds, $incomingUserIds)) || !empty(array_diff($incomingUserIds, $existingUserAccessIds))) {
+                AccountTypeAccess::where('account_type_id', $id)->delete();
+    
+                foreach ($userAccess as $userId) {
+                    AccountTypeAccess::create([
+                        'account_type_id' => $id,
+                        'user_id' => $userId,
+                    ]);
+                }
+            }
+        } else {
+            AccountTypeAccess::where('account_type_id', $id)->delete();
+        }
+    
         return back()->with('toast', [
             'title' => trans('public.toast_update_account_type_success'),
             'type' => 'success',
         ]);
     }
-
+    
     public function updateStatus($id)
     {
         $account_type = AccountType::find($id);
@@ -82,4 +111,24 @@ class AccountTypeController extends Controller
             'type' => 'success',
         ]);
     }
+
+    public function getAccountTypeUsers(Request $request)
+    {
+        $users = AccountTypeAccess::where('account_type_id', $request->account_type_id)
+            ->with('user') // Eager load user data
+            ->get()
+            ->map(function ($access) {
+                return [
+                    'value' => $access->user?->id,
+                    'name' => $access->user?->name,
+                    'email' => $access->user?->email,
+                    'id_number' => $access->user?->id_number,
+                ];
+            });
+    
+        return response()->json([
+            'users' => $users
+        ]);
+    }
+    
 }
