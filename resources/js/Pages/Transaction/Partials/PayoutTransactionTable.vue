@@ -22,10 +22,6 @@ const props = defineProps({
   selectedType: String,
 });
 
-watch(() => props.selectedMonths, () => {
-    getResults(props.selectedType, props.selectedMonths, selectedDate.value);
-});
-
 const visible = ref(false);
 const transactions = ref();
 const dt = ref();
@@ -94,8 +90,14 @@ const clearDate = () => {
     selectedDate.value = [];
 };
 
+const isProcessing = ref(false);
+
 watch(() => props.selectedMonths, (newValue) => {
-    let computedMinDate = new Date(today.value.getFullYear(), today.value.getMonth(), 1); // Default to start of current month
+    if (isProcessing.value) return; // Prevent multiple triggers
+
+    isProcessing.value = true; // Set flag to prevent re-entry
+
+    let computedMinDate = new Date(today.value.getFullYear(), today.value.getMonth(), 1);
 
     if (newValue.length > 0) {
         const startDates = newValue.map(dateStr => getStartOfMonth(dateStr));
@@ -105,30 +107,31 @@ watch(() => props.selectedMonths, (newValue) => {
 
     minDate.value = computedMinDate;
     maxDate.value = today.value;
-    selectedDate.value = [maxDate.value, maxDate.value];
 
     if (newValue.length === 0) {
         clearDate();
-    } else {
-        getResults(props.selectedType, newValue, [maxDate.value, maxDate.value]);
     }
+
+    getResults(props.selectedType, newValue, selectedDate.value);
+
+    setTimeout(() => { isProcessing.value = false; }, 100);
 }, { immediate: true });
 
-
 watch(selectedDate, (newDateRange) => {
-    if (Array.isArray(newDateRange)) {
-        const [startDate, endDate] = newDateRange;
+    if (isProcessing.value) return; // Prevent redundant calls
+    isProcessing.value = true;
 
-        if (startDate && endDate) {
-            getResults(props.selectedType, props.selectedMonths, [startDate, endDate]);
-        } else if (startDate || endDate) {
-            getResults(props.selectedType, props.selectedMonths, [startDate || endDate, endDate || startDate]);
-        } else {
-            getResults(props.selectedType, props.selectedMonths, []);
-        }
-    } else {
-        console.warn('Invalid date range format:', newDateRange);
+    if (Array.isArray(newDateRange)) {
+        let [startDate, endDate] = newDateRange;
+
+        // If only one date is available, use it for both start and end
+        if (!startDate) startDate = endDate;
+        if (!endDate) endDate = startDate;
+
+        getResults(props.selectedType, props.selectedMonths, [startDate, endDate]);
     }
+
+    setTimeout(() => { isProcessing.value = false; }, 100);
 });
 
 const filters = ref({

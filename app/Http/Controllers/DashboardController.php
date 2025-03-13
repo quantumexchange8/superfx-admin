@@ -145,11 +145,7 @@ class DashboardController extends Controller
             ->whereMonth('created_at', $month)
             ->whereYear('created_at', $year)
             ->get()
-            ->map(function ($record) {
-                // Multiply volume by rebate for each record
-                return $record->volume * $record->rebate;
-            })
-            ->sum(); // Sum up all the calculated values
+            ->sum('rebate');
 
         return response()->json([
             'totalDeposit' => $totalDeposit,
