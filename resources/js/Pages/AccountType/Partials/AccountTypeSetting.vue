@@ -275,11 +275,6 @@ const emit = defineEmits(['detailsVisible']);
                             <InputError :message="form.errors.max_account" />
                         </div>
                         <div class="flex flex-col items-start gap-1 flex-1">
-                            <InputLabel for="color" :value="$t('public.color')" :invalid="!!form.errors.color"/>
-                            <ColorPicker v-model="form.color" id="Color"/>
-                            <InputError :message="form.errors.color" />
-                        </div>
-                        <div class="flex flex-col items-start gap-1 flex-1">
                             <InputLabel for="user_access" :value="$t('public.access_to')" :invalid="!!form.errors.user_access"/>
                             <MultiSelect
                                 v-model="selectedUser"
@@ -310,6 +305,11 @@ const emit = defineEmits(['detailsVisible']);
                                     </span>
                                 </template>
                             </MultiSelect>
+                            <InputError :message="form.errors.color" />
+                        </div>
+                        <div class="flex flex-col items-start gap-1 flex-1">
+                            <InputLabel for="color" :value="$t('public.color')" :invalid="!!form.errors.color"/>
+                            <ColorPicker v-model="form.color" id="Color"/>
                             <InputError :message="form.errors.color" />
                         </div>
                     </div>
