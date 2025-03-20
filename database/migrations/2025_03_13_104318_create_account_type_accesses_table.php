@@ -8,9 +8,10 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('account_type_accesses', function (Blueprint $table) {
-            // No ID column
+            $table->id();
             $table->unsignedBigInteger('account_type_id');
             $table->unsignedBigInteger('user_id');
+            $table->string('status')->default('inactive');
             $table->timestamps();
     
             // Define foreign keys
