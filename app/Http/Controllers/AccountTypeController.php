@@ -87,6 +87,7 @@ class AccountTypeController extends Controller
                     AccountTypeAccess::create([
                         'account_type_id' => $id,
                         'user_id' => $userId,
+                        'status' => 'active',
                     ]);
                 }
             }
