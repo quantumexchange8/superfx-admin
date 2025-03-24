@@ -13,6 +13,7 @@ import {
     IconReceiptDollar,
     IconFileAnalytics,
     IconId,
+    IconIdBadge2,
     IconCoinMonero,
     IconBusinessplan,
     IconClockDollar,
@@ -180,6 +181,17 @@ watchEffect(() => {
                <IconFileAnalytics :size="20" stroke-width="1.25" />
            </template>
        </SidebarLink>
+
+        <!-- Markup Profile -->
+        <SidebarLink
+            :title="$t('public.profile')"
+            :href="route('markup_profile')"
+            :active="route().current('markup_profile')"
+        >
+            <template #icon>
+                <IconIdBadge2 :size="20" stroke-width="1.25" />
+            </template>
+        </SidebarLink>
 
         <!-- Account Type -->
         <SidebarLink

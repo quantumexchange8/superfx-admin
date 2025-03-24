@@ -73,7 +73,6 @@ const getAccountTypeUsers = async () => {
     try {
         const response = await axios.get(`/account_type/getAccountTypeUsers?account_type_id=${props.accountType.id}`);
         selectedUser.value = response.data.users;
-        console.log(selectedUser.value)
     } catch (error) {
         console.error('Error getting account type users:', error);
     } finally {
@@ -279,7 +278,7 @@ const emit = defineEmits(['detailsVisible']);
                             <MultiSelect
                                 v-model="selectedUser"
                                 :options="props.users"
-                                :placeholder="$t('public.filter_user')"
+                                :placeholder="$t('public.select_user')"
                                 filter
                                 :filterFields="['name', 'email', 'id_number']"
                                 :maxSelectedLabels="1"
@@ -301,7 +300,7 @@ const emit = defineEmits(['detailsVisible']);
                                         {{ selectedUser?.length }} {{ $t('public.users_selected') }}
                                     </span>
                                     <span v-else class="text-gray-400">
-                                        {{ $t('public.filter_user') }}
+                                        {{ $t('public.select_user') }}
                                     </span>
                                 </template>
                             </MultiSelect>

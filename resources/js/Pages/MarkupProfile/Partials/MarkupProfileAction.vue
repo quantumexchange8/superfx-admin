@@ -7,18 +7,18 @@ import InputSwitch from "primevue/inputswitch";
 import {router} from "@inertiajs/vue3";
 import {useConfirm} from "primevue/useconfirm";
 import {trans} from "laravel-vue-i18n";
-import AccountTypeSetting from "@/Pages/AccountType/Partials//AccountTypeSetting.vue";
+import MarkupProfileSetting from "@/Pages/MarkupProfile/Partials/MarkupProfileSetting.vue"
 
 const props = defineProps({
-    accountType: Object,
-    leverages: Array,
+    profile: Object,
+    accountTypes: Array,
     users: Array,
     loading: Boolean,
 })
 
-const checked = ref(props.accountType.status === 'active')
+const checked = ref(props.profile.status === 'active')
 
-watch(() => props.accountType.status, (newStatus) => {
+watch(() => props.profile.status, (newStatus) => {
     checked.value = newStatus === 'active';
 });
 
@@ -26,26 +26,30 @@ const confirm = useConfirm();
 
 const requireConfirmation = (action_type) => {
     const messages = {
-        deactivate_account_type: {
+        deactivate_profile: {
             group: 'headless-gray',
-            header: trans('public.deactivate_account_type_header'),
-            message: trans('public.deactivate_account_type_content'),
+            header: trans('public.deactivate_profile_header'),
+            message: trans('public.deactivate_profile_content'),
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.deactivate'),
             action: () => {
-                router.patch(route('accountType.updateStatus', props.accountType.id));
+                router.patch(route('markup_profile.updateStatus'), {
+                    id: props.profile.id,
+                });
 
                 checked.value = !checked.value;
             }
         },
-        activate_account_type: {
+        activate_profile: {
             group: 'headless-primary',
-            header: trans('public.activate_account_type_header'),
-            message: trans('public.activate_account_type_content'),
+            header: trans('public.activate_profile_header'),
+            message: trans('public.activate_profile_content'),
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.patch(route('accountType.updateStatus', props.accountType.id));
+                router.patch(route('markup_profile.updateStatus'), {
+                    id: props.profile.id,
+                });
 
                 checked.value = !checked.value;
             }
@@ -65,11 +69,11 @@ const requireConfirmation = (action_type) => {
     });
 };
 
-const handleAccountTypeStatus = () => {
-    if (props.accountType.status === 'active') {
-        requireConfirmation('deactivate_account_type')
+const handleMarkupProfileStatus = () => {
+    if (props.profile.status === 'active') {
+        requireConfirmation('deactivate_profile')
     } else {
-        requireConfirmation('activate_account_type')
+        requireConfirmation('activate_profile')
     }
 }
 
@@ -80,12 +84,12 @@ const handleAccountTypeStatus = () => {
         <InputSwitch
             v-model="checked"
             readonly
-            @click="handleAccountTypeStatus"
+            @click="handleMarkupProfileStatus"
             :disabled="props.loading"
         />
-        <AccountTypeSetting 
-            :accountType="props.accountType" 
-            :leverages="props.leverages"
+        <MarkupProfileSetting 
+            :profile="props.profile" 
+            :accountTypes="props.accountTypes" 
             :users="props.users"
             :loading="props.loading"
         />

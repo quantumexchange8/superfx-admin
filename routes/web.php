@@ -17,6 +17,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BillboardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AccountTypeController;
+use App\Http\Controllers\MarkupProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TradingAccountController;
 
@@ -225,6 +226,23 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         // Route::get('/getRebateListing', [ReportController::class, 'getRebateListing'])->name('report.getRebateListing');
         // Route::get('/getGroupTransaction', [ReportController::class, 'getGroupTransaction'])->name('report.getGroupTransaction');
         Route::get('/getRebateHistory', [ReportController::class, 'getRebateHistory'])->name('report.getRebateHistory');
+    });
+
+    /**
+     * ==============================
+     *         Markup Profile
+     * ==============================
+     */
+    Route::prefix('markup_profile')->group(function () {
+        Route::get('/', [MarkupProfileController::class, 'index'])->name('markup_profile');
+        Route::get('/getMarkupProfiles', [MarkupProfileController::class, 'getMarkupProfiles'])->name('markup_profile.getMarkupProfiles');
+        Route::get('/getMarkupProfileData', [MarkupProfileController::class, 'getMarkupProfileData'])->name('markup_profile.getMarkupProfileData');
+
+        Route::post('/addMarkupProfile', [MarkupProfileController::class, 'addMarkupProfile'])->name('markup_profile.addMarkupProfile');
+
+        Route::post('/updateMarkupProfile', [MarkupProfileController::class, 'updateMarkupProfile'])->name('markup_profile.updateMarkupProfile');
+
+        Route::patch('/updateStatus', [MarkupProfileController::class, 'updateStatus'])->name('markup_profile.updateStatus');
     });
 
     /**
