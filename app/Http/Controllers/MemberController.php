@@ -305,10 +305,25 @@ class MemberController extends Controller
         }
     
         $uplineRebate = RebateAllocation::with('symbol_group:id,display')
-            ->where('user_id', $upline->id);
+            ->where('user_id', $upline->id)
+            ->get();
     
-        $availableAccountTypeId = $uplineRebate->get()->pluck('account_type_id')->toArray();
+        $user = User::find($request->user_id);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
     
+        $userRebate = null;
+        if ($user->upline_id === $upline->id) {
+            $userRebate = RebateAllocation::with('symbol_group:id,display')
+                ->where('user_id', $user->id)
+                ->get();
+        }
+    
+        // Get account type details from upline's rebate
+        $availableAccountTypeId = $uplineRebate->pluck('account_type_id')->toArray();
+    
+        // Fetch account types based on available account type IDs
         $accountTypeSel = AccountType::whereIn('id', $availableAccountTypeId)
             ->select('id', 'name')
             ->get()
@@ -322,27 +337,30 @@ class MemberController extends Controller
         // Fetch all markup profiles associated with the upline
         $markupProfiles = MarkupProfile::whereHas('userToMarkupProfiles', function ($query) use ($upline) {
             $query->where('user_id', $upline->id);
-        })->with(['markupProfileToAccountTypes.accountType:id,name'])->get()
-        ->map(function ($markupProfile) {
-            return [
-                'id' => $markupProfile->id,
-                'name' => $markupProfile->name,
-                'account_types' => $markupProfile->markupProfileToAccountTypes->map(function ($accountType) {
-                    return [
-                        'id' => $accountType->accountType->id,
-                        'name' => $accountType->accountType->name,
-                    ];
-                })
-            ];
-        });
+        })
+            ->with(['markupProfileToAccountTypes.accountType:id,name'])
+            ->get()
+            ->map(function ($markupProfile) {
+                return [
+                    'id' => $markupProfile->id,
+                    'name' => $markupProfile->name,
+                    'account_types' => $markupProfile->markupProfileToAccountTypes->map(function ($accountType) {
+                        return [
+                            'id' => $accountType->accountType->id,
+                            'name' => $accountType->accountType->name,
+                        ];
+                    }),
+                ];
+            });
     
         return response()->json([
-            'rebateDetails' => $uplineRebate->get(),
+            'rebateDetails' => $uplineRebate,
+            'userRebateDetails' => $userRebate,
             'accountTypeSel' => $accountTypeSel,
-            'markupProfiles' => $markupProfiles
+            'markupProfiles' => $markupProfiles,
         ]);
     }
-    
+        
     public function transferUpline(Request $request)
     {
         // Validate the incoming request data
@@ -386,8 +404,76 @@ class MemberController extends Controller
         $user->save();
 
         // Step 2: If the role is 'ib' for the transferred user, set their RebateAllocation amounts to 0
+        // Now not all set to 0 but set to the amount user input else those not have set to 0
         if ($request->input('role') === 'ib') {
-            RebateAllocation::where('user_id', $user->id)->update(['amount' => 0]);
+            $amounts = $request->input('amounts');
+    
+            // Find the upline user and their rebate allocations
+            $upline_user = User::find($request->input('upline_id'));
+            $uplineRebates = RebateAllocation::where('user_id', $upline_user->id)->get();
+    
+            // Get the account_type_id and symbol_group_id combinations for the upline
+            $uplineCombinations = $uplineRebates->map(function($rebate) {
+                return [
+                    'account_type_id' => $rebate->account_type_id,
+                    'symbol_group_id' => $rebate->symbol_group_id
+                ];
+            })->toArray();
+    
+            // Get the account_type_id and symbol_group_id combinations from the request
+            $requestCombinations = array_map(function($amount) {
+                return [
+                    'account_type_id' => $amount['account_type_id'],
+                    'symbol_group_id' => $amount['symbol_group_id']
+                ];
+            }, $amounts);
+    
+            $errors = [];
+    
+            // Validate amounts
+            foreach ($amounts as $index => $amount) {
+                $uplineRebate = RebateAllocation::find($amount['rebate_detail_id']);
+    
+                if ($uplineRebate && $amount['amount'] > $uplineRebate->amount) {
+                    $errors["amounts.$index"] = 'Amount should not be higher than $' . $uplineRebate->amount;
+                }
+            }
+    
+            if (!empty($errors)) {
+                throw ValidationException::withMessages($errors);
+            }
+    
+            // Update or create rebate allocations for amounts in the request
+            foreach ($amounts as $amount) {
+                RebateAllocation::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'account_type_id' => $amount['account_type_id'],
+                        'symbol_group_id' => $amount['symbol_group_id']
+                    ],
+                    [
+                        'amount' => $amount['amount'],
+                        'edited_by' => Auth::id()
+                    ]
+                );
+            }
+
+            // Update or create entries for missing combinations with amount 0
+            foreach ($uplineCombinations as $combination) {
+                if (!in_array($combination, $requestCombinations)) {
+                    RebateAllocation::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'account_type_id' => $combination['account_type_id'],
+                            'symbol_group_id' => $combination['symbol_group_id']
+                        ],
+                        [
+                            'amount' => 0,
+                            'edited_by' => Auth::id()
+                        ]
+                    );
+                }
+            }
         }
         
         // Step 3: Update related users' hierarchyList and their RebateAllocation amounts if they are ibs
@@ -426,55 +512,59 @@ class MemberController extends Controller
                 ->update(['group_id' => $group_id]);
         }
 
-        // Handle user associations update
-        $markupProfileIds = $request->markup_profile_ids ?? [];
+        // Step 6: Handle user associations update only if role is ib
+        if ($request->input('role') === 'ib') {
+            $markupProfileIds = $request->markup_profile_ids ?? [];
 
-        if ($markupProfileIds) {
-            // Get existing markup profile associations for the given user ID
-            $existingMarkupProfileIds = UserToMarkupProfile::where('user_id', $request->input('user_id'))
-                ->pluck('markup_profile_id')
-                ->toArray();
-
-            // Get the markup profile IDs to add and remove
-            $markupProfileIdsToAdd = array_diff($markupProfileIds, $existingMarkupProfileIds);
-            $markupProfileIdsToRemove = array_diff($existingMarkupProfileIds, $markupProfileIds);
-
-            // Remove outdated user associations
-            if (!empty($markupProfileIdsToRemove)) {
-                UserToMarkupProfile::where('user_id', $request->input('user_id'))
-                    ->whereIn('markup_profile_id', $markupProfileIdsToRemove)
-                    ->delete();
-            }
-
-            // Add new user associations
-            foreach ($markupProfileIdsToAdd as $markupProfileId) {
-                UserToMarkupProfile::create([
-                    'markup_profile_id' => $markupProfileId,
-                    'user_id' => $request->input('user_id'),
-                    'referral_code' => null,
-                ]);
-            }
-
-            // Update referral codes for records without a referral code (both new and existing)
-            $recordsToUpdate = UserToMarkupProfile::where('user_id', $request->input('user_id'))
-                ->whereNull('referral_code')
-                ->get();
-
-            foreach ($recordsToUpdate as $userToMarkupProfile) {
-                // Generate a unique referral code
-                $referralCode = Str::random(10);
-                while (UserToMarkupProfile::where('referral_code', $referralCode)->exists()) {
-                    $referralCode = Str::random(10); // Ensure the referral code is unique
+            if ($markupProfileIds) {
+                // Get existing markup profile associations for the given user ID
+                $existingMarkupProfileIds = UserToMarkupProfile::where('user_id', $request->input('user_id'))
+                    ->pluck('markup_profile_id')
+                    ->toArray();
+    
+                // Get the markup profile IDs to add and remove
+                $markupProfileIdsToAdd = array_diff($markupProfileIds, $existingMarkupProfileIds);
+                $markupProfileIdsToRemove = array_diff($existingMarkupProfileIds, $markupProfileIds);
+    
+                // Remove outdated user associations
+                if (!empty($markupProfileIdsToRemove)) {
+                    UserToMarkupProfile::where('user_id', $request->input('user_id'))
+                        ->whereIn('markup_profile_id', $markupProfileIdsToRemove)
+                        ->delete();
                 }
-
-                // Update the referral code for this specific record
-                $userToMarkupProfile->update(['referral_code' => $referralCode]);
+    
+                // Add new user associations
+                foreach ($markupProfileIdsToAdd as $markupProfileId) {
+                    UserToMarkupProfile::create([
+                        'markup_profile_id' => $markupProfileId,
+                        'user_id' => $request->input('user_id'),
+                        'referral_code' => null,
+                    ]);
+                }
+    
+                if ($request->input('role') === 'ib') {
+                    // Update referral codes for records without a referral code (both new and existing)
+                    $recordsToUpdate = UserToMarkupProfile::where('user_id', $request->input('user_id'))
+                        ->whereNull('referral_code')
+                        ->get();
+    
+                    foreach ($recordsToUpdate as $userToMarkupProfile) {
+                        // Generate a unique referral code
+                        $referralCode = Str::random(10);
+                        while (UserToMarkupProfile::where('referral_code', $referralCode)->exists()) {
+                            $referralCode = Str::random(10); // Ensure the referral code is unique
+                        }
+    
+                        // Update the referral code for this specific record
+                        $userToMarkupProfile->update(['referral_code' => $referralCode]);
+                    }
+                }
+            } else {
+                // If no markup profile IDs are provided, remove all associated markup profiles for this user
+                UserToMarkupProfile::where('user_id', $request->input('user_id'))->delete();
             }
-        } else {
-            // If no markup profile IDs are provided, remove all associated markup profiles for this user
-            UserToMarkupProfile::where('user_id', $request->input('user_id'))->delete();
         }
-        
+
         // Return a success response
         return back()->with('toast', [
             'title' => trans('public.toast_transfer_upline_success'),

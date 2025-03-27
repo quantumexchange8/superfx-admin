@@ -88,32 +88,30 @@ let isMarkupChange = false;
 
 // Watch for changes in selectedMarkupProfiles
 watch(selectedMarkupProfiles, () => {
-  // Update the flag indicating markup change
-  isMarkupChange = true;
+    // Update the flag indicating markup change
+    isMarkupChange = true;
 
-  // Check if there are filtered account types, if so, select the first one as the new account type
-  if (filteredAccountTypes.value.length > 0) {
+    // Check if there are filtered account types, if so, select the first one as the new account type
     selectedAccountType.value = filteredAccountTypes.value[0];
     accountRebateData.value = {};
     initializeMemberRebateAmount();
-  }
 }, { immediate: true });
 
 // Watch for changes in selectedAccountType to update data
 watch(selectedAccountType, (newType, oldType) => {
-  if (isMarkupChange) {
-    initializeMemberRebateAmount();
-    isMarkupChange = false;
-  } else {
-    // If account type has changed, save previous data
-    if (oldType) {
-      // Ensure we are preserving the rebate data for the previous account type
-      accountRebateData.value[oldType.id] = accountRebateData.value[oldType.id] || {};
-    }
+    if (isMarkupChange) {
+        initializeMemberRebateAmount();
+        isMarkupChange = false;
+    } else {
+        // If account type has changed, save previous data
+        if (oldType) {
+            // Ensure we are preserving the rebate data for the previous account type
+            accountRebateData.value[oldType.id] = accountRebateData.value[oldType.id] || {};
+        }
 
-    // Initialize or reset rebate data for the new selected account type
-    initializeMemberRebateAmount();
-  }
+        // Initialize or reset rebate data for the new selected account type
+        initializeMemberRebateAmount();
+    }
 });
 
 const filteredRebateDetails = computed(() => {
@@ -315,7 +313,7 @@ const closeDialog = () => {
                             size="base"
                             class="w-full md:w-[120px]"
                             @click="nextStep"
-                            :disabled="form.processing || selectedMarkupProfiles?.length <= 0"
+                            :disabled="form.processing"
                         >
                             {{ $t('public.next') }}
                         </Button>
@@ -332,7 +330,7 @@ const closeDialog = () => {
                         :options="filteredAccountTypes"
                         class="md:max-w-[240px] w-full"
                         optionLabel="name"
-                        :disabled="!selectedAccountType"
+                        :disabled="!selectedAccountType || selectedMarkupProfiles?.length <= 0"
                     />
                     <InputError :message="form.errors.account_type_id" />
                 </div>
@@ -363,6 +361,7 @@ const closeDialog = () => {
                                 :placeholder="formatAmount(rebateDetail.amount, 0)"
                                 :invalid="!!form.errors[`amounts.${index}`]"
                                 inputClass="py-2 px-4 w-20"
+                                :disabled="!selectedAccountType || selectedMarkupProfiles?.length <= 0"
                             />
                             <InputError :message="form.errors[`amounts.${index}`]" />
                         </div>

@@ -606,7 +606,7 @@ return [
     "logout_header" => "Đăng xuất",
     "logout_caption" => "Bạn chắc chắn muốn đăng xuất?",
     "ib_transfer_upline_header" => "Xác nhận chuyển upline",
-    "ib_transfer_upline_message" => "Nếu IB chuyển upline, rebate của IB và các downline của họ sẽ được đặt lại về 0. Vui lòng cẩn thận.",
+    "ib_transfer_upline_message" => "Nếu IB chuyển upline, rebate của IB sẽ là số tiền chỉ định hoặc 0, và rebate của downline sẽ reset về 0. Vui lòng cẩn thận.",
     "change_password" => "Đổi mật khẩu",
     "master_password" => "Mật khẩu quản trị",
     "investor_password" => "Mật khẩu nhà đầu tư",

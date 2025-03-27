@@ -606,7 +606,7 @@ return [
     "logout_header" => "登出",
     "logout_caption" => "您确定要登出吗？",
     "ib_transfer_upline_header" => "转换上级代理",
-    "ib_transfer_upline_message" => "如果IB转换上级代理,该IB及其下线的回馈金将重置为0, 请谨慎操作。",
+    "ib_transfer_upline_message" => "如果IB转换上级代理, 该IB的回馈金将设置为指定的金额或0, 下线的回馈金将重置为0。请谨慎操作。",
     "master_password" => "主密码",
     "investor_password" => "投资者密码",
     "toast_update_password_success" => "密码已成功更新！",
