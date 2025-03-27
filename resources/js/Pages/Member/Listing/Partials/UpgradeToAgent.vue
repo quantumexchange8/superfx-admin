@@ -14,7 +14,7 @@ const props = defineProps({
     member: Object
 })
 
-const step = ref(2);
+const step = ref(1);
 const isLoading = ref(false);
 const availableUpline = ref(null);
 const newIdNumber = ref('');
@@ -38,7 +38,6 @@ const getAvailableUplineData = async () => {
         accountTypes.value = response.data.accountTypeSel;
         markupProfiles.value = response.data.markupProfiles;
 
-        selectedAccountType.value = accountTypes.value[0];
         // Map selectedMarkupProfiles (which is an array of IDs) to full profile objects
         if (props.member?.markup_profile_ids && markupProfiles.value.length) {
             selectedMarkupProfiles.value = props.member.markup_profile_ids
@@ -85,18 +84,36 @@ const initializeMemberRebateAmount = () => {
     }
 };
 
+let isMarkupChange = false;
+
+// Watch for changes in selectedMarkupProfiles
 watch(selectedMarkupProfiles, () => {
+  // Update the flag indicating markup change
+  isMarkupChange = true;
+
+  // Check if there are filtered account types, if so, select the first one as the new account type
+  if (filteredAccountTypes.value.length > 0) {
+    selectedAccountType.value = filteredAccountTypes.value[0];
     accountRebateData.value = {};
     initializeMemberRebateAmount();
-});
+  }
+}, { immediate: true });
 
 // Watch for changes in selectedAccountType to update data
 watch(selectedAccountType, (newType, oldType) => {
-    if (oldType) {
-        // Save previous data before changing
-        accountRebateData.value[oldType.id] = accountRebateData.value[oldType.id] || {};
-    }
+  if (isMarkupChange) {
     initializeMemberRebateAmount();
+    isMarkupChange = false;
+  } else {
+    // If account type has changed, save previous data
+    if (oldType) {
+      // Ensure we are preserving the rebate data for the previous account type
+      accountRebateData.value[oldType.id] = accountRebateData.value[oldType.id] || {};
+    }
+
+    // Initialize or reset rebate data for the new selected account type
+    initializeMemberRebateAmount();
+  }
 });
 
 const filteredRebateDetails = computed(() => {
@@ -369,7 +386,7 @@ const closeDialog = () => {
                     </div>
 
                     <div class="flex gap-3 md:gap-4 md:justify-end pt-10 md:pt-7 self-stretch">
-                        <!-- <Button
+                        <Button
                             type="button"
                             variant="gray-tonal"
                             size="base"
@@ -377,15 +394,6 @@ const closeDialog = () => {
                             @click="previousStep"
                         >
                             {{ $t('public.back') }}
-                        </Button> -->
-                        <Button
-                            type="button"
-                            variant="gray-tonal"
-                            size="base"
-                            class="w-full md:w-[120px]"
-                            @click="closeDialog"
-                        >
-                            {{ $t('public.cancel') }}
                         </Button>
                         <Button
                             variant="primary-flat"

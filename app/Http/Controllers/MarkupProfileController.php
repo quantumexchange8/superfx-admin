@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Inertia\Inertia;
+use App\Models\SymbolGroup;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\MarkupProfile;
+use App\Models\RebateAllocation;
 use App\Models\UserToMarkupProfile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\MarkupProfileToAccountType;
 
@@ -40,7 +45,7 @@ class MarkupProfileController extends Controller
     public function addMarkupProfile(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'unique:markup_profiles,name'],
             'description' => ['nullable', 'string'],
             'account_type_ids' => ['nullable', 'array'],
             'account_type_ids.*' => ['exists:account_types,id'],
@@ -58,6 +63,7 @@ class MarkupProfileController extends Controller
         // Create MarkupProfile
         $markupProfile = MarkupProfile::create([
             'name' => $request->name,
+            'slug' => Str::slug($request->name),
             'description' => $request->description ?? null,
         ]);
 
@@ -74,13 +80,24 @@ class MarkupProfileController extends Controller
         // Insert into UserToMarkupProfile using the Model
         if (!empty($request->user_ids)) {
             foreach ($request->user_ids as $userId) {
+                $user = User::find($userId);
+                if ($user && $user->role === 'ib') {
+                    // Generate a unique referral code if the user role is 'ib'
+                    do {
+                        $referralCode = Str::random(10);
+                    } while (UserToMarkupProfile::where('referral_code', $referralCode)->exists());
+                } else {
+                    $referralCode = null;
+                }
+    
                 UserToMarkupProfile::create([
                     'markup_profile_id' => $markupProfile->id,
                     'user_id' => $userId,
+                    'referral_code' => $referralCode,
                 ]);
             }
         }
-
+        
         return back()->with('toast', [
             'title' => trans('public.toast_create_profile_success'),
             'type' => 'success',
@@ -118,23 +135,282 @@ class MarkupProfileController extends Controller
         ]);
     }
 
+    // public function updateMarkupProfile(Request $request)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'name' => ['required', 'string', 'unique:markup_profiles,name,' . $request->id],
+    //         'description' => ['nullable', 'string'],
+    //         'account_type_ids' => ['nullable', 'array'],
+    //         'account_type_ids.*' => ['exists:account_types,id'],
+    //         'user_ids' => ['nullable', 'array'],
+    //         'user_ids.*' => ['exists:users,id'],
+    //     ])->setAttributeNames([
+    //         'name' => trans('public.name'),
+    //         'description' => trans('public.description'),
+    //         'account_type_ids' => trans('public.account_type_ids'),
+    //         'user_ids' => trans('public.user_ids'),
+    //     ]);
+
+    //     $validator->validate(); // Validate the request
+
+    //     $profile = MarkupProfile::findOrFail($request->id);
+    
+    //     // Update AccountType fields
+    //     $profile->update([
+    //         'name' => $request->name,
+    //         'slug' => Str::slug($request->name),
+    //         'description' => $request->description,
+    //         'status' => 'active',
+    //     ]);
+    
+    //     // Handle account types update
+    //     $accountTypes = $request->account_type_ids ?? []; // New account type IDs passed in the request
+
+    //     if ($accountTypes) {
+    //         // Get existing account type IDs associated with the profile
+    //         $existingAccountTypeIds = MarkupProfileToAccountType::where('markup_profile_id', $request->id)
+    //             ->pluck('account_type_id')
+    //             ->toArray();
+
+    //         // Get the account types to add and remove
+    //         $accountTypesToAdd = array_diff($accountTypes, $existingAccountTypeIds);
+    //         $accountTypesToRemove = array_diff($existingAccountTypeIds, $accountTypes);
+
+    //         // Remove outdated account type associations
+    //         if (!empty($accountTypesToRemove)) {
+    //             // Remove RebateAllocations for the removed account types
+    //             foreach ($accountTypesToRemove as $accountTypeId) {
+    //                 foreach ($request->user_ids as $userId) {
+    //                     // Check if the user has other active markup profiles with the same account type
+    //                     $hasOtherMarkupProfiles = UserToMarkupProfile::where('user_id', $userId)
+    //                         ->whereHas('markupProfile.markupProfileToAccountTypes', function ($query) use ($accountTypeId) {
+    //                             $query->where('account_type_id', $accountTypeId);
+    //                         })
+    //                         ->exists();
+
+    //                     // Only delete RebateAllocations if no other active markup profiles exist for this user and account type
+    //                     if (!$hasOtherMarkupProfiles) {
+    //                         RebateAllocation::where('user_id', $userId)
+    //                             ->where('account_type_id', $accountTypeId)
+    //                             ->delete();
+    //                     }
+    //                 }
+    //             }
+
+    //             // Also remove the account type associations from the profile
+    //             MarkupProfileToAccountType::where('markup_profile_id', $request->id)
+    //                 ->whereIn('account_type_id', $accountTypesToRemove)
+    //                 ->delete();
+    //         }
+
+    //         // Add new account type associations
+    //         foreach ($accountTypesToAdd as $accountTypeId) {
+    //             // Add account type associations to the markup profile
+    //             MarkupProfileToAccountType::create([
+    //                 'markup_profile_id' => $request->id,
+    //                 'account_type_id' => $accountTypeId,
+    //             ]);
+
+    //             // Add RebateAllocations for users if account types are added
+    //             foreach ($request->user_ids as $userId) {
+    //                 // Ensure RebateAllocation is created for the new account type and user
+    //                 foreach (SymbolGroup::all() as $symbolGroup) {
+    //                     RebateAllocation::firstOrCreate([
+    //                         'user_id' => $userId,
+    //                         'account_type_id' => $accountTypeId,
+    //                         'symbol_group_id' => $symbolGroup->id,
+    //                         'amount' => 0,
+    //                     ]);
+    //                 }
+    //             }
+    //         }
+    //     } else {
+    //         // If no account types are provided, remove all associated account types
+    //         $accountTypeIds = MarkupProfileToAccountType::where('markup_profile_id', $request->id)
+    //             ->pluck('account_type_id')
+    //             ->toArray();
+
+    //         // Remove RebateAllocations for all users and account types associated with the profile
+    //         foreach ($request->user_ids as $userId) {
+    //             foreach ($accountTypeIds as $accountTypeId) {
+    //                 // Check if the user has other active markup profiles with the same account type
+    //                 $hasOtherMarkupProfiles = UserToMarkupProfile::where('user_id', $userId)
+    //                     ->whereHas('markupProfile.markupProfileToAccountTypes', function ($query) use ($accountTypeId) {
+    //                         $query->where('account_type_id', $accountTypeId);
+    //                     })
+    //                     ->exists();
+
+    //                 // Only delete RebateAllocations if no other active markup profiles exist for this user and account type
+    //                 if (!$hasOtherMarkupProfiles) {
+    //                     RebateAllocation::where('user_id', $userId)
+    //                         ->where('account_type_id', $accountTypeId)
+    //                         ->delete();
+    //                 }
+    //             }
+    //         }
+
+    //         // Finally, remove the account type associations from the profile
+    //         MarkupProfileToAccountType::where('markup_profile_id', $request->id)->delete();
+    //     }
+    
+    //     // Handle user associations update
+    //     $userIds = $request->user_ids ?? [];
+
+    //     if ($userIds) {
+    //         // Get existing user IDs associated with the profile
+    //         $existingUserIds = UserToMarkupProfile::where('markup_profile_id', $request->id)
+    //             ->pluck('user_id')
+    //             ->toArray();
+
+    //         // Get the user IDs to add and remove
+    //         $userIdsToAdd = array_diff($userIds, $existingUserIds);
+    //         $userIdsToRemove = array_diff($existingUserIds, $userIds);
+
+    //         // Remove outdated user associations
+    //         if (!empty($userIdsToRemove)) {
+    //             // First, remove RebateAllocations for the users to be removed
+    //             foreach ($userIdsToRemove as $userId) {
+    //                 foreach ($accountTypes as $accountTypeId) {
+    //                     // Check if the user has other active markup profiles with the same account type
+    //                     $hasOtherMarkupProfiles = UserToMarkupProfile::where('user_id', $userId)
+    //                         ->whereHas('markupProfile.markupProfileToAccountTypes', function ($query) use ($accountTypeId) {
+    //                             $query->where('account_type_id', $accountTypeId);
+    //                         })
+    //                         ->exists();
+
+    //                     // Only delete RebateAllocations if no other active markup profiles exist for this user and account type
+    //                     if (!$hasOtherMarkupProfiles) {
+    //                         RebateAllocation::where('user_id', $userId)
+    //                             ->where('account_type_id', $accountTypeId)
+    //                             ->delete();
+    //                     }
+    //                 }
+    //             }
+
+    //             // Then, remove the user associations
+    //             UserToMarkupProfile::where('markup_profile_id', $request->id)
+    //                 ->whereIn('user_id', $userIdsToRemove)
+    //                 ->delete();
+    //         }
+
+    //         // Add new user associations
+    //         foreach ($userIdsToAdd as $userId) {
+    //             $user = User::find($userId);
+
+    //             if (!$user) {
+    //                 continue; // Skip if user not found
+    //             }
+
+    //             // Check if user is IB
+    //             $referralCode = null;
+    //             if ($user->role === 'ib') {
+    //                 // Generate unique referral code
+    //                 do {
+    //                     $referralCode = Str::random(10);
+    //                 } while (UserToMarkupProfile::where('referral_code', $referralCode)->exists());
+    //             }
+
+    //             // Create user to markup profile record
+    //             UserToMarkupProfile::create([
+    //                 'markup_profile_id' => $request->id,
+    //                 'user_id' => $userId,
+    //                 'referral_code' => $referralCode,
+    //             ]);
+
+    //             // Add RebateAllocations for the newly added user(s)
+    //             foreach ($request->account_type_ids as $accountTypeId) {
+    //                 foreach (SymbolGroup::all() as $symbolGroup) {
+    //                     RebateAllocation::firstOrCreate([
+    //                         'user_id' => $userId,
+    //                         'account_type_id' => $accountTypeId,
+    //                         'symbol_group_id' => $symbolGroup->id,
+    //                         'amount' => 0, // Default amount is 0
+    //                     ]);
+    //                 }
+    //             }
+    //         }
+    //     } else {
+    //         // If no user IDs are provided, remove all associated users and their RebateAllocations
+    //         $existingUserIds = UserToMarkupProfile::where('markup_profile_id', $request->id)
+    //             ->pluck('user_id')
+    //             ->toArray();
+
+    //         // Remove RebateAllocations for all users associated with the profile
+    //         foreach ($existingUserIds as $userId) {
+    //             foreach ($accountTypeIds as $accountTypeId) {
+    //                 // Check and delete RebateAllocations
+    //                 $hasOtherMarkupProfiles = UserToMarkupProfile::where('user_id', $userId)
+    //                     ->whereHas('markupProfile.markupProfileToAccountTypes', function ($query) use ($accountTypeId) {
+    //                         $query->where('account_type_id', $accountTypeId);
+    //                     })
+    //                     ->exists();
+
+    //                 if (!$hasOtherMarkupProfiles) {
+    //                     RebateAllocation::where('user_id', $userId)
+    //                         ->where('account_type_id', $accountTypeId)
+    //                         ->delete();
+    //                 }
+    //             }
+    //         }
+
+    //         // Remove all associated user profiles
+    //         UserToMarkupProfile::where('markup_profile_id', $request->id)->delete();
+    //     }
+    
+    //     return back()->with('toast', [
+    //         'title' => trans('public.toast_update_markup_profile_success'),
+    //         'type' => 'success',
+    //     ]);
+    // }
+
     public function updateMarkupProfile(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'unique:markup_profiles,name,' . $request->id],
+            'description' => ['nullable', 'string'],
+            'account_type_ids' => ['nullable', 'array'],
+            'account_type_ids.*' => ['exists:account_types,id'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['exists:users,id'],
+        ])->setAttributeNames([
+            'name' => trans('public.name'),
+            'description' => trans('public.description'),
+            'account_type_ids' => trans('public.account_type_ids'),
+            'user_ids' => trans('public.user_ids'),
+        ]);
+
+        $validator->validate(); // Validate the request
+
         $profile = MarkupProfile::findOrFail($request->id);
-    
+
         // Update AccountType fields
         $profile->update([
             'name' => $request->name,
+            'slug' => Str::slug($request->name),
             'description' => $request->description,
             'status' => 'active',
         ]);
-    
-        // Handle account types update
-        $accountTypes = $request->account_type_ids ?? []; // New account type IDs passed in the request
+
+        // Update Account Type Associations
+        $this->updateAccountTypes($request);
+
+        // Update User Associations
+        $this->updateUserAssociations($request);
+
+        return back()->with('toast', [
+            'title' => trans('public.toast_update_markup_profile_success'),
+            'type' => 'success',
+        ]);
+    }
+
+    public function updateAccountTypes(Request $request)
+    {
+        $accountTypes = $request->account_type_ids ?? [];
+        $markupProfileId = $request->id; // Get the current markup profile ID
     
         if ($accountTypes) {
             // Get existing account type IDs associated with the profile
-            $existingAccountTypeIds = MarkupProfileToAccountType::where('markup_profile_id', $request->id)
+            $existingAccountTypeIds = MarkupProfileToAccountType::where('markup_profile_id', $markupProfileId)
                 ->pluck('account_type_id')
                 ->toArray();
     
@@ -144,59 +420,64 @@ class MarkupProfileController extends Controller
     
             // Remove outdated account type associations
             if (!empty($accountTypesToRemove)) {
-                MarkupProfileToAccountType::where('markup_profile_id', $request->id)
+                MarkupProfileToAccountType::where('markup_profile_id', $markupProfileId)
                     ->whereIn('account_type_id', $accountTypesToRemove)
                     ->delete();
             }
     
-            // Add new account type associations
             foreach ($accountTypesToAdd as $accountTypeId) {
                 MarkupProfileToAccountType::create([
-                    'markup_profile_id' => $request->id,
+                    'markup_profile_id' => $markupProfileId,
                     'account_type_id' => $accountTypeId,
                 ]);
             }
         } else {
-            // If no account types are provided, remove all associated account types
-            MarkupProfileToAccountType::where('markup_profile_id', $request->id)->delete();
+            MarkupProfileToAccountType::where('markup_profile_id', $markupProfileId)->delete();
         }
-    
-        // Handle user associations update
-        $userIds = $request->user_ids ?? []; // New user IDs passed in the request
+    }
+        
+    public function updateUserAssociations(Request $request)
+    {
+        $userIds = $request->user_ids ?? [];
+        $markupProfileId = $request->id; // Get the current markup profile ID
     
         if ($userIds) {
-            // Get existing user IDs associated with the profile
-            $existingUserIds = UserToMarkupProfile::where('markup_profile_id', $request->id)
+            $existingUserIds = UserToMarkupProfile::where('markup_profile_id', $markupProfileId)
                 ->pluck('user_id')
                 ->toArray();
     
-            // Get the user IDs to add and remove
             $userIdsToAdd = array_diff($userIds, $existingUserIds);
             $userIdsToRemove = array_diff($existingUserIds, $userIds);
     
-            // Remove outdated user associations
             if (!empty($userIdsToRemove)) {
-                UserToMarkupProfile::where('markup_profile_id', $request->id)
+                UserToMarkupProfile::where('markup_profile_id', $markupProfileId)
                     ->whereIn('user_id', $userIdsToRemove)
                     ->delete();
             }
     
-            // Add new user associations
             foreach ($userIdsToAdd as $userId) {
+                $user = User::find($userId);
+    
+                if (!$user) {
+                    continue;
+                }
+    
+                $referralCode = null;
+                if ($user->role === 'ib') {
+                    do {
+                        $referralCode = Str::random(10);
+                    } while (UserToMarkupProfile::where('referral_code', $referralCode)->exists());
+                }
+    
                 UserToMarkupProfile::create([
-                    'markup_profile_id' => $request->id,
+                    'markup_profile_id' => $markupProfileId,
                     'user_id' => $userId,
+                    'referral_code' => $referralCode,
                 ]);
             }
         } else {
-            // If no user IDs are provided, remove all associated users
-            UserToMarkupProfile::where('markup_profile_id', $request->id)->delete();
+            UserToMarkupProfile::where('markup_profile_id', $markupProfileId)->delete();
         }
-    
-        return back()->with('toast', [
-            'title' => trans('public.toast_update_markup_profile_success'),
-            'type' => 'success',
-        ]);
     }
         
     public function updateStatus(Request $request)

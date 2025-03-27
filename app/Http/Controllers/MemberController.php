@@ -425,7 +425,56 @@ class MemberController extends Controller
                 ->where('group_id', '!=', $group_id) // Only update if the current group is different
                 ->update(['group_id' => $group_id]);
         }
-            
+
+        // Handle user associations update
+        $markupProfileIds = $request->markup_profile_ids ?? [];
+
+        if ($markupProfileIds) {
+            // Get existing markup profile associations for the given user ID
+            $existingMarkupProfileIds = UserToMarkupProfile::where('user_id', $request->input('user_id'))
+                ->pluck('markup_profile_id')
+                ->toArray();
+
+            // Get the markup profile IDs to add and remove
+            $markupProfileIdsToAdd = array_diff($markupProfileIds, $existingMarkupProfileIds);
+            $markupProfileIdsToRemove = array_diff($existingMarkupProfileIds, $markupProfileIds);
+
+            // Remove outdated user associations
+            if (!empty($markupProfileIdsToRemove)) {
+                UserToMarkupProfile::where('user_id', $request->input('user_id'))
+                    ->whereIn('markup_profile_id', $markupProfileIdsToRemove)
+                    ->delete();
+            }
+
+            // Add new user associations
+            foreach ($markupProfileIdsToAdd as $markupProfileId) {
+                UserToMarkupProfile::create([
+                    'markup_profile_id' => $markupProfileId,
+                    'user_id' => $request->input('user_id'),
+                    'referral_code' => null,
+                ]);
+            }
+
+            // Update referral codes for records without a referral code (both new and existing)
+            $recordsToUpdate = UserToMarkupProfile::where('user_id', $request->input('user_id'))
+                ->whereNull('referral_code')
+                ->get();
+
+            foreach ($recordsToUpdate as $userToMarkupProfile) {
+                // Generate a unique referral code
+                $referralCode = Str::random(10);
+                while (UserToMarkupProfile::where('referral_code', $referralCode)->exists()) {
+                    $referralCode = Str::random(10); // Ensure the referral code is unique
+                }
+
+                // Update the referral code for this specific record
+                $userToMarkupProfile->update(['referral_code' => $referralCode]);
+            }
+        } else {
+            // If no markup profile IDs are provided, remove all associated markup profiles for this user
+            UserToMarkupProfile::where('user_id', $request->input('user_id'))->delete();
+        }
+        
         // Return a success response
         return back()->with('toast', [
             'title' => trans('public.toast_transfer_upline_success'),
@@ -612,7 +661,6 @@ class MemberController extends Controller
             // If no markup profile IDs are provided, remove all associated markup profiles for this user
             UserToMarkupProfile::where('user_id', $user_id)->delete();
         }
-
         
         return back()->with('toast', [
             'title' => trans('public.upgrade_to_ib_success_alert'),
