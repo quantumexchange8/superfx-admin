@@ -123,7 +123,7 @@ const rowClicked = (data) => {
                         </Column>
                         <Column field="action" class="md:w-[15%] max-w-0">
                             <template #body="slotProps">
-                                <div class="flex justify-center items-center gap-2 flex-1">
+                                <div class="flex justify-end items-center gap-2 flex-1">
                                     <MarkupProfileAction 
                                         :profile="slotProps.data" 
                                         :accountTypes="props.accountTypes"

@@ -137,6 +137,11 @@ class User extends Authenticatable implements HasMedia
         return $this->hasMany(RebateAllocation::class, 'user_id', 'id');
     }
 
+    public function markupProfiles(): HasMany
+    {
+        return $this->hasMany(UserToMarkupProfile::class, 'user_id', 'id');
+    }
+
     // Logs
     public function getActivitylogOptions(): LogOptions
     {

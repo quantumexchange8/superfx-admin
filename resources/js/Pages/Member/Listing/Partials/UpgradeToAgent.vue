@@ -8,13 +8,18 @@ import InputNumber from "primevue/inputnumber";
 import {useForm} from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue";
 import Dropdown from "primevue/dropdown";
+import MultiSelect from 'primevue/multiselect';
 
 const props = defineProps({
     member: Object
 })
 
+const step = ref(2);
+const isLoading = ref(false);
 const availableUpline = ref(null);
 const newIdNumber = ref('');
+const markupProfiles = ref([]);
+const selectedMarkupProfiles = ref([]);
 const accountTypes = ref([]);
 const selectedAccountType = ref(null);
 const rebateDetails = ref([]);
@@ -24,20 +29,42 @@ const emit = defineEmits(['update:visible'])
 
 // Fetch and initialize data
 const getAvailableUplineData = async () => {
+    isLoading.value = true;
+
     try {
         const response = await axios.get(`/member/getAvailableUplineData?user_id=${props.member.id}`);
         availableUpline.value = response.data.availableUpline;
         rebateDetails.value = response.data.rebateDetails;
         accountTypes.value = response.data.accountTypeSel;
+        markupProfiles.value = response.data.markupProfiles;
 
         selectedAccountType.value = accountTypes.value[0];
+        // Map selectedMarkupProfiles (which is an array of IDs) to full profile objects
+        if (props.member?.markup_profile_ids && markupProfiles.value.length) {
+            selectedMarkupProfiles.value = props.member.markup_profile_ids
+                .map(id => markupProfiles.value.find(profile => profile.id === id))
+                .filter(profile => profile); // Filter out undefined if no match is found
+        }
         newIdNumber.value = props.member.id_number.replace(/^M/, 'I');
 
         initializeMemberRebateAmount();
     } catch (error) {
         console.error('Error fetching available upline data:', error);
+    } finally {
+        isLoading.value = false;
     }
 };
+
+// Computed property to filter account types based on selected markup profiles
+const filteredAccountTypes = computed(() => {
+  // Get all selected account IDs from selected markup profiles
+  const selectedAccountIds = selectedMarkupProfiles.value.flatMap(profile =>
+    profile.account_types.map(account => account.id)
+  );
+
+  // Filter accountTypes to include only those that match the selected account IDs
+  return accountTypes.value.filter(accountType => selectedAccountIds.includes(accountType.id));
+});
 
 // Initialize or reset rebate amounts for the selected account type
 const initializeMemberRebateAmount = () => {
@@ -57,6 +84,11 @@ const initializeMemberRebateAmount = () => {
         }, {});
     }
 };
+
+watch(selectedMarkupProfiles, () => {
+    accountRebateData.value = {};
+    initializeMemberRebateAmount();
+});
 
 // Watch for changes in selectedAccountType to update data
 watch(selectedAccountType, (newType, oldType) => {
@@ -88,13 +120,25 @@ const form = useForm({
     user_id: props.member.id,
     id_number: '',
     upline_id: null,
-    amounts: {}
+    amounts: {},
+    markup_profile_ids: '',
 });
+
+const nextStep = () => {
+    step.value = 2;
+};
+
+const previousStep = () => {
+    step.value = 1;
+};
 
 const submitForm = () => {
     form.id_number = newIdNumber.value;
     form.upline_id = availableUpline.value.id
     form.amounts = prepareSubmissionData();
+    // Extract the IDs of the selected markup profiles and assign them to the form
+    form.markup_profile_ids = selectedMarkupProfiles.value.map(profile => profile.id);
+
     form.post(route('member.upgradeIB'), {
         onSuccess: () => {
             closeDialog();
@@ -176,88 +220,185 @@ const closeDialog = () => {
         <form
             class="w-full space-y-5"
         >
-            <!-- account type -->
-            <div class="flex flex-col items-start gap-1">
-                <Dropdown
-                    v-model="selectedAccountType"
-                    id="accountTypes"
-                    :options="accountTypes"
-                    class="md:max-w-[240px] w-full"
-                    optionLabel="name"
-                    :disabled="!selectedAccountType"
-                />
-                <InputError :message="form.errors.account_type_id" />
-            </div>
-
-            <!-- rebate allocate -->
-            <div class="flex flex-col items-center self-stretch divide-y">
-                <div class="flex items-center w-full self-stretch py-2 text-gray-950 bg-gray-100">
-                    <span class="uppercase text-xs font-semibold px-2 w-[120px] md:w-full">{{ $t('public.product') }}</span>
-                    <span class="uppercase text-xs font-semibold px-2 w-20 md:w-full">{{ $t('public.upline_rebate') }}</span>
-                    <span class="uppercase text-xs font-semibold px-2 w-[88px] md:w-full">{{ $t('public.rebate') }} / Ł ($)</span>
-                </div>
-
-                <!-- symbol groups -->
-                <div
-                    v-if="rebateDetails.length > 0"
-                    v-for="(rebateDetail, index) in filteredRebateDetails"
-                    class="flex items-center w-full self-stretch py-2 text-gray-950"
-                >
-                    <div class="text-sm px-2 w-[120px] md:w-full truncate">{{ $t(`public.${rebateDetail.symbol_group.display}`) }}</div>
-                    <div class="text-sm px-2 w-20 md:w-full">{{ formatAmount(rebateDetail.amount, 2) }}</div>
-                    <div class="text-sm px-2 w-[88px] md:w-full">
-                        <InputNumber
-                            v-model="accountRebateData[selectedAccountType.id][rebateDetail.id].amount"
-                            :min="0"
-                            :max="Number(rebateDetail.amount)"
-                            :minFractionDigits="2"
-                            fluid
-                            :placeholder="formatAmount(rebateDetail.amount, 0)"
-                            :invalid="!!form.errors[`amounts.${index}`]"
-                            inputClass="py-2 px-4 w-20"
-                        />
-                        <InputError :message="form.errors[`amounts.${index}`]" />
-                    </div>
-                </div>
-
-                <!-- lazy loading -->
-                <div
-                    v-else
-                    v-for="index in 6"
-                    class="flex items-center w-full self-stretch py-4 text-gray-950"
-                >
-                    <div class="w-full">
-                        <div class="h-2.5 bg-gray-200 rounded-full w-20 md:w-36 mt-1 mb-1.5"></div>
-                    </div>
-                    <div class="w-full">
-                        <div class="h-2.5 bg-gray-200 rounded-full w-10 md:w-36 mt-1 mb-1.5"></div>
-                    </div>
-                    <div class="w-full">
-                        <div class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
-                    </div>
-                </div>
-
-                <div class="flex gap-3 md:gap-4 md:justify-end pt-10 md:pt-7 self-stretch">
-                    <Button
-                        type="button"
-                        variant="gray-tonal"
-                        size="base"
-                        class="w-full md:w-[120px]"
-                        @click="closeDialog"
+            <template v-if="step === 1">
+                <!-- account type -->
+                <div class="flex flex-col items-start gap-1">
+                    <MultiSelect
+                        v-model="selectedMarkupProfiles"
+                        :options="markupProfiles"
+                        :placeholder="$t('public.select_profile')"
+                        filter
+                        :filterFields="['name']"
+                        :maxSelectedLabels="1"
+                        :selectedItemsLabel="`${selectedMarkupProfiles?.length} ${$t('public.profiles_selected')}`"
+                        class="w-full md:w-64 font-normal"
                     >
-                        {{ $t('public.cancel') }}
-                    </Button>
-                    <Button
-                        variant="primary-flat"
-                        size="base"
-                        class="w-full md:w-[120px]"
-                        @click="submitForm"
-                        :disabled="form.processing"
-                    >
-                        {{ $t('public.upgrade') }}
-                    </Button>
+                        <template #option="{ option }">
+                            <div class="flex flex-col">
+                                <span>{{ option.name }}</span>
+                            </div>
+                        </template>
+                        <template #value>
+                            <div v-if="selectedMarkupProfiles?.length === 1">
+                                <span>{{ selectedMarkupProfiles[0].name }}</span>
+                            </div>
+                            <span v-else-if="selectedMarkupProfiles?.length > 1">
+                                {{ selectedMarkupProfiles?.length }} {{ $t('public.profiles_selected') }}
+                            </span>
+                            <span v-else class="text-gray-400">
+                                {{ $t('public.select_profile') }}
+                            </span>
+                        </template>
+                    </MultiSelect>
                 </div>
-            </div>
+
+                <!-- Selected Markup Profiles -->
+                <div class="flex flex-col items-center self-stretch divide-y">
+                    <div class="flex items-center w-full self-stretch py-2 text-gray-950 bg-gray-100">
+                        <span class="uppercase text-xs font-semibold px-2 w-[120px] md:w-full">{{ $t('public.name') }}</span>
+                        <span class="uppercase text-xs font-semibold px-2 w-20 md:w-full">{{ $t('public.account_type') }}</span>
+                    </div>
+
+                    <!-- details -->
+                    <div
+                        v-if="!isLoading"
+                        v-for="(profile, index) in selectedMarkupProfiles"
+                        class="flex items-center w-full self-stretch py-2 text-gray-950"
+                    >
+                        <div class="text-sm px-2 w-[120px] md:w-full truncate">{{ profile.name }}</div>
+                        <div class="text-sm px-2 w-20 md:w-full">{{ profile.account_types.map(account => account.name).join(', ') }}</div>
+                    </div>
+
+                    <!-- lazy loading -->
+                    <div
+                        v-else
+                        v-for="index in 2"
+                        class="flex items-center w-full self-stretch py-4 text-gray-950"
+                    >
+                        <div class="w-full">
+                            <div class="h-2.5 bg-gray-200 rounded-full w-20 md:w-36 mt-1 mb-1.5"></div>
+                        </div>
+                        <div class="w-full">
+                            <div class="h-2.5 bg-gray-200 rounded-full w-10 md:w-36 mt-1 mb-1.5"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 md:gap-4 md:justify-end pt-10 md:pt-7 self-stretch">
+                        <Button
+                            type="button"
+                            variant="gray-tonal"
+                            size="base"
+                            class="w-full md:w-[120px]"
+                            @click="closeDialog"
+                        >
+                            {{ $t('public.cancel') }}
+                        </Button>
+                        <Button
+                            variant="primary-flat"
+                            size="base"
+                            class="w-full md:w-[120px]"
+                            @click="nextStep"
+                            :disabled="form.processing || selectedMarkupProfiles?.length <= 0"
+                        >
+                            {{ $t('public.next') }}
+                        </Button>
+                    </div>
+                </div>
+            </template>
+
+            <template v-if="step === 2">
+                <!-- Markup Profile -->
+                <div class="flex flex-col items-start gap-1">
+                    <Dropdown
+                        v-model="selectedAccountType"
+                        id="accountTypes"
+                        :options="filteredAccountTypes"
+                        class="md:max-w-[240px] w-full"
+                        optionLabel="name"
+                        :disabled="!selectedAccountType"
+                    />
+                    <InputError :message="form.errors.account_type_id" />
+                </div>
+
+                <!-- rebate allocate -->
+                <div class="flex flex-col items-center self-stretch divide-y">
+                    <div class="flex items-center w-full self-stretch py-2 text-gray-950 bg-gray-100">
+                        <span class="uppercase text-xs font-semibold px-2 w-[120px] md:w-full">{{ $t('public.product') }}</span>
+                        <span class="uppercase text-xs font-semibold px-2 w-20 md:w-full">{{ $t('public.upline_rebate') }}</span>
+                        <span class="uppercase text-xs font-semibold px-2 w-[88px] md:w-full">{{ $t('public.rebate') }} / Ł ($)</span>
+                    </div>
+
+                    <!-- symbol groups -->
+                    <div
+                        v-if="rebateDetails.length > 0"
+                        v-for="(rebateDetail, index) in filteredRebateDetails"
+                        class="flex items-center w-full self-stretch py-2 text-gray-950"
+                    >
+                        <div class="text-sm px-2 w-[120px] md:w-full truncate">{{ $t(`public.${rebateDetail.symbol_group.display}`) }}</div>
+                        <div class="text-sm px-2 w-20 md:w-full">{{ formatAmount(rebateDetail.amount, 2) }}</div>
+                        <div class="text-sm px-2 w-[88px] md:w-full">
+                            <InputNumber
+                                v-model="accountRebateData[selectedAccountType.id][rebateDetail.id].amount"
+                                :min="0"
+                                :max="Number(rebateDetail.amount)"
+                                :minFractionDigits="2"
+                                fluid
+                                :placeholder="formatAmount(rebateDetail.amount, 0)"
+                                :invalid="!!form.errors[`amounts.${index}`]"
+                                inputClass="py-2 px-4 w-20"
+                            />
+                            <InputError :message="form.errors[`amounts.${index}`]" />
+                        </div>
+                    </div>
+
+                    <!-- lazy loading -->
+                    <div
+                        v-else
+                        v-for="index in 6"
+                        class="flex items-center w-full self-stretch py-4 text-gray-950"
+                    >
+                        <div class="w-full">
+                            <div class="h-2.5 bg-gray-200 rounded-full w-20 md:w-36 mt-1 mb-1.5"></div>
+                        </div>
+                        <div class="w-full">
+                            <div class="h-2.5 bg-gray-200 rounded-full w-10 md:w-36 mt-1 mb-1.5"></div>
+                        </div>
+                        <div class="w-full">
+                            <div class="h-2.5 bg-gray-200 rounded-full w-10 mt-1 mb-1.5"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 md:gap-4 md:justify-end pt-10 md:pt-7 self-stretch">
+                        <!-- <Button
+                            type="button"
+                            variant="gray-tonal"
+                            size="base"
+                            class="w-full md:w-[120px]"
+                            @click="previousStep"
+                        >
+                            {{ $t('public.back') }}
+                        </Button> -->
+                        <Button
+                            type="button"
+                            variant="gray-tonal"
+                            size="base"
+                            class="w-full md:w-[120px]"
+                            @click="closeDialog"
+                        >
+                            {{ $t('public.cancel') }}
+                        </Button>
+                        <Button
+                            variant="primary-flat"
+                            size="base"
+                            class="w-full md:w-[120px]"
+                            @click="submitForm"
+                            :disabled="form.processing"
+                        >
+                            {{ $t('public.upgrade') }}
+                        </Button>
+                    </div>
+                </div>
+            </template>
         </form>
     </div>
 </template>

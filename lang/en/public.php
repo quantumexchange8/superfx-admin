@@ -677,4 +677,6 @@ return [
     "toast_profile_activated" => "Profile has been activated.",
     "toast_profile_deactivated" => "Profile has been deactivated.",
     "toast_update_markup_profile_success" => "You've successfully updated the profile!",
+    "select_profile" => "Select Profile",
+    "profiles_selected" => "profiles selected",
 ];

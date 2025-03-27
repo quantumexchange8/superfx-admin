@@ -10,7 +10,11 @@ class UserToMarkupProfile extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'markup_profile_id'];
+    protected $fillable = [
+        'user_id',
+        'markup_profile_id',
+        'referral_code'
+    ];
 
     // Relations
     public function markupProfile(): BelongsTo

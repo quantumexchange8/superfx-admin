@@ -9,7 +9,8 @@ return new class extends Migration {
     {
         Schema::create('markup_profiles', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->unique();
+            $table->string('slug')->unique()->nullable();
             $table->text('description')->nullable();
             $table->string('status')->default('inactive');
             $table->timestamps();

@@ -676,5 +676,7 @@ return [
     "activate_profile_content" => "Bạn có chắc chắn muốn kích hoạt hồ sơ này không? Điều này sẽ hiển thị hồ sơ cho người dùng.",
     "toast_profile_activated" => "Hồ sơ đã được kích hoạt",
     "toast_profile_deactivated" => "Hồ sơ đã bị vô hiệu hóa",
-    "toast_update_markup_profile_success" => "Bạn đã cập nhật hồ sơ thành công!"
+    "toast_update_markup_profile_success" => "Bạn đã cập nhật hồ sơ thành công!",
+    "select_profile" => "Chọn hồ sơ",
+    "profiles_selected" => "hồ sơ đã chọn",
 ];

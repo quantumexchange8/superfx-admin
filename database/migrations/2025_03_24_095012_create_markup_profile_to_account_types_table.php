@@ -20,6 +20,6 @@ return new class extends Migration {
 
     public function down()
     {
-        Schema::dropIfExists('markup_profile_to_account_type');
+        Schema::dropIfExists('markup_profile_to_account_types');
     }
 };

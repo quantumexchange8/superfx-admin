@@ -677,4 +677,6 @@ return [
     "toast_profile_activated" => "档案已被停用",
     "toast_profile_deactivated" => "档案已被启用",
     "toast_update_markup_profile_success" => "您已成功更新档案!",
+    "select_profile" => "选择档案",
+    "profiles_selected" => "个选择的档案",
 ];

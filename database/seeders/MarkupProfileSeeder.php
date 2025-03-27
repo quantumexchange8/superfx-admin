@@ -2,10 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\MarkupProfile;
-use App\Models\MarkupProfileToAccountType;
 use App\Models\AccountType;
+use Illuminate\Support\Str;
+use App\Models\MarkupProfile;
+use Illuminate\Database\Seeder;
+use App\Models\MarkupProfileToAccountType;
 
 class MarkupProfileSeeder extends Seeder
 {
@@ -29,7 +30,11 @@ class MarkupProfileSeeder extends Seeder
 
         foreach ($profiles as $profileData) {
             // Create the markup profile
-            $markupProfile = MarkupProfile::create($profileData);
+            $markupProfile = MarkupProfile::create([
+                'name' => $profileData['name'],
+                'slug' => Str::slug($profileData['name']),
+                'status' => $profileData['status'],
+            ]);
 
             // Fetch all matching account types
             $accountTypes = AccountType::whereIn('name', $accountTypeNames[$profileData['name']])

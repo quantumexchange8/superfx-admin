@@ -10,7 +10,10 @@ class MarkupProfileToAccountType extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['markup_profile_id', 'account_type_id'];
+    protected $fillable = [
+        'markup_profile_id',
+        'account_type_id'
+    ];
 
     // Relations
     public function markupProfile(): BelongsTo

@@ -1,7 +1,7 @@
 <script setup>
 import Button from "@/Components/Button.vue";
 import Dialog from 'primevue/dialog';
-import {ref, watchEffect} from "vue";
+import {ref, watch, watchEffect} from "vue";
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputText from 'primevue/inputtext';
@@ -41,20 +41,29 @@ const submitForm = () => {
     });
 };
 
+const isLoading = ref(false)
 const countries = ref()
 const uplines = ref()
 const selectedCountry = ref();
 const getResults = async () => {
+    isLoading.value = true;
+
     try {
         const response = await axios.get('/member/getFilterData');
         countries.value = response.data.countries;
         uplines.value = response.data.uplines;
     } catch (error) {
         console.error('Error changing locale:', error);
+    } finally {
+        isLoading.value = false;
     }
 };
 
-getResults();
+watch(visible, (newVal) => {
+    if (newVal === true) {
+        getResults();
+    }
+});
 
 watchEffect(() => {
     if (usePage().props.toast !== null) {
@@ -268,7 +277,7 @@ watchEffect(() => {
                     variant="primary-flat"
                     size="base"
                     @click="submitForm"
-                    :disabled="form.processing"
+                    :disabled="form.processing || isLoading"
                 >
                     {{ $t('public.create') }}
                 </Button>

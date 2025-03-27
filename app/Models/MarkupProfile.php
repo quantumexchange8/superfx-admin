@@ -10,7 +10,12 @@ class MarkupProfile extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'status'];
+    protected $fillable = [
+        'name',
+        'slug',
+        'description',
+        'status'
+    ];
 
     // Relations
     public function markupProfileToAccountTypes(): HasMany
