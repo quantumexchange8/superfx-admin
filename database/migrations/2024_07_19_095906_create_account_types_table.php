@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('name')->nullable();
             $table->string('slug')->nullable();
+            $table->string('member_display_name')->nullable();
             $table->string('category')->nullable();
             $table->string('account_group')->nullable();
             $table->unsignedInteger('account_group_id')->nullable();

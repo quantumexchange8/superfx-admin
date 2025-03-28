@@ -108,6 +108,7 @@ return [
     "individual" => "個人",
     "manage" => "管理",
     "account_type_name" => "賬戶類型名稱",
+    "member_display_name" => "會員顯示名稱",
     "category" => "類別",
     "description_en" => "備註（英文）",
     "description_tw" => "備註（中文）",

@@ -57,6 +57,7 @@ const closeDialog = () => {
 const form = useForm({
     id: props.accountType.id,
     account_type_name: props.accountType.name,
+    member_display_name: props.accountType.member_display_name,
     category: props.accountType.category,
     min_deposit: Number(props.accountType.minimum_deposit ?? 0),
     descriptions: { en: props.accountType.description_en, tw: props.accountType.description_tw },
@@ -141,6 +142,19 @@ const emit = defineEmits(['detailsVisible']);
                                     disabled
                                 />
                                 <InputError :message="form.errors.account_type_name" />
+                            </div>
+                            <div class="flex flex-col items-start gap-1 flex-1">
+                                <InputLabel for="member_display_name" :invalid="!!form.errors.member_display_name">
+                                    {{ $t('public.member_display_name') }}
+                                </InputLabel>
+                                <InputText
+                                    v-model="form.member_display_name"
+                                    id="member_display_name"
+                                    type="text"
+                                    :placeholder="$t('public.enter_name')"
+                                    class="w-full"
+                                />
+                                <InputError :message="form.errors.member_display_name" />
                             </div>
                             <div class="flex flex-col items-start gap-1 flex-1">
                                 <InputLabel for="category" :value="$t('public.category')" :invalid="!!form.errors.category" />

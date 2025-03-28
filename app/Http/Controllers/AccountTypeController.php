@@ -61,6 +61,7 @@ class AccountTypeController extends Controller
     
         // Update AccountType fields
         $account_type->update([
+            'member_display_name' => $request->member_display_name,
             'category' => $request->category,
             'descriptions' => json_encode($request->descriptions),
             'leverage' => $request->leverage,

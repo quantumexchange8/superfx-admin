@@ -108,6 +108,7 @@ return [
     "individual" => "Individual",
     "manage" => "Managed",
     "account_type_name" => "Account Type Name",
+    "member_display_name" => "Member Display Name",
     "category" => "Category",
     "description_en" => "Description (English)",
     "description_tw" => "Description (Chinese)",

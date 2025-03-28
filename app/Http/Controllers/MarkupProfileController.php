@@ -386,7 +386,6 @@ class MarkupProfileController extends Controller
         // Update AccountType fields
         $profile->update([
             'name' => $request->name,
-            'slug' => Str::slug($request->name),
             'description' => $request->description,
             'status' => 'active',
         ]);

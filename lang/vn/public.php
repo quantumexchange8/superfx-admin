@@ -108,6 +108,7 @@ return [
     "individual" => "Cá nhân",
     "manage" => "Quản lý",
     "account_type_name" => "Tên loại tài khoản",
+    "member_display_name" => "Tên Hiển Thị Thành Viên",
     "category" => "Danh mục",
     "description_en" => "Mô tả (Tiếng Anh)",
     "description_tw" => "Mô tả (Tiếng Trung)",

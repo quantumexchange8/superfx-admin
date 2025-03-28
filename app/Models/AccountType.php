@@ -12,6 +12,7 @@ class AccountType extends Model
 
     protected $fillable = [
         'name',
+        'member_display_name',
         'category',
         'account_group',
         'minimum_deposit',
