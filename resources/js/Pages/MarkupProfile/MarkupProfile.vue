@@ -53,7 +53,7 @@ const rowClicked = (data) => {
 </script>
 
 <template>
-    <AuthenticatedLayout :title="$t('public.profile')">
+    <AuthenticatedLayout :title="$t('public.markup_profile')">
         <div class="flex flex-col items-center gap-5 md:gap-8">
             <div class="flex justify-end items-center self-stretch">
                 <AddProfile

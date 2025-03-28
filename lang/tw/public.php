@@ -662,6 +662,7 @@ return [
     "no_profile_caption" => "看來您還沒有創建任何檔案. 我們可以開始添加您的第一個檔案!",
     "loading_profile" => "正在加載檔案數據。請稍候。",
     "no_account_type" => "尚未有賬戶類型",
+    "markup_profile" => "標註檔案",
     "add_profile" => "添加檔案",
     "new_profile" => "添加檔案",
     "enter_description" => "輸入備註",

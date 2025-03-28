@@ -662,6 +662,7 @@ return [
     "no_profile_caption" => "看来您还没有创建任何档案. 我们可以开始添加您的第一个档案!",
     "loading_profile" => "正在加载档案数据。请稍候。",
     "no_account_type" => "尚未有账户类型",
+    "markup_profile" => "标注档案",
     "add_profile" => "添加档案",
     "new_profile" => "添加档案",
     "enter_description" => "输入备注",

@@ -662,6 +662,7 @@ return [
     "no_profile_caption" => "Có vẻ như bạn chưa tạo bất kỳ hồ sơ nào. Hãy bắt đầu bằng cách thêm hồ sơ đầu tiên của bạn!",
     "loading_profile" => "Đang tải dữ liệu hồ sơ. Xin vui lòng đợi.",
     "no_account_type" => "Chưa có loại tài khoản",
+    "markup_profile" => "Hồ sơ Đánh dấu",
     "add_profile" => "Thêm hồ sơ",
     "new_profile" => "Thêm hồ sơ",
     "enter_description" => "Nhập ghi chú",

@@ -184,7 +184,7 @@ watchEffect(() => {
 
         <!-- Markup Profile -->
         <SidebarLink
-            :title="$t('public.profile')"
+            :title="$t('public.markup_profile')"
             :href="route('markup_profile')"
             :active="route().current('markup_profile')"
         >

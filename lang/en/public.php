@@ -662,6 +662,7 @@ return [
     "no_profile_caption" => "Looks like you haven't created any profile yet. Let's get started by adding your first one!",
     "loading_profile" => "Loading profiles data. Please wait.",
     "no_account_type" => "No Account Type",
+    "markup_profile" => "Markup Profile",
     "add_profile" => "Add Profile",
     "new_profile" => "New Profile",
     "enter_description" => "Enter Description",
