@@ -645,6 +645,8 @@ return [
     "completed" => "Completed",
     "platform" => "Platform",
     "sell_limit" => "Sell Limit",
+    "upline_name" => "Upline Name",
+    "upline_email" => "Upline Email",
     "upline_id" => "Upline Id",
     "required_confirmation" => "Confirmation Required",
     "withdrawal_confirmed" => "Withdrawal Confirmed",

@@ -645,6 +645,8 @@ return [
     "completed" => "已完成",
     "platform" => "平台",
     "sell_limit" => "Sell Limit",
+    "upline_name" => "上级代理名称",
+    "upline_email" => "上级代理邮件",
     "upline_id" => "上级代理交易序号",
     "required_confirmation" => "需要确认",
     "withdrawal_confirmed" => "提款已确认",
