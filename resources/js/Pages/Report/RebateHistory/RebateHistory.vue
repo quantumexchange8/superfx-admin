@@ -76,10 +76,10 @@ watch(() => props.uplines, (newUplines) => {
   }, { immediate: true }
 );
 
-watch([selectedUplines], (newUplineId) => {
-    if (newUplineId && newUplineId?.length > 0) {
+watch(selectedUplines, (newUplineId) => {
+    if (newUplineId) {
         // Update only if it's not empty
-        filters.value['upline_id'] = newUplineId[0].map(item => item.value);
+        filters.value['upline_id'] = newUplineId.value;
     }
 });
 
@@ -129,8 +129,8 @@ const constructUrl = (exportStatus = false) => {
         url += `&endClosedDate=${formatDate(filters.value.end_close_date)}`;
     }
 
-    if (filters.value.upline_id && filters.value.upline_id.length > 0) {
-        const uplineIdValues = filters.value.upline_id.map(item => item).join(',');
+    if (filters.value.upline_id) {
+        const uplineIdValues = filters.value.upline_id;
         url += `&upline_id=${uplineIdValues}`;
     }
 
@@ -323,7 +323,7 @@ const clearFilter = () => {
 
     selectedDate.value = [minDate.value, maxDate.value];
     selectedCloseDate.value = null;
-    selectedUplines.value = [];
+    selectedUplines.value = null;
 };
 
 </script>
@@ -718,14 +718,12 @@ const clearFilter = () => {
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_upline') }}
                 </div>
-                <MultiSelect
+                <Dropdown
                     v-model="selectedUplines"
                     :options="uplines"
-                    :placeholder="$t('public.filter_by_sales_team')"
+                    :placeholder="$t('public.filter_upline')"
                     filter
                     :filterFields="['name', 'email', 'id_number']"
-                    :maxSelectedLabels="1"
-                    :selectedItemsLabel="`${selectedUplines?.length} ${$t('public.uplines_selected')}`"
                     class="w-full md:w-64 font-normal"
                 >
                     <template #option="{option}">
@@ -735,17 +733,14 @@ const clearFilter = () => {
                         </div>
                     </template>
                     <template #value>
-                        <div v-if="selectedUplines?.length === 1">
-                            <span>{{ selectedUplines[0].name }}</span>
+                        <div v-if="selectedUplines">
+                            <span>{{ selectedUplines.name }}</span>
                         </div>
-                        <span v-else-if="selectedUplines?.length > 1">
-                            {{ selectedUplines?.length }} {{ $t('public.uplines_selected') }}
-                        </span>
                         <span v-else class="text-gray-400">
                             {{ $t('public.filter_upline') }}
                         </span>
                     </template>
-                </MultiSelect>
+                </Dropdown>
             </div>
 
             <div class="flex flex-col items-center gap-2 self-stretch">
