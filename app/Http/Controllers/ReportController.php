@@ -13,6 +13,7 @@ use App\Models\TradeRebateHistory;
 use App\Models\TradeRebateSummary;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\User;
 
 class ReportController extends Controller
 {
@@ -298,6 +299,11 @@ class ReportController extends Controller
                         ->orWhere('email', 'like', '%' . $search . '%')
                         ->orWhere('id_number', 'like', '%' . $search . '%');
                 })
+                ->orWhereHas('upline', function ($query) use ($search) {
+                    $query->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('email', 'like', '%' . $search . '%')
+                        ->orWhere('id_number', 'like', '%' . $search . '%');
+                })
                 ->orWhere('meta_login', 'like', '%' . $search . '%')
                 ->orWhere('deal_id', 'like', '%' . $search . '%');
             });
@@ -324,8 +330,14 @@ class ReportController extends Controller
         }
 
         if ($request->input('upline_id')) {
-            $uplineIds = explode(',', $request->input('upline_id'));
-            $query->whereIn('upline_user_id', $uplineIds);
+            $uplineId = $request->input('upline_id');
+
+            // Get upline and their children IDs
+            $upline = User::find($uplineId);
+            $childrenIds = $upline ? $upline->getChildrenIds() : [];
+            $childrenIds[] = $uplineId;
+        
+            $query->whereIn('upline_user_id', $childrenIds);
         }
 
         if ($request->input('type')) {
