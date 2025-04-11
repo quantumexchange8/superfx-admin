@@ -31,6 +31,7 @@ class ReportController extends Controller
         // Retrieve date parameters from request
         $startDate = $request->query('startDate');
         $endDate = $request->query('endDate');
+        $group = $request->query('group');
 
         // Initialize query for rebate summary with date filtering
         $query = TradeRebateSummary::with('symbolGroup', 'user', 'accountType');
@@ -57,6 +58,12 @@ class ReportController extends Controller
         } else {
             // Both startDate and endDate are null, apply default start date
             $query->whereDate('execute_at', '>=', '2024-01-01');
+        }
+
+        if ($group) {
+            $query->whereHas('accountType', function ($q) use ($group) {
+                $q->where('category', $group);
+            });
         }
 
         if ($request->input('upline_id')) {

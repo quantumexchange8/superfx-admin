@@ -77,8 +77,8 @@ const getResults = async (search, user_id, startDate, endDate, selectedGroup) =>
 watch(() => props.group, (newGroup) => {
     // Whenever uplines change, update the local ref
     selectedGroup.value = newGroup;
-    getResults(search.value, startDate.value, endDate.value, newGroup);
-  }
+    getResults(search.value, user_id.value, startDate.value, endDate.value, selectedGroup.value);
+}
 );
 
 // Handle the update-date event from RebateListingTable
