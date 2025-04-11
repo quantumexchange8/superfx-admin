@@ -683,4 +683,10 @@ return [
     "toast_update_markup_profile_success" => "您已成功更新档案!",
     "select_profile" => "选择档案",
     "profiles_selected" => "个选择的档案",
+    "summary" => "汇总",
+    "total_rebate_earned" => "返佣所得",
+    "rebate_date" => "日期",
+    "rebate_percentage_breakdown" => "返佣百分比明细",
+    "percentage" => "百分比",
+    "no_data" => "暂无资料",
 ];

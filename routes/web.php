@@ -223,8 +223,8 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
      */
     Route::prefix('report')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('report');
-        // Route::get('/getRebateSummary', [ReportController::class, 'getRebateSummary'])->name('report.getRebateSummary');
-        // Route::get('/getRebateListing', [ReportController::class, 'getRebateListing'])->name('report.getRebateListing');
+        Route::get('/getRebateSummary', [ReportController::class, 'getRebateSummary'])->name('report.getRebateSummary');
+        Route::get('/getRebateListing', [ReportController::class, 'getRebateListing'])->name('report.getRebateListing');
         // Route::get('/getGroupTransaction', [ReportController::class, 'getGroupTransaction'])->name('report.getGroupTransaction');
         Route::get('/getRebateHistory', [ReportController::class, 'getRebateHistory'])->name('report.getRebateHistory');
     });

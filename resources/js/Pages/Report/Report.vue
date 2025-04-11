@@ -1,8 +1,6 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { HandIcon, CoinsIcon, RocketIcon } from '@/Components/Icons/solid';
 import Button from "@/Components/Button.vue";
-import Vue3Autocounter from 'vue3-autocounter';
 import { ref, h, watch, onMounted, computed } from "vue";
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
@@ -11,21 +9,22 @@ import GroupTransaction from '@/Pages/Report/GroupTransaction/GroupTransaction.v
 import { usePage, useForm } from "@inertiajs/vue3";
 import { trans, wTrans } from "laravel-vue-i18n";
 import RebateHistory from "@/Pages/Report/RebateHistory/RebateHistory.vue";
+// import Select from "primevue/select";
+import Dropdown from "primevue/dropdown";
 
 const props = defineProps({
   uplines: Array,
+  downlines: Array
 });
-
-// Initialize the form with user data
-const user = usePage().props.auth.user;
 
 const tabs = ref([
     { title: wTrans('public.rebate'), component: h(RebateHistory), type: 'rebate' },
-    // { title: wTrans('public.summary'), component: h(RebateReport), type: 'summary' },
+    { title: wTrans('public.summary'), component: h(RebateReport), type: 'summary' },
     // { title: wTrans('public.group_transaction'), component: h(GroupTransaction), type: 'group_transaction' },
 ]);
 
 const selectedType = ref('rebate');
+const selectedGroup = ref('dollar');
 const activeIndex = ref(tabs.value.findIndex(tab => tab.type === selectedType.value));
 
 // Watch for changes in selectedType and update the activeIndex accordingly
@@ -41,70 +40,45 @@ function updateType(event) {
     selectedType.value = selectedTab.type;
 }
 
-const totalVolume = ref(999);
-const totalRebateAmount = ref(999);
-const counterDuration = ref(10);
-
-// data overview
-const dataOverviews = computed(() => [
-    {
-        icon: HandIcon,
-        total: totalVolume.value,
-        label: 'total_volume',
-    },
-    {
-        icon: CoinsIcon,
-        total: totalRebateAmount.value,
-        label: 'total_rebate',
-    },
-]);
-
-const handleUpdateTotals = (data) => {
-  totalVolume.value = data.totalVolume;
-  totalRebateAmount.value = data.totalRebateAmount;
-  counterDuration.value = 1;
-};
-
+const groups = ref(['dollar', 'cent']);
 </script>
 
 <template>
     <AuthenticatedLayout :title="$t('public.report')">
         <div class="flex flex-col items-center gap-5 self-stretch">
-            <div class="flex items-center self-stretch">
+            <div class="flex flex-col md:flex-row gap-5 items-center self-stretch justify-between">
                 <TabView class="flex flex-col" :activeIndex="activeIndex" @tab-change="updateType">
                     <TabPanel v-for="(tab, index) in tabs" :key="index" :header="tab.title" />
                 </TabView>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 w-full gap-5">
-                <div
-                    v-for="(item, index) in dataOverviews"
-                    :key="index"
-                    class="flex justify-center items-center py-4 px-6 gap-5 self-stretch rounded-2xl bg-white shadow-toast md:flex-col md:flex-grow md:py-6 md:gap-3"
+                <!-- <div v-if="selectedType === 'summary'">test</div> -->
+                <Dropdown
+                    v-if="selectedType === 'summary'"
+                    v-model="selectedGroup"
+                    :options="groups"
+                    :placeholder="$t('public.select_group_placeholder')"
+                    class="w-full md:w-60 font-normal truncate"
+                    scroll-height="236px"
                 >
-                    <component :is="item.icon" class="w-12 h-12 grow-0 shrink-0" />
-                    <div class="flex flex-col items-center gap-1 flex-grow md:flex-grow-0 md:self-stretch">
-                        <div class="self-stretch text-gray-950 text-lg font-semibold md:text-xl md:text-center">
-                            <vue3-autocounter
-                                ref="counter"
-                                :startAmount="0"
-                                :endAmount="item.total"
-                                :duration="counterDuration"
-                                separator=","
-                                decimalSeparator="."
-                                :decimals="item.label === 'total_transaction' ? 0 : (item.label === 'total_payout_amount' ? 3 : 2)"
-                                :autoinit="true"
-                            />
+                    <template #value="slotProps">
+                        <div v-if="slotProps.value" class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <div>{{ $t('public.' + slotProps.value) }}</div>
+                            </div>
                         </div>
-                        <span class="self-stretch text-gray-500 text-xs md:text-sm md:text-center">{{ $t('public.' + item.label) }}</span>
-                    </div>
-                </div>
+                    </template>
+                    <template #option="slotProps">
+                        <div class="flex items-center gap-2">
+                            <div>{{ $t('public.' + slotProps.option) }}</div>
+                        </div>
+                    </template>
+                </Dropdown>
             </div>
-
-            <component 
-                :is="tabs[activeIndex]?.component" 
-                v-bind="selectedType === 'rebate' ? { uplines: props.uplines } : {}"
-                @update-totals="handleUpdateTotals"
+            <component
+                :is="tabs[activeIndex]?.component"
+                v-bind="{
+                    ...(selectedType === 'rebate' ? { uplines: props.uplines } : {}),
+                    ...(selectedType === 'summary' ? { group: selectedGroup, uplines: props.uplines } : {})
+                }"
             />
         </div>
     </AuthenticatedLayout>

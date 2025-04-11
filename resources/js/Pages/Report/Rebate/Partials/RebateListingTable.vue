@@ -1,25 +1,48 @@
 <script setup>
 import InputText from 'primevue/inputtext';
 import Button from '@/Components/Button.vue';
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import Dialog from 'primevue/dialog';
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
 import {FilterMatchMode} from "primevue/api";
-import { transactionFormat } from '@/Composables/index.js';
+import { transactionFormat, generalFormat } from '@/Composables/index.js';
 import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
-import {IconSearch, IconCircleXFilled, IconX} from '@tabler/icons-vue';
+import {IconSearch, IconCircleXFilled, IconX, IconAdjustments} from '@tabler/icons-vue';
 import Calendar from 'primevue/calendar';
+import OverlayPanel from 'primevue/overlaypanel';
+import debounce from "lodash/debounce.js";
+import Dropdown from "primevue/dropdown";
+import StatusBadge from '@/Components/StatusBadge.vue';
+import Badge from '@/Components/Badge.vue';
+import RadioButton from 'primevue/radiobutton';
+
+// Define props
+const props = defineProps({
+    selectedGroup: String,
+    uplines: Array,
+});
 
 const { formatDate, formatDateTime, formatAmount } = transactionFormat();
+const { formatRgbaColor } = generalFormat();
 
+const exportStatus = ref(false);
 const visible = ref(false);
 const rebateListing = ref();
+const uplines = ref()
+const selectedUplines = ref();
 const dt = ref();
 const loading = ref(false);
 const expandedRows = ref({});
+const selectedGroup = ref('dollar')
+const totalRecords = ref(0);
+const first = ref(0);
+const rows = ref(10);
+const page = ref(0);
+const sortField = ref(null);
+const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
 
 // Get current date
 const today = new Date();
@@ -31,22 +54,153 @@ const maxDate = ref(today);
 // Reactive variable for selected date range
 const selectedDate = ref([minDate.value, maxDate.value]);
 
-const getResults = async (selectedDate = []) => {
-    loading.value = true;
+// Clear date selection
+const clearDate = () => {
+    selectedDate.value = null;
+    filters.value['start_date'] = null;
+    filters.value['end_date'] = null;
+};
 
-    try {
-        let response;
-        const [startDate, endDate] = selectedDate;
-        let url = `/report/getRebateListing`;
+watch(selectedDate, (newDateRange) => {
+    if (Array.isArray(newDateRange)) {
+        const [startDate, endDate] = newDateRange;
+        filters.value['start_date'] = startDate;
+        filters.value['end_date'] = endDate;
 
-        // Append date range to the URL if it's not null
-        if (startDate && endDate) {
-            url += `?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
+        if (startDate !== null && endDate !== null) {
+            getResults();
+        }
+    }
+    else {
+        // console.warn('Invalid date range format:', newDateRange);
+    }
+})
+
+watch(() => props.selectedGroup, (newGroup) => {
+    // Whenever uplines change, update the local ref
+    filters.value['group'] = newGroup;
+  }
+);
+
+const filters = ref({
+    global: null,
+    start_date: null,
+    end_date: null,
+    group: null,
+    upline_id: [],
+});
+
+// Watch for changes in props.uplines
+watch(() => props.uplines, (newUplines) => {
+    // Whenever uplines change, update the local ref
+    uplines.value = newUplines;
+  }, { immediate: true }
+);
+
+watch(selectedUplines, (newUplineId) => {
+    if (newUplineId) {
+        // Update only if it's not empty
+        filters.value['upline_id'] = newUplineId.value;
+    }
+});
+
+const clearFilterGlobal = () => {
+    filters.value['global'] = null;
+}
+
+const clearFilter = () => {
+    filters.value = {
+        global: null,
+        start_date: minDate.value,
+        end_date: maxDate.value,
+        group: props.selectedGroup,
+        upline_id: [],
+    };
+
+    selectedDate.value = [minDate.value, maxDate.value];
+    selectedUplines.value = null;
+};
+
+// Watch for changes on the entire 'filters' object and debounce the API call
+watch(filters, debounce(() => {
+    // Count active filters, excluding null, undefined, empty strings, and empty arrays
+    filterCount.value = Object.entries(filters.value).filter(([key, filter]) => {
+        // If both start_date and end_date have values, count them as 1 (treat as a pair)
+        if ((key === 'start_date' || key === 'end_date') && filters.value.start_date && filters.value.end_date) {
+            return key === 'start_date'; // Count once for the pair (count start_date only)
         }
 
-        response = await axios.get(url);
-        rebateListing.value = response.data.rebateListing;
+        if (key === 'group') return false; // exclude 'group'
 
+        // For other filters, count them if they are not null, undefined, or empty
+        if (Array.isArray(filter)) {
+            return filter.length > 0;  // Check if the array is not empty
+        }
+
+        return filter !== null && filter !== '';  // Check if the value is not null or empty string
+    }).length;
+
+    page.value = 0; // Reset to first page when filters change
+    getResults(); // Call getResults function to fetch the data
+}, 1000), { deep: true });
+
+// Function to construct the URL with necessary query parameters
+const constructUrl = (exportStatus = false) => {
+    let url = `/report/getRebateListing?rows=${rows.value}&page=${page.value}`;
+
+    // Create an array to hold the query parameters
+    const params = [];
+
+    // Add filters if present
+    if (filters.value.global) {
+        params.push(`search=${filters.value.global}`);
+    }
+
+    // Dynamically use selectedDate and selectedCloseDate for date filters
+    if (filters.value.start_date && filters.value.end_date) {
+        params.push(`startDate=${formatDate(filters.value.start_date)}`);
+        params.push(`endDate=${formatDate(filters.value.end_date)}`);
+    }
+
+    if (filters.value.group) {
+        params.push(`group=${filters.value.group}`);
+    }
+
+    if (filters.value.upline_id) {
+        const uplineIdValues = filters.value.upline_id;
+        params.push(`upline_id=${uplineIdValues}`);
+    }
+
+    if (sortField.value && sortOrder.value !== null) {
+        params.push(`sortField=${sortField.value}&sortOrder=${sortOrder.value}`);
+    }
+
+    // Add exportStatus if export is required
+    if (exportStatus) {
+        params.push(`exportStatus=true`);
+    }
+
+    // If there are any parameters, append them to the URL with '?' at the start
+    if (params.length > 0) {
+        url += `&${params.join('&')}`;
+    }
+
+    return url;
+};
+
+// Optimized getResults function
+const getResults = async () => {
+    loading.value = true;
+    try {
+        // Construct the URL dynamically
+        const url = constructUrl();
+
+        // Make the API request
+        const response = await axios.get(url);
+        rebateListing.value = response.data.rebateListing.data;
+        totalRecords.value = response.data.rebateListing.total;
+
+        emit('update-filters', filters.value);
     } catch (error) {
         console.error('Error fetching rebate listing data:', error);
     } finally {
@@ -54,52 +208,62 @@ const getResults = async (selectedDate = []) => {
     }
 };
 
-const exportCSV = () => {
-    dt.value.exportCSV();
-};
+// Optimized exportRebateSummary function
+const exportRebateSummary = async () => {
+    exportStatus.value = true;
+    try {
+        // Construct the URL dynamically with exportStatus for export
+        const url = constructUrl(exportStatus.value);
 
-// Clear date selection
-const clearDate = () => {
-    selectedDate.value = [];
+        // Send the request to trigger the export
+        window.location.href = url;  // This will trigger the download directly
+    } catch (e) {
+        console.error('Error occurred during export:', e);
+    } finally {
+        loading.value = false;
+        exportStatus.value = false;  // Reset export status
+    }
 };
 
 // Define emits
-const emit = defineEmits(['update-date']);
+const emit = defineEmits(['update-filters']);
 
-// Watch for changes in selectedDate
-watch(selectedDate, (newDateRange) => {
-    // Implement logic to handle changes in the selected date range
-    if (Array.isArray(newDateRange)) {
-        const [startDate, endDate] = newDateRange;
+const onPage = async (event) => {
+    rows.value = event.rows;
+    page.value = event.page;
 
-        // Check if both dates are valid
-        if (startDate && endDate) {
-            // Both dates are valid, call function with the full range
-            getResults([startDate, endDate]);
-            emit('update-date', [startDate, endDate]);
-        } else if (startDate || endDate) {
-            // Only one date is provided
-            // Use the same date for both start and end if one is null
-            getResults([startDate || endDate, endDate || startDate]);
-            emit('update-date', [startDate || endDate, endDate || startDate]);
-        } else if (!(startDate && endDate)) {
-            getResults([]);
-            emit('update-date', []);
-        }
-    } else {
-        // Handle unexpected formats or types
-        console.warn('Invalid date range format:', newDateRange);
-    }
-}, { immediate: true });
+    getResults();
+};
 
-const filters = ref({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-});
+const onSort = (event) => {
+    sortField.value = event.sortField;
+    sortOrder.value = event.sortOrder;
 
-const clearFilterGlobal = () => {
-    filters.value['global'].value = null;
+    getResults();
+};
+
+const op = ref();
+const filterCount = ref(0);
+const toggle = (event) => {
+    op.value.toggle(event);
 }
+
+onMounted(() => {
+    // Ensure filters are populated before fetching data
+    if (Array.isArray(selectedDate.value)) {
+        const [startDate, endDate] = selectedDate.value;
+        if (startDate && endDate) {
+            filters.value.start_date = startDate;
+            filters.value.end_date = endDate;
+        }
+    }
+
+    if (selectedGroup.value) {
+        filters.value['group'] = selectedGroup.value;
+    }
+
+    getResults();
+});
 
 // dialog
 const data = ref({});
@@ -113,30 +277,35 @@ const openDialog = (rowData) => {
 <template>
     <div class="flex flex-col items-center px-4 py-6 gap-5 self-stretch rounded-2xl border border-gray-200 bg-white shadow-table md:px-6 md:gap-5">
         <DataTable
-            v-model:filters="filters"
             :value="rebateListing"
+            lazy
             :paginator="rebateListing?.length > 0"
             removableSort
+            :totalRecords="totalRecords"
+            :first="first"
             :rows="10"
             :rowsPerPageOptions="[10, 20, 50, 100]"
             tableStyle="md:min-width: 50rem"
             paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-            :globalFilterFields="['name']"
+            :globalFilterFields="['name', 'email']"
             ref="dt"
+            dataKey="id"
             selectionMode="single"
             @row-click="(event) => openDialog(event.data)"
             :loading="loading"
+            @page="onPage($event)"
+            @sort="onSort($event)"
             >
             <template #header>
-                <div class="flex flex-col md:flex-row gap-3 items-center self-stretch">
+                <div class="flex flex-col md:flex-row gap-3 items-center self-stretch pb-3 md:pb-5">
                     <div class="relative w-full md:w-60">
                         <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                             <IconSearch size="20" stroke-width="1.25" />
                         </div>
-                        <InputText v-model="filters['global'].value" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
+                        <InputText v-model="filters['global']" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
                         <div
-                            v-if="filters['global'].value !== null"
+                            v-if="filters['global'] !== null && filters['global'] !== ''"
                             class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"
                             @click="clearFilterGlobal"
                         >
@@ -144,31 +313,26 @@ const openDialog = (rowData) => {
                         </div>
                     </div>
                     <div class="w-full flex flex-col gap-3 md:flex-row">
-                        <div class="relative w-full md:w-[272px]">
-                            <Calendar
-                                v-model="selectedDate"
-                                selectionMode="range"
-                                :manualInput="false"
-                                :minDate="minDate"
-                                :maxDate="maxDate"
-                                dateFormat="dd/mm/yy"
-                                showIcon
-                                iconDisplay="input"
-                                placeholder="yyyy/mm/dd - yyyy/mm/dd"
-                                class="w-full md:w-[272px]"
-                            />
-                            <div
-                                v-if="selectedDate && selectedDate.length > 0"
-                                class="absolute top-2/4 -mt-2.5 right-4 text-gray-400 select-none cursor-pointer bg-white"
-                                @click="clearDate"
+                        <div class="w-full md:w-[272px]">
+                            <Button
+                                variant="gray-outlined"
+                                @click="toggle"
+                                size="sm"
+                                class="flex gap-3 items-center justify-center py-3 w-full md:w-[130px]"
                             >
-                                <IconX size="20" />
-                            </div>
+                                <IconAdjustments size="20" color="#0C111D" stroke-width="1.25" />
+                                <div class="text-sm text-gray-950 font-medium">
+                                    {{ $t('public.filter') }}
+                                </div>
+                                <Badge class="w-5 h-5 text-xs text-white" variant="numberbadge">
+                                    {{ filterCount }}
+                                </Badge>
+                            </Button>
                         </div>
                         <div class="w-full flex justify-end">
                             <Button
                                 variant="primary-outlined"
-                                @click="exportCSV($event)"
+                                @click="exportRebateSummary()"
                                 class="w-full md:w-auto"
                             >
                                 {{ $t('public.export') }}
@@ -208,12 +372,33 @@ const openDialog = (rowData) => {
                     </template>
                 </Column>
                 <Column
+                    field="id_number"
+                    sortable
+                    :header="`${$t('public.id')}`"
+                    class="hidden md:table-cell"
+                >
+                    <template #body="slotProps">
+                        {{ slotProps.data.id_number }}
+                    </template>
+                </Column>
+                <Column
                     field="meta_login"
                     :header="`${$t('public.account')}`"
                     class="hidden md:table-cell"
                 >
                     <template #body="slotProps">
-                        {{ slotProps.data.meta_login }}
+                        <div class="flex items-center content-center gap-3 flex-grow relative">
+                            <span >{{ slotProps.data.meta_login }}</span>
+                            <div
+                                class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
+                                :style="{
+                                    backgroundColor: formatRgbaColor(slotProps.data.color, 0.15),
+                                    color: `#${slotProps.data.color}`,
+                                }"
+                            >
+                                {{ $t(`public.${slotProps.data.slug}`) }}
+                            </div>
+                        </div>
                     </template>
                 </Column>
                 <Column
@@ -282,7 +467,7 @@ const openDialog = (rowData) => {
         <div class="flex flex-col justify-center items-center py-4 gap-3 self-stretch border-b border-gray-200 md:border-none">
             <div class="min-w-[100px] flex gap-1 flex-grow items-center self-stretch">
                 <span class="self-stretch text-gray-500 text-xs font-medium w-[88px] md:w-[140px]">{{ $t('public.rebate_date') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium flex-grow">{{ `${formatDate(selectedDate[0] ?? '2024/01/01')}&nbsp;-&nbsp;${formatDate(selectedDate[1] ?? today)}` }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium flex-grow">{{ `${formatDate(selectedDate ? selectedDate[0] : '2025/01/01')}&nbsp;-&nbsp;${formatDate(selectedDate ? selectedDate[1] : today)}` }}</span>
             </div>
             <div class="min-w-[100px] flex gap-1 flex-grow items-center self-stretch">
                 <span class="self-stretch text-gray-500 text-xs font-medium w-[88px] md:w-[140px]">{{ $t('public.account') }}</span>
@@ -476,4 +661,75 @@ const openDialog = (rowData) => {
             </DataTable>
         </div>
     </Dialog>
+
+    <OverlayPanel ref="op">
+        <div class="flex flex-col gap-8 w-72 py-5 px-4">
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_date') }}
+                </div>
+                <div class="flex flex-col relative gap-1 self-stretch">
+                    <Calendar
+                        v-model="selectedDate"
+                        selectionMode="range"
+                        :manualInput="false"
+                        :maxDate="maxDate"
+                        dateFormat="dd/mm/yy"
+                        showIcon
+                        iconDisplay="input"
+                        placeholder="yyyy/mm/dd - yyyy/mm/dd"
+                        class="w-full md:w-[272px]"
+                    />
+                    <div
+                        v-if="selectedDate && selectedDate.length > 0"
+                        class="absolute top-2/4 -mt-2.5 right-4 text-gray-400 select-none cursor-pointer bg-white"
+                        @click="clearDate"
+                    >
+                        <IconX size="20" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Upline-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_upline') }}
+                </div>
+                <Dropdown
+                    v-model="selectedUplines"
+                    :options="uplines"
+                    :placeholder="$t('public.filter_upline')"
+                    filter
+                    :filterFields="['name', 'email', 'id_number']"
+                    class="w-full md:w-64 font-normal"
+                >
+                    <template #option="{option}">
+                        <div class="flex flex-col">
+                            <span>{{ option.name }}</span>
+                            <span class="text-xs text-gray-400 max-w-52 truncate">{{ option.email }}</span>
+                        </div>
+                    </template>
+                    <template #value>
+                        <div v-if="selectedUplines">
+                            <span>{{ selectedUplines.name }}</span>
+                        </div>
+                        <span v-else class="text-gray-400">
+                            {{ $t('public.filter_upline') }}
+                        </span>
+                    </template>
+                </Dropdown>
+            </div>
+
+            <div class="flex w-full">
+                <Button
+                    type="button"
+                    variant="primary-outlined"
+                    class="flex justify-center w-full"
+                    @click="clearFilter()"
+                >
+                    {{ $t('public.clear_all') }}
+                </Button>
+            </div>
+        </div>
+    </OverlayPanel>
 </template>

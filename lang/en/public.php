@@ -683,4 +683,10 @@ return [
     "toast_update_markup_profile_success" => "You've successfully updated the profile!",
     "select_profile" => "Select Profile",
     "profiles_selected" => "profiles selected",
+    "summary" => "Summary",
+    "total_rebate_earned" => "Total Rebate Earned",
+    "rebate_date" => "Rebate Date",
+    "rebate_percentage_breakdown" => "Rebate Percentage Breakdown",
+    "percentage" => "Percentage",
+    "no_data" => "No Data",
 ];

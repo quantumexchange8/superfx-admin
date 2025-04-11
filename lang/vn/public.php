@@ -683,4 +683,10 @@ return [
     "toast_update_markup_profile_success" => "Bạn đã cập nhật hồ sơ thành công!",
     "select_profile" => "Chọn hồ sơ",
     "profiles_selected" => "hồ sơ đã chọn",
+    "summary" => "Tổng hợp",
+    "total_rebate_earned" => "Tổng số tiền hoàn lại kiếm được",
+    "rebate_date" => "Ngày hoàn lại",
+    "rebate_percentage_breakdown" => "Chi tiết phần trăm hoàn lại",
+    "percentage" => "Phần trăm",
+    "no_data" => "Không có dữ liệu",
 ];

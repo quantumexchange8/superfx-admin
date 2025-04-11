@@ -213,8 +213,6 @@ onMounted(() => {
             filters.value.end_date = endDate;
         }
     }
-
-    getResults();
 });
 
 const op = ref();

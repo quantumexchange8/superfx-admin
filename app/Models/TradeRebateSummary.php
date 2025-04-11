@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -22,7 +21,12 @@ class TradeRebateSummary extends Model
         return $this->belongsTo(User::class, 'upline_user_id', 'id');
     }
 
-    public function account_type(): BelongsTo
+    public function symbolGroup(): belongsTo
+    {
+        return $this->belongsTo(SymbolGroup::class, 'symbol_group', 'id');
+    }
+
+    public function accountType(): belongsTo
     {
         return $this->belongsTo(AccountType::class, 'account_type_id', 'id');
     }
