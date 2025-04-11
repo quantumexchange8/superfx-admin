@@ -111,7 +111,7 @@ watch(filters, debounce(() => {
 
 // Function to construct the URL with necessary query parameters
 const constructUrl = (exportStatus = false) => {
-    let url = `/report/getRebateHistory?rows=${rows.value}&page=${page.value}`;
+    let url = `/report/getRebateHistory?rows=${rows.value}&page=${page.value + 1}`;
 
     // Add filters if present
     if (filters.value.global) {
@@ -190,7 +190,7 @@ const exportRebateReport = async () => {
     }
 };
 
-const onPage = async (event) => {
+const onPage = (event) => {
     rows.value = event.rows;
     page.value = event.page;
 

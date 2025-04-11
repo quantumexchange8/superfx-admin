@@ -1,23 +1,20 @@
 <script setup>
 import InputText from 'primevue/inputtext';
 import Button from '@/Components/Button.vue';
-import { onMounted, ref, watch } from "vue";
+import {onMounted, ref, watch} from "vue";
 import Dialog from 'primevue/dialog';
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
-import {FilterMatchMode} from "primevue/api";
-import { transactionFormat, generalFormat } from '@/Composables/index.js';
+import {generalFormat, transactionFormat} from '@/Composables/index.js';
 import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
-import {IconSearch, IconCircleXFilled, IconX, IconAdjustments} from '@tabler/icons-vue';
+import {IconAdjustments, IconCircleXFilled, IconSearch, IconX} from '@tabler/icons-vue';
 import Calendar from 'primevue/calendar';
 import OverlayPanel from 'primevue/overlaypanel';
 import debounce from "lodash/debounce.js";
 import Dropdown from "primevue/dropdown";
-import StatusBadge from '@/Components/StatusBadge.vue';
 import Badge from '@/Components/Badge.vue';
-import RadioButton from 'primevue/radiobutton';
 
 // Define props
 const props = defineProps({
@@ -146,7 +143,7 @@ watch(filters, debounce(() => {
 
 // Function to construct the URL with necessary query parameters
 const constructUrl = (exportStatus = false) => {
-    let url = `/report/getRebateListing?rows=${rows.value}&page=${page.value}`;
+    let url = `/report/getRebateListing?rows=${rows.value}&page=${page.value + 1}`;
 
     // Create an array to hold the query parameters
     const params = [];
@@ -213,10 +210,8 @@ const exportRebateSummary = async () => {
     exportStatus.value = true;
     try {
         // Construct the URL dynamically with exportStatus for export
-        const url = constructUrl(exportStatus.value);
-
         // Send the request to trigger the export
-        window.location.href = url;  // This will trigger the download directly
+        window.location.href = constructUrl(exportStatus.value);  // This will trigger the download directly
     } catch (e) {
         console.error('Error occurred during export:', e);
     } finally {
@@ -228,7 +223,7 @@ const exportRebateSummary = async () => {
 // Define emits
 const emit = defineEmits(['update-filters']);
 
-const onPage = async (event) => {
+const onPage = (event) => {
     rows.value = event.rows;
     page.value = event.page;
 
