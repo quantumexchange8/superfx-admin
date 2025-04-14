@@ -25,13 +25,13 @@ const props = defineProps({
 const { formatDate, formatDateTime, formatAmount } = transactionFormat();
 const { formatRgbaColor } = generalFormat();
 
+const isLoading = ref(false);
 const exportStatus = ref(false);
 const visible = ref(false);
 const rebateListing = ref();
 const uplines = ref()
 const selectedUplines = ref();
 const dt = ref();
-const loading = ref(false);
 const expandedRows = ref({});
 const selectedGroup = ref('dollar')
 const totalRecords = ref(0);
@@ -65,7 +65,7 @@ watch(selectedDate, (newDateRange) => {
         filters.value['end_date'] = endDate;
 
         if (startDate !== null && endDate !== null) {
-            getResults();
+            loadLazyData();
         }
     }
     else {
@@ -138,104 +138,90 @@ watch(filters, debounce(() => {
     }).length;
 
     page.value = 0; // Reset to first page when filters change
-    getResults(); // Call getResults function to fetch the data
+    loadLazyData(); // Call loadLazyData function to fetch the data
 }, 1000), { deep: true });
 
-// Function to construct the URL with necessary query parameters
-const constructUrl = (exportStatus = false) => {
-    let url = `/report/getRebateListing?rows=${rows.value}&page=${page.value + 1}`;
+const lazyParams = ref({});
 
-    // Create an array to hold the query parameters
-    const params = [];
+const loadLazyData = (event) => {
+    isLoading.value = true;
 
-    // Add filters if present
-    if (filters.value.global) {
-        params.push(`search=${filters.value.global}`);
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+    lazyParams.value.filters = filters.value;
+
+    try {
+        setTimeout(async () => {
+            const params = {
+                page: JSON.stringify(event?.page + 1),
+                sortField: event?.sortField,
+                sortOrder: event?.sortOrder,
+                include: [],
+                lazyEvent: JSON.stringify(lazyParams.value),
+            };
+
+            const url = route('report.getRebateListing', params);
+            const response = await fetch(url);
+
+            const results = await response.json();
+            rebateListing.value = results?.data?.data;
+            console.log(rebateListing.value);
+            totalRecords.value = results?.data?.total;
+            isLoading.value = false;
+
+            emit('update-filters', filters.value);
+        }, 100);
+    } catch (e) {
+        rebateListing.value = [];
+        totalRecords.value = 0;
+        isLoading.value = false;
     }
-
-    // Dynamically use selectedDate and selectedCloseDate for date filters
-    if (filters.value.start_date && filters.value.end_date) {
-        params.push(`startDate=${formatDate(filters.value.start_date)}`);
-        params.push(`endDate=${formatDate(filters.value.end_date)}`);
-    }
-
-    if (filters.value.group) {
-        params.push(`group=${filters.value.group}`);
-    }
-
-    if (filters.value.upline_id) {
-        const uplineIdValues = filters.value.upline_id;
-        params.push(`upline_id=${uplineIdValues}`);
-    }
-
-    if (sortField.value && sortOrder.value !== null) {
-        params.push(`sortField=${sortField.value}&sortOrder=${sortOrder.value}`);
-    }
-
-    // Add exportStatus if export is required
-    if (exportStatus) {
-        params.push(`exportStatus=true`);
-    }
-
-    // If there are any parameters, append them to the URL with '?' at the start
-    if (params.length > 0) {
-        url += `&${params.join('&')}`;
-    }
-
-    return url;
 };
 
-// Optimized getResults function
-const getResults = async () => {
-    loading.value = true;
-    try {
-        // Construct the URL dynamically
-        const url = constructUrl();
+const onPage = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
 
-        // Make the API request
-        const response = await axios.get(url);
-        rebateListing.value = response.data.rebateListing.data;
-        totalRecords.value = response.data.rebateListing.total;
+const onSort = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
 
-        emit('update-filters', filters.value);
-    } catch (error) {
-        console.error('Error fetching rebate listing data:', error);
-    } finally {
-        loading.value = false;
-    }
+const onFilter = (event) => {
+    lazyParams.value.fitlers = filters.value;
+    loadLazyData(event);
 };
 
 // Optimized exportRebateSummary function
 const exportRebateSummary = async () => {
     exportStatus.value = true;
+    isLoading.value = true;
+
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+    lazyParams.value.filters = filters.value;
+
+    const params = {
+        page: JSON.stringify(event?.page + 1),
+        sortField: event?.sortField,
+        sortOrder: event?.sortOrder,
+        include: [],
+        lazyEvent: JSON.stringify(lazyParams.value),
+        exportStatus: true,
+    };
+    const url = route('report.getRebateListing', params);
+
     try {
-        // Construct the URL dynamically with exportStatus for export
-        // Send the request to trigger the export
-        window.location.href = constructUrl(exportStatus.value);  // This will trigger the download directly
+        window.location.href = url;
     } catch (e) {
-        console.error('Error occurred during export:', e);
+        console.error('Error occured during export:', e);
     } finally {
-        loading.value = false;
-        exportStatus.value = false;  // Reset export status
+        isLoading.value = false;
+        exportStatus.value = false;
     }
 };
 
 // Define emits
 const emit = defineEmits(['update-filters']);
-
-const onPage = (event) => {
-    rows.value = event.rows;
-    page.value = event.page;
-
-    getResults();
-};
-
-const onSort = (event) => {
-    sortField.value = event.sortField;
-    sortOrder.value = event.sortOrder;
-
-    getResults();
-};
 
 const op = ref();
 const filterCount = ref(0);
@@ -257,7 +243,14 @@ onMounted(() => {
         filters.value['group'] = selectedGroup.value;
     }
 
-    getResults();
+    lazyParams.value = {
+        first: dt.value.first,
+        rows: dt.value.rows,
+        sortField: null,
+        sortOrder: null,
+        filters: filters.value
+    };
+    // loadLazyData();
 });
 
 // dialog
@@ -288,10 +281,11 @@ const openDialog = (rowData) => {
             dataKey="id"
             selectionMode="single"
             @row-click="(event) => openDialog(event.data)"
-            :loading="loading"
+            :loading="isLoading"
             @page="onPage($event)"
             @sort="onSort($event)"
-            >
+            @filter="onFilter($event)"
+        >
             <template #header>
                 <div class="flex flex-col md:flex-row gap-3 items-center self-stretch pb-3 md:pb-5">
                     <div class="relative w-full md:w-60">
