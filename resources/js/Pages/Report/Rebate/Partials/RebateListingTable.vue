@@ -164,7 +164,6 @@ const loadLazyData = (event) => {
 
             const results = await response.json();
             rebateListing.value = results?.data?.data;
-            console.log(rebateListing.value);
             totalRecords.value = results?.data?.total;
             isLoading.value = false;
 
