@@ -28,92 +28,102 @@ class ReportController extends Controller
 
     public function getRebateSummary(Request $request)
     {
-        // Retrieve date parameters from request
         $startDate = $request->query('startDate');
         $endDate = $request->query('endDate');
         $group = $request->query('group');
-
-        // Initialize query for rebate summary with date filtering
-        $query = TradeRebateSummary::with('symbolGroup', 'user', 'accountType');
-
-        if ($request->input('search')) {
-            $keyword = $request->input('search');
-
-            $query->where(function ($q) use ($keyword) {
-                $q->whereHas('user', function ($query) use ($keyword) {
-                    $query->where(function ($q) use ($keyword) {
-                        $q->where('name', 'like', '%' . $keyword . '%')
-                        ->orWhere('email', 'like', '%' . $keyword . '%')
-                        ->orWhere('id_number', 'like', '%' . $keyword . '%');
+        $search = $request->input('search');
+        $uplineId = $request->input('upline_id');
+    
+        $baseQuery = TradeRebateSummary::with('symbolGroup', 'user', 'accountType');
+    
+        if ($search) {
+            $baseQuery->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($query) use ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('email', 'like', '%' . $search . '%')
+                            ->orWhere('id_number', 'like', '%' . $search . '%');
                     });
-                })->orWhere('meta_login', 'like', '%' . $keyword . '%');
+                })->orWhere('meta_login', 'like', '%' . $search . '%');
             });
         }
-
-        // Apply date filter based on availability of startDate and/or endDate
+    
         if ($startDate && $endDate) {
-            // Both startDate and endDate are provided
-            $query->whereDate('execute_at', '>=', $startDate)
-                ->whereDate('execute_at', '<=', $endDate);
+            $baseQuery->whereDate('execute_at', '>=', $startDate)
+                      ->whereDate('execute_at', '<=', $endDate);
         } else {
-            // Both startDate and endDate are null, apply default start date
-            $query->whereDate('execute_at', '>=', '2024-01-01');
+            $baseQuery->whereDate('execute_at', '>=', '2024-01-01');
         }
-
+    
         if ($group) {
-            $query->whereHas('accountType', function ($q) use ($group) {
+            $baseQuery->whereHas('accountType', function ($q) use ($group) {
                 $q->where('category', $group);
             });
         }
-
-        if ($request->input('upline_id')) {
-            $uplineId = $request->input('upline_id');
-
-            // Get upline and their children IDs
+    
+        // Clone query for volume-only calculation
+        $volumeQuery = clone $baseQuery;
+    
+        if ($uplineId) {
             $upline = User::find($uplineId);
             $childrenIds = $upline ? $upline->getChildrenIds() : [];
             $childrenIds[] = $uplineId;
-        
-            $query->whereIn('upline_user_id', $childrenIds);
+    
+            // Rebate summary: include upline and children
+            $baseQuery->whereIn('upline_user_id', $childrenIds);
+    
+            // Volume: only upline's own volume
+            $volumeQuery->where('upline_user_id', $uplineId);
         }
-
-        // Fetch rebate summary data
-        $rebateSummary = $query->get(['symbol_group', 'volume', 'rebate']);
-
-        // Retrieve all symbol groups with non-null display values
+    
+        // Fetch rebate summary data (for upline + children)
+        $rebateSummary = $baseQuery->get(['symbol_group', 'rebate']);
+    
+        // Fetch volume data (for upline only)
+        $volumeSummary = $volumeQuery->get(['symbol_group', 'volume']);
+    
         $symbolGroups = SymbolGroup::whereNotNull('display')->pluck('display', 'id');
-
-        // Aggregate rebate data in PHP
-        $rebateSummaryData = $rebateSummary->groupBy('symbol_group')->map(function ($items) {
-            return [
-                'volume' => $items->sum('volume'),
-                'rebate' => $items->sum('rebate'),
-            ];
-        });
-
-        // Initialize final summary and totals
+    
+        // Initialize summary arrays
+        $rebateSummaryData = [];
+        $volumeSummaryData = [];
+    
+        // Group & sum rebate data
+        foreach ($rebateSummary as $item) {
+            $symbolGroupId = $item->symbol_group;
+            if (!isset($rebateSummaryData[$symbolGroupId])) {
+                $rebateSummaryData[$symbolGroupId] = ['rebate' => 0];
+            }
+            $rebateSummaryData[$symbolGroupId]['rebate'] += $item->rebate;
+        }
+    
+        // Group & sum volume data
+        foreach ($volumeSummary as $item) {
+            $symbolGroupId = $item->symbol_group;
+            if (!isset($volumeSummaryData[$symbolGroupId])) {
+                $volumeSummaryData[$symbolGroupId] = ['volume' => 0];
+            }
+            $volumeSummaryData[$symbolGroupId]['volume'] += $item->volume;
+        }
+    
         $finalSummary = [];
         $totalVolume = 0;
         $totalRebate = 0;
-
-        // Iterate over all symbol groups
+    
         foreach ($symbolGroups as $id => $display) {
-            // Retrieve data or use default values
-            $data = $rebateSummaryData->get($id, ['volume' => 0, 'rebate' => 0]);
-
-            // Add to the final summary
+            $volume = isset($volumeSummaryData[$id]) ? $volumeSummaryData[$id]['volume'] : 0;
+            $rebate = isset($rebateSummaryData[$id]) ? $rebateSummaryData[$id]['rebate'] : 0;
+    
             $finalSummary[] = [
                 'symbol_group' => $display,
-                'volume' => $data['volume'],
-                'rebate' => $data['rebate'],
+                'volume' => $volume,
+                'rebate' => $rebate,
             ];
-
-            // Accumulate totals
-            $totalVolume += $data['volume'];
-            $totalRebate += $data['rebate'];
+    
+            $totalVolume += $volume;
+            $totalRebate += $rebate;
         }
-
-        // Return the response with rebate summary, total volume, and total rebate
+    
         return response()->json([
             'rebateSummary' => $finalSummary,
             'totalVolume' => $totalVolume,
