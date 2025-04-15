@@ -106,102 +106,87 @@ watch(filters, debounce(() => {
     }).length;
 
     page.value = 0; // Reset to first page when filters change
-    getResults(); // Call getResults function to fetch the data
+    loadLazyData(); // Call loadLazyData function to fetch the data
 }, 1000), { deep: true });
 
-// Function to construct the URL with necessary query parameters
-const constructUrl = (exportStatus = false) => {
-    let url = `/report/getRebateHistory?rows=${rows.value}&page=${page.value + 1}`;
+const lazyParams = ref({});
 
-    // Add filters if present
-    if (filters.value.global) {
-        url += `&search=${filters.value.global}`;
-    }
-
-    // Dynamically use selectedDate and selectedCloseDate for date filters
-    if (filters.value.start_date && filters.value.end_date) {
-        url += `&startDate=${formatDate(filters.value.start_date)}`;
-        url += `&endDate=${formatDate(filters.value.end_date)}`;
-    }
-
-    if (filters.value.start_close_date && filters.value.end_close_date) {
-        url += `&startClosedDate=${formatDate(filters.value.start_close_date)}`;
-        url += `&endClosedDate=${formatDate(filters.value.end_close_date)}`;
-    }
-
-    if (filters.value.upline_id) {
-        const uplineIdValues = filters.value.upline_id;
-        url += `&upline_id=${uplineIdValues}`;
-    }
-
-    if (filters.value.t_type) {
-        url += `&type=${filters.value.t_type}`;
-    }
-
-    if (sortField.value && sortOrder.value !== null) {
-        url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
-    }
-
-    // Add exportStatus if export is required
-    if (exportStatus) {
-        url += `&exportStatus=true`;
-    }
-
-    return url;
-};
-
-// Optimized getResults function
-const getResults = async () => {
+const loadLazyData = (event) => {
     isLoading.value = true;
-    try {
-        // Construct the URL dynamically
-        const url = constructUrl();
 
-        // Make the API request
-        const response = await axios.get(url);
-        // Update the data and total records with the response
-        histories.value = response?.data?.data?.data;
-        totalRecords.value = response?.data?.data?.total;
-        totalVolume.value = response?.data?.totalVolume;
-        totalRebateAmount.value = response?.data?.totalRebateAmount;
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+    lazyParams.value.filters = filters.value;
+
+    try {
+        setTimeout(async () => {
+            const params = {
+                page: JSON.stringify(event?.page + 1),
+                sortField: event?.sortField,
+                sortOrder: event?.sortOrder,
+                include: [],
+                lazyEvent: JSON.stringify(lazyParams.value),
+            };
+
+            const url = route('report.getRebateHistory', params);
+            const response = await fetch(url);
+
+            const results = await response.json();
+            histories.value = results?.data?.data;
+            totalRecords.value = results?.data?.total;
+            totalVolume.value = results?.totalVolume;
+            totalRebateAmount.value = results?.totalRebateAmount;
+
+            isLoading.value = false;
+
+        }, 100);
     } catch (error) {
         histories.value = [];
         totalRecords.value = 0;
         isLoading.value = false;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-// Optimized exportRebateReport function
-const exportRebateReport = async () => {
-    exportStatus.value = true;
-    try {
-        // Construct the URL dynamically with exportStatus for export
-        const url = constructUrl(exportStatus.value);
-
-        // Send the request to trigger the export
-        window.location.href = url;  // This will trigger the download directly
-    } catch (e) {
-        console.error('Error occurred during export:', e);
-    } finally {
-        isLoading.value = false;
-        exportStatus.value = false;  // Reset export status
     }
 };
 
 const onPage = (event) => {
-    rows.value = event.rows;
-    page.value = event.page;
-
-    getResults();
+    lazyParams.value = event;
+    loadLazyData(event);
 };
 
 const onSort = (event) => {
-    sortField.value = event.sortField;
-    sortOrder.value = event.sortOrder;  // Store ascending or descending order
+    lazyParams.value = event;
+    loadLazyData(event);
+};
 
-    getResults();
+const onFilter = (event) => {
+    lazyParams.value.fitlers = filters.value;
+    loadLazyData(event);
+};
+
+// Optimized exportRebateSummary function
+const exportRebateReport = async () => {
+    exportStatus.value = true;
+    isLoading.value = true;
+
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+    lazyParams.value.filters = filters.value;
+
+    const params = {
+        page: JSON.stringify(event?.page + 1),
+        sortField: event?.sortField,
+        sortOrder: event?.sortOrder,
+        include: [],
+        lazyEvent: JSON.stringify(lazyParams.value),
+        exportStatus: true,
+    };
+    const url = route('report.getRebateListing', params);
+
+    try {
+        window.location.href = url;
+    } catch (e) {
+        console.error('Error occured during export:', e);
+    } finally {
+        isLoading.value = false;
+        exportStatus.value = false;
+    }
 };
 
 onMounted(() => {
@@ -213,6 +198,16 @@ onMounted(() => {
             filters.value.end_date = endDate;
         }
     }
+
+    lazyParams.value = {
+        first: dt.value.first,
+        rows: dt.value.rows,
+        sortField: null,
+        sortOrder: null,
+        filters: filters.value
+    };
+
+    loadLazyData();
 });
 
 const op = ref();
@@ -227,7 +222,7 @@ const clearFilterGlobal = () => {
 
 watchEffect(() => {
     if (usePage().props.toast !== null) {
-        getResults();
+        loadLazyData();
     }
 });
 
@@ -244,67 +239,46 @@ const selectedCloseDate = ref(null);
 
 const clearDate = () => {
     selectedDate.value = null;
+    filters.value['start_date'] = null;
+    filters.value['end_date'] = null;
 }
 
 const clearCloseDate = () => {
     selectedCloseDate.value = null;
+    filters.value['start_close_date'] = null;
+    filters.value['end_close_date'] = null;
 }
 
 // Watch for changes in selectedDate
 watch(selectedDate, (newDateRange) => {
     if (Array.isArray(newDateRange)) {
         const [startDate, endDate] = newDateRange;
-        // Check if both start and end dates are valid
-        if (startDate && endDate) {
-            filters.value.start_date = startDate;
-            filters.value.end_date = endDate;
+        filters.value['start_date'] = startDate;
+        filters.value['end_date'] = endDate;
+
+        if (startDate !== null && endDate !== null) {
+            loadLazyData();
         }
-        // Handle case where one of the dates is missing
-        else if (startDate || endDate) {
-            filters.value.start_date = startDate || endDate;
-            filters.value.end_date = endDate || startDate;
-        }
-        // If no dates are selected, pass an empty array
-        else {
-            filters.value.start_date = null;
-            filters.value.end_date = null;
-        }
-    }
-    else if (newDateRange === null) {
-        filters.value.start_date = null;
-        filters.value.end_date = null;
     }
     else {
-        console.warn('Invalid date range format:', newDateRange);
+        // console.warn('Invalid date range format:', newDateRange);
     }
-});
+})
 
 // Watch for changes in selectedCloseDate
 watch(selectedCloseDate, (newDateRange) => {
     if (Array.isArray(newDateRange)) {
         const [startCloseDate, endCloseDate] = newDateRange;
+        filters.value['start_close_date'] = startCloseDate;
+        filters.value['end_close_date'] = endCloseDate;
+
         // Check if both start and end close dates are valid
-        if (startCloseDate && endCloseDate) {
-            filters.value.start_close_date = startCloseDate;
-            filters.value.end_close_date = endCloseDate;
+        if (startCloseDate !== null && endCloseDate !== null) {
+            loadLazyData();
         }
-        // Handle case where one of the dates is missing
-        else if (startCloseDate || endCloseDate) {
-            filters.value.start_close_date = startCloseDate || endCloseDate;
-            filters.value.end_close_date = endCloseDate || startCloseDate;
-        }
-        // If no dates are selected, pass an empty array
-        else {
-            filters.value.start_close_date = null;
-            filters.value.end_close_date = null;
-        }
-    }
-    else if (newDateRange === null) {
-        filters.value.start_close_date = null;
-        filters.value.end_close_date = null;
     }
     else {
-        console.warn('Invalid date range format:', newDateRange);
+        // console.warn('Invalid date range format:', newDateRange);
     }
 });
 
@@ -348,6 +322,7 @@ const clearFilter = () => {
                 :loading="isLoading"
                 @page="onPage($event)"
                 @sort="onSort($event)"
+                @filter="onFilter($event)"
                 :globalFilterFields="['name', 'email', 'username', 'meta_login', 'id_number', 'deal_id']"
             >
                 <template #header>

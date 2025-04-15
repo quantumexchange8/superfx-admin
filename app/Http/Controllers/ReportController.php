@@ -151,8 +151,10 @@ class ReportController extends Controller
             }
 
             if ($startDate && $endDate) {
-                $query->whereDate('execute_at', '>=', $startDate)
-                    ->whereDate('execute_at', '<=', $endDate);
+                $start_date = Carbon::parse($startDate)->addDay()->startOfDay();
+                $end_date = Carbon::parse($endDate)->addDay()->endOfDay();
+                
+                $query->whereBetween('execute_at', [$start_date, $end_date]);
             } else {
                 $query->whereDate('execute_at', '>=', '2024-01-01');
             }
@@ -193,6 +195,7 @@ class ReportController extends Controller
             $itemData = [];
             foreach ($rawData as $item) {
                 $itemData[] = [
+                    'upline_user_id' => $item->upline_user_id,
                     'user_id' => $item->user_id,
                     'name' => $item->user->name,
                     'email' => $item->user->email,
@@ -210,7 +213,7 @@ class ReportController extends Controller
     
             $grouped = [];
             foreach ($itemData as $item) {
-                $key = $item['user_id'] . '-' . $item['meta_login'];
+                $key = $item['upline_user_id'] . '-' . $item['user_id'] . '-' . $item['meta_login'];
                 $grouped[$key][] = $item;
             }
     
@@ -407,89 +410,98 @@ class ReportController extends Controller
 
     public function getRebateHistory(Request $request)
     {
-        $query = TradeRebateHistory::with([
-                'upline:id,name,email,id_number',
-                'downline:id,name,email,id_number',
-                'of_account_type:id,slug,color'
-            ])
-            ->where('t_status', 'approved');
+        if ($request->has('lazyEvent')) {
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true); //only() extract parameters in lazyEvent
 
-        // Handle search functionality
-        $search = $request->input('search');
-        if ($search) {
-            $query->where(function ($query) use ($search) {
-                $query->whereHas('downline', function ($query) use ($search) {
-                    $query->where('name', 'like', '%' . $search . '%')
-                        ->orWhere('email', 'like', '%' . $search . '%')
-                        ->orWhere('id_number', 'like', '%' . $search . '%');
-                })
-                ->orWhereHas('upline', function ($query) use ($search) {
-                    $query->where('name', 'like', '%' . $search . '%')
-                        ->orWhere('email', 'like', '%' . $search . '%')
-                        ->orWhere('id_number', 'like', '%' . $search . '%');
-                })
-                ->orWhere('meta_login', 'like', '%' . $search . '%')
-                ->orWhere('deal_id', 'like', '%' . $search . '%');
-            });
-        }
+            $query = TradeRebateHistory::with([
+                    'upline:id,name,email,id_number',
+                    'downline:id,name,email,id_number',
+                    'of_account_type:id,slug,color'
+                ])
+                ->where('t_status', 'approved');
 
-        $startDate = $request->query('startDate');
-        $endDate = $request->query('endDate');
+            // Handle search functionality
+            $search = $data['filters']['global'];
+            if ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->whereHas('downline', function ($query) use ($search) {
+                        $query->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('email', 'like', '%' . $search . '%')
+                            ->orWhere('id_number', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('upline', function ($query) use ($search) {
+                        $query->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('email', 'like', '%' . $search . '%')
+                            ->orWhere('id_number', 'like', '%' . $search . '%');
+                    })
+                    ->orWhere('meta_login', 'like', '%' . $search . '%')
+                    ->orWhere('deal_id', 'like', '%' . $search . '%');
+                });
+            }
 
-        if ($startDate && $endDate) {
-            $start_date = Carbon::createFromFormat('Y/m/d', $startDate)->startOfDay();
-            $end_date = Carbon::createFromFormat('Y/m/d', $endDate)->endOfDay();
+            $startDate = $data['filters']['start_date'];
+            $endDate = $data['filters']['end_date'];
 
-            $query->whereBetween('created_at', [$start_date, $end_date]);
-        }
-    
-        $startClosedDate = $request->query('startClosedDate');
-        $endClosedDate = $request->query('endClosedDate');
-
-        if ($startClosedDate && $endClosedDate) {
-            $start_close_date = Carbon::createFromFormat('Y/m/d', $startClosedDate)->startOfDay();
-            $end_close_date = Carbon::createFromFormat('Y/m/d', $endClosedDate)->endOfDay();
-
-            $query->whereBetween('closed_time', [$start_close_date, $end_close_date]);
-        }
-
-        if ($request->input('upline_id')) {
-            $uplineId = $request->input('upline_id');
-
-            // Get upline and their children IDs
-            $upline = User::find($uplineId);
-            $childrenIds = $upline ? $upline->getChildrenIds() : [];
-            $childrenIds[] = $uplineId;
-        
-            $query->whereIn('upline_user_id', $childrenIds);
-        }
-
-        if ($request->input('type')) {
-            $query->where('t_type', $request->input('type'));
-        }
-
-
-        // Handle sorting
-        $sortField = $request->input('sortField', 'created_at'); // Default to 'created_at'
-        $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
-        $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
-
-        // Handle pagination
-        $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
-        $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
+            if ($startDate && $endDate) {
+                $start_date = Carbon::parse($startDate)->addDay()->startOfDay();
+                $end_date = Carbon::parse($endDate)->addDay()->endOfDay();
                 
-        // Export logic
-        if ($request->has('exportStatus') && $request->exportStatus) {
-            $rebateHistory = $query->get();
+                $query->whereBetween('created_at', [$start_date, $end_date]);
+            } else {
+                $query->whereDate('created_at', '>=', '2024-01-01');
+            }
+        
+            $startClosedDate = $data['filters']['start_close_date'];
+            $endClosedDate = $data['filters']['end_close_date'];
 
-            return Excel::download(new RebateHistoryExport($rebateHistory), now() . '-rebate-report.xlsx');
+            if ($startClosedDate && $endClosedDate) {
+                $start_close_date = Carbon::parse($startClosedDate)->addDay()->startOfDay();
+                $end_close_date = Carbon::parse($endClosedDate)->addDay()->endOfDay();
+                
+                $query->whereBetween('created_at', [$start_close_date, $end_close_date]);
+            } else {
+                $query->whereDate('created_at', '>=', '2024-01-01');
+            }
+
+            if ($data['filters']['upline_id']) {
+                $uplineId = $data['filters']['upline_id'];
+
+                // Get upline and their children IDs
+                $upline = User::find($uplineId);
+                $childrenIds = $upline ? $upline->getChildrenIds() : [];
+                $childrenIds[] = $uplineId;
+            
+                $query->whereIn('upline_user_id', $childrenIds);
+            }
+
+            if ($data['filters']['t_type']) {
+                $query->where('t_type', $data['filters']['t_type']);
+            }
+
+            // Handle sorting
+            if ($data['sortField'] && $data['sortOrder']) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+                $query->orderBy($data['sortField'], $order);
+            } else {
+                $query->orderByDesc('created_at');
+            }
+
+            // Handle pagination
+            $rowsPerPage = $data['rows'] ?? 15; // Default to 15 if 'rows' not provided
+                    
+            // Export logic
+            if ($request->has('exportStatus') && $request->exportStatus) {
+                $rebateHistory = $query->get();
+
+                return Excel::download(new RebateHistoryExport($rebateHistory), now() . '-rebate-report.xlsx');
+            }
+
+            $totalVolume = (clone $query)->sum('volume');
+            $totalRebateAmount = (clone $query)->sum('revenue');
+
+            $histories = $query->paginate($rowsPerPage);
         }
-
-        $totalVolume = (clone $query)->sum('volume');
-        $totalRebateAmount = (clone $query)->sum('revenue');
-
-        $histories = $query->paginate($rowsPerPage, ['*'], 'page', $currentPage);
-
+        
         return response()->json([
             'success' => true,
             'data' => $histories,
