@@ -63,7 +63,7 @@ class TransactionController extends Controller
             $allSymbolGroups = SymbolGroup::pluck('display', 'id')->toArray();
 
             // Initialize query for TradeRebateSummary
-            $query = TradeRebateSummary::with('upline_user', 'account_type');
+            $query = TradeRebateSummary::with('upline_user', 'accountType');
 
             if (!empty($selectedMonthsArray)) {
                 $query->where(function ($q) use ($selectedMonthsArray) {
@@ -95,7 +95,7 @@ class TransactionController extends Controller
                     'user_id' => $item->upline_user_id,
                     'name' => $item->upline_user->name,
                     'email' => $item->upline_user->email,
-                    'account_type' => $item->account_type->slug ?? null,
+                    'account_type' => $item->accountType->slug ?? null,
                     'execute_at' => Carbon::parse($item->execute_at)->toDateString(),
                     'symbol_group' => $item->symbol_group,
                     'volume' => $item->volume,
