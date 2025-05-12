@@ -1,3 +1,3 @@
 <template>
-    <img src="/img/SuperFin-logo.png" alt="SuperFin-icon">
+    <img src="/img/superfx-logo.png" alt="SuperFin-icon">
 </template>
