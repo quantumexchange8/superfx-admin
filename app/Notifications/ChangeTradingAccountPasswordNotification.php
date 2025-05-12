@@ -31,7 +31,7 @@ class ChangeTradingAccountPasswordNotification extends Notification implements S
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('SuperForex - Trading Account Password Changed')
+            ->subject('SuperFin - Trading Account Password Changed')
             ->greeting('Dear ' . $this->user->email)
             ->line('This is a notification to inform you, your Main Password or Investor Password has been change.')
             ->line('Please check the credentials below to check the changes in your Main Password or Investor Password.')
