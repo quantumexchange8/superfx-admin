@@ -177,7 +177,7 @@ const exportRebateReport = async () => {
         lazyEvent: JSON.stringify(lazyParams.value),
         exportStatus: true,
     };
-    const url = route('report.getRebateListing', params);
+    const url = route('report.getRebateHistory', params);
 
     try {
         window.location.href = url;

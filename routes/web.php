@@ -17,8 +17,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BillboardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AccountTypeController;
-use App\Http\Controllers\MarkupProfileController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\MarkupProfileController;
+use App\Http\Controllers\TradePositionController;
 use App\Http\Controllers\TradingAccountController;
 
 Route::get('locale/{locale}', function ($locale) {
@@ -216,6 +217,21 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
 
     });
 
+    /**
+     * ==============================
+     *         Trade Position
+     * ==============================
+     */
+    Route::prefix('trade_positions')->group(function () {
+        Route::get('/open_positions', [TradePositionController::class, 'open_positions'])->name('trade_positions.open_positions');
+        Route::get('/open_trade', [TradePositionController::class, 'open_trade'])->name('trade_positions.open_trade');
+        Route::get('/closed_positions', [TradePositionController::class, 'closed_positions'])->name('trade_positions.closed_positions');
+        Route::get('/closed_trade', [TradePositionController::class, 'closed_trade'])->name('trade_positions.closed_trade');
+
+        // Additional routes can be added as necessary
+        // Route::get('/details/{id}', [TradePositionController::class, 'details'])->name('trade_positions.details');
+    });
+    
     /**
      * ==============================
      *          Report

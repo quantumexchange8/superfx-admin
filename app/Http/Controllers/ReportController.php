@@ -468,7 +468,7 @@ class ReportController extends Controller
                 $start_close_date = Carbon::parse($startClosedDate)->addDay()->startOfDay();
                 $end_close_date = Carbon::parse($endClosedDate)->addDay()->endOfDay();
                 
-                $query->whereBetween('created_at', [$start_close_date, $end_close_date]);
+                $query->whereBetween('closed_time', [$start_close_date, $end_close_date]);
             } else {
                 $query->whereDate('created_at', '>=', '2024-01-01');
             }

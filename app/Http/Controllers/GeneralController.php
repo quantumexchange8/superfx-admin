@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use App\Models\Bank;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\Symbol;
 use App\Models\Wallet;
 use App\Models\Country;
 use App\Models\AccountType;
@@ -410,4 +411,17 @@ class GeneralController extends Controller
         ]);
     }
 
+    public function getSymbols($returnAsArray = false)
+    {
+        $symbols = Symbol::distinct()->pluck('meta_symbol_name');
+    
+        if ($returnAsArray) {
+            return $symbols;
+        }
+    
+        return response()->json([
+            'symbols' => $symbols,
+        ]);
+    }
+    
 }
