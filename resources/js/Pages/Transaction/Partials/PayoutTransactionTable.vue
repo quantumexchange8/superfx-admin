@@ -22,6 +22,7 @@ const props = defineProps({
   selectedType: String,
 });
 
+const exportStatus = ref(false);
 const visible = ref(false);
 const transactions = ref();
 const dt = ref();
@@ -186,6 +187,30 @@ watch([totalTransaction, totalTransactionAmount, maxAmount], () => {
 const handleFilter = (e) => {
     filteredValueCount.value = e.filteredValue.length;
 };
+
+const exportPayout = async () => {
+    exportStatus.value = true;
+
+    try {
+        let url = `/transaction/getTransactionListingData?type=payout`;
+
+        if (props.selectedMonths && props.selectedMonths.length > 0) {
+            const selectedMonthString = props.selectedMonths.join(',');
+            url += `&selectedMonths=${selectedMonthString}`;
+        }
+
+        if (exportStatus.value === true) {
+            url += `&exportStatus=${exportStatus.value}`;
+        }
+
+        window.location.href = url;
+    } catch (error) {
+        console.error('Error occurred during export:', error);
+    } finally {
+        loading.value = false;
+        exportStatus.value = false;
+    }
+};
 </script>
 
 <template>
@@ -246,7 +271,7 @@ const handleFilter = (e) => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="exportCSV($event)"
+                            @click="filteredValueCount > 0 && exportPayout()"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}
@@ -312,7 +337,7 @@ const handleFilter = (e) => {
             <Column
                 field="volume"
                 sortable
-                :header="`${$t('public.volume')}&nbsp;(Ł) `"
+                :header="`${$t('public.volume')}&nbsp;(Ł)`"
                 class="hidden md:table-cell"
             >
                 <template #body="slotProps">

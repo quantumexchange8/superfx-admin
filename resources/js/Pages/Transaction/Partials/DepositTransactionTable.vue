@@ -33,6 +33,7 @@ watch(() => props.selectedMonths, () => {
     getResults(props.selectedType, props.selectedMonths);
 });
 
+const exportStatus = ref(false);
 const visible = ref(false);
 const transactions = ref();
 const dt = ref();
@@ -190,74 +191,29 @@ const handleFilter = (e) => {
     filteredValueCount.value = e.filteredValue.length;
 };
 
-const exportXLSX = () => {
-    // Retrieve the array from the reactive proxy
-    const data = filteredValue.value;
+const exportDeposit = async () => {
+    exportStatus.value = true;
 
-    // Specify the headers
-    const headers = [
-        trans('public.date'),
-        trans('public.name'),
-        trans('public.email'),
-        trans('public.id'),
-        trans('public.account'),
-        trans('public.amount') + ' ($)',
-        trans('public.status'),
-        trans('public.receiving_address'),
-        trans('public.platform'),
-        trans('public.bank_name'),
-        trans('public.bank_code'),
-        trans('public.payment_account_type'),
-        trans('public.account_no'),
-    ];
+    try {
+        let url = `/transaction/getTransactionListingData?type=deposit`;
 
-    // Map the array data to XLSX rows
-    const rows = data.map(obj => {
-        const toDisplay = obj.to_meta_login ? obj.to_meta_login : (obj.to_wallet_name ? trans('public.' + obj.to_wallet_name) : '');
-        const accountTypeLabel = obj.payment_platform === 'bank' ? (obj.payment_account_type === 'card' ? trans('public.card') : trans('public.account')) : trans('public.' + obj.payment_account_type);
+        if (props.selectedMonths && props.selectedMonths.length > 0) {
+            const selectedMonthString = props.selectedMonths.join(',');
+            url += `&selectedMonths=${selectedMonthString}`;
+        }
 
-        return [
-            obj.created_at !== undefined ? dayjs(obj.created_at).format('YYYY/MM/DD') : '',
-            obj.name !== undefined ? obj.name : '',
-            obj.email !== undefined ? obj.email : '',
-            obj.transaction_number !== undefined ? obj.transaction_number : '',
-            toDisplay,
-            obj.transaction_amount !== undefined ? obj.transaction_amount : '',
-            obj.status !== undefined ? trans('public.' + obj.status) : '',
-            obj.to_wallet_address !== undefined ? obj.to_wallet_address : '',
-            obj.payment_platform !== null && obj.payment_platform !== undefined ? trans('public.' + obj.payment_platform) : '',
-            obj.payment_platform_name !== undefined ? obj.payment_platform_name : '',
-            obj.bank_code !== undefined ? obj.bank_code : '',
-            accountTypeLabel,
-            obj.payment_account_no !== undefined ? obj.payment_account_no : '',
-        ];
-    });
+        if (exportStatus.value === true) {
+            url += `&exportStatus=${exportStatus.value}`;
+        }
 
-    // Combine headers and rows into a single data array
-    const sheetData = [headers, ...rows];
-
-    // Create the XLSX content
-    let csvContent = "data:text/xlsx;charset=utf-8,";
-    
-    sheetData.forEach((rowArray) => {
-        const row = rowArray.join("\t"); // Use tabs for column separation
-        csvContent += row + "\r\n"; // Add a new line after each row
-    });
-
-    // Create a temporary link element
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "export.xlsx");
-
-    // Append the link to the document and trigger the download
-    document.body.appendChild(link);
-    link.click();
-
-    // Clean up by removing the link
-    document.body.removeChild(link);
+        window.location.href = url;
+    } catch (error) {
+        console.error('Error occurred during export:', error);
+    } finally {
+        loading.value = false;
+        exportStatus.value = false;
+    }
 };
-
 </script>
 
 <template>
@@ -311,7 +267,7 @@ const exportXLSX = () => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="filteredValueCount > 0 ? exportXLSX() : null"
+                            @click="filteredValueCount > 0 && exportDeposit()"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}
