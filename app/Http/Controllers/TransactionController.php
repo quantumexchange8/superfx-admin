@@ -9,7 +9,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Models\RebateAllocation;
 use App\Models\TradeRebateSummary;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Services\DropdownOptionService;
+use App\Exports\PayoutTransactionExport;
+use App\Exports\DepositTransactionExport;
+use App\Exports\TransferTransactionExport;
+use App\Exports\WithdrawalTransactionExport;
 
 class TransactionController extends Controller
 {
@@ -155,6 +160,11 @@ class TransactionController extends Controller
             // Sort summary by execute_at in descending order to get the latest dates first
             $summary = $summary->sortByDesc('execute_at');
 
+            // Export logic
+            if ($request->has('exportStatus') && $request->exportStatus == true) {
+                return Excel::download(new PayoutTransactionExport($data), now() . '-payout.xlsx');
+            }
+
             $data = $summary;
         } else {
             $query = Transaction::with('user', 'from_wallet', 'to_wallet');
@@ -188,13 +198,14 @@ class TransactionController extends Controller
             // Apply ordering based on the transaction type
             if ($type === 'withdrawal') {
                 $query->where('status', '!=', 'processing')
-                    ->orderByDesc('approved_at');
+                    ->orderByDesc('approved_at')
+                    ->orderByDesc('created_at');
             } else {
                 $query->latest();
             }
 
             // Fetch data
-            $data = $query->latest()->get()->map(function ($transaction) use ($commonFields, $type) {
+            $data = $query->get()->map(function ($transaction) use ($commonFields, $type) {
                 // Initialize result array with common fields
                 $result = $transaction->only($commonFields);
 
@@ -210,7 +221,7 @@ class TransactionController extends Controller
                     $result['to_wallet_address'] = $transaction->to_wallet_address;
                     $result['to_meta_login'] = $transaction->to_meta_login;
                     $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
-                    $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->name : null;
+                    $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->type : null;
                 } elseif ($type === 'withdrawal') {
                     $result['to_wallet_address'] = $transaction->to_wallet_address;
                     $result['from_meta_login'] = $transaction->from_meta_login;
@@ -223,13 +234,25 @@ class TransactionController extends Controller
                     $result['from_meta_login'] = $transaction->from_meta_login;
                     $result['to_meta_login'] = $transaction->to_meta_login;
                     $result['from_wallet_id'] = $transaction->from_wallet ? $transaction->from_wallet->id : null;
-                    $result['from_wallet_name'] = $transaction->from_wallet ? $transaction->from_wallet->name : null;
+                    $result['from_wallet_name'] = $transaction->from_wallet ? $transaction->from_wallet->type : null;
                     $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
-                    $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->name : null;
+                    $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->type : null;
                 }
 
                 return $result;
             });
+
+            // Export logic
+            if ($request->has('exportStatus') && $request->exportStatus == true) {
+                if ($type === 'deposit') {
+                    return Excel::download(new DepositTransactionExport($data), now() . '-deposits.xlsx');
+                } elseif ($type === 'withdrawal') {
+                    return Excel::download(new WithdrawalTransactionExport($data), now() . '-withdrawals.xlsx');
+                } elseif ($type === 'transfer') {
+                    return Excel::download(new TransferTransactionExport($data), now() . '-transfers.xlsx');
+                }
+            }
+                                    
         }
 
         return response()->json([

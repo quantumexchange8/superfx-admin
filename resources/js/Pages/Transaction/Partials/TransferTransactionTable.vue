@@ -29,6 +29,7 @@ watch(() => props.selectedMonths, () => {
     getResults(props.selectedType, props.selectedMonths);
 });
 
+const exportStatus = ref(false);
 const visible = ref(false);
 const transactions = ref();
 const dt = ref();
@@ -187,6 +188,30 @@ watch([totalTransaction, totalTransactionAmount, maxAmount], () => {
 const handleFilter = (e) => {
     filteredValueCount.value = e.filteredValue.length;
 };
+
+const exportTransfer = async () => {
+    exportStatus.value = true;
+
+    try {
+        let url = `/transaction/getTransactionListingData?type=transfer`;
+
+        if (props.selectedMonths && props.selectedMonths.length > 0) {
+            const selectedMonthString = props.selectedMonths.join(',');
+            url += `&selectedMonths=${selectedMonthString}`;
+        }
+
+        if (exportStatus.value === true) {
+            url += `&exportStatus=${exportStatus.value}`;
+        }
+
+        window.location.href = url;
+    } catch (error) {
+        console.error('Error occurred during export:', error);
+    } finally {
+        loading.value = false;
+        exportStatus.value = false;
+    }
+};
 </script>
 
 <template>
@@ -240,7 +265,7 @@ const handleFilter = (e) => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="exportCSV($event)"
+                            @click="filteredValueCount > 0 && exportTransfer()"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}

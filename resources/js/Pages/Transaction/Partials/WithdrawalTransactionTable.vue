@@ -33,6 +33,7 @@ watch(() => props.selectedMonths, () => {
     getResults(props.selectedType, props.selectedMonths);
 });
 
+const exportStatus = ref(false);
 const visible = ref(false);
 const transactions = ref();
 const dt = ref();
@@ -193,70 +194,28 @@ const handleFilter = (e) => {
     filteredValueCount.value = e.filteredValue.length;
 };
 
-const exportXLSX = () => {
-    const data = filteredValue.value;
+const exportWithdrawal = async () => {
+    exportStatus.value = true;
 
-    const headers = [
-        trans('public.requested_date'),
-        trans('public.approval_date'),
-        trans('public.name'),
-        trans('public.email'),
-        trans('public.id'),
-        trans('public.from'),
-        trans('public.amount') + ' ($)',
-        trans('public.status'),
-        trans('public.receiving_address'),
-        trans('public.platform'),
-        trans('public.bank_name'),
-        trans('public.bank_code'),
-        trans('public.payment_account_type'),
-        trans('public.account_no'),
-        trans('public.wallet_name'),
-        trans('public.wallet_address'),
-    ];
+    try {
+        let url = `/transaction/getTransactionListingData?type=withdrawal`;
 
-    const rows = data.map(obj => {
-        const fromDisplay = obj.from_meta_login ? obj.from_meta_login : (obj.from_wallet_name ? trans('public.' + obj.from_wallet_name) : '');
-        const accountTypeLabel = obj.payment_platform === 'bank' ? (obj.payment_account_type === 'card' ? trans('public.card') : trans('public.account')) : trans('public.' + obj.payment_account_type);
+        if (props.selectedMonths && props.selectedMonths.length > 0) {
+            const selectedMonthString = props.selectedMonths.join(',');
+            url += `&selectedMonths=${selectedMonthString}`;
+        }
 
-        return [
-            obj.created_at ? dayjs(obj.created_at).format('YYYY/MM/DD') : '',
-            obj.approved_at ? dayjs(obj.approved_at).format('YYYY/MM/DD') : '',
-            obj.name ?? '',
-            obj.email ?? '',
-            obj.transaction_number ?? '',
-            fromDisplay,
-            obj.transaction_amount ?? '',
-            obj.status ? trans('public.' + obj.status) : '',
-            obj.to_wallet_address ?? '',
-            obj.payment_platform ? trans('public.' + obj.payment_platform) : '',
-            obj.payment_platform_name ?? '',
-            obj.bank_code ?? '',
-            accountTypeLabel,
-            obj.payment_account_no ?? '',
-            obj.to_wallet_name ?? '',
-            obj.to_wallet_address ?? '',
-        ];
-    });
+        if (exportStatus.value === true) {
+            url += `&exportStatus=${exportStatus.value}`;
+        }
 
-    // Convert data to an HTML table format (Excel can read this)
-    let table = "<table><tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
-    rows.forEach(row => {
-        table += "<tr>" + row.map(value => `<td>${value}</td>`).join("") + "</tr>";
-    });
-    table += "</table>";
-
-    // Base64 encode the table data
-    const uri = 'data:application/vnd.ms-excel;base64,' + btoa(unescape(encodeURIComponent(table)));
-
-    // Create and trigger the download
-    const link = document.createElement("a");
-    link.href = uri;
-    link.download = "export.xlsx";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+        window.location.href = url;
+    } catch (error) {
+        console.error('Error occurred during export:', error);
+    } finally {
+        loading.value = false;
+        exportStatus.value = false;
+    }
 };
 
 </script>
@@ -312,7 +271,7 @@ const exportXLSX = () => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="filteredValueCount > 0 ? exportXLSX() : null"
+                            @click="filteredValueCount > 0 && exportWithdrawal()"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}
