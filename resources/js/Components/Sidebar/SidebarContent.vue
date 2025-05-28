@@ -11,6 +11,8 @@ import {
     IconUserCircle,
     IconUsersGroup,
     IconReceiptDollar,
+    IconFileReport,
+    IconFileTime,
     IconFileAnalytics,
     IconId,
     IconIdBadge2,
@@ -178,7 +180,7 @@ watchEffect(() => {
             :active="route().current('trade_positions.open_positions')"
         >
             <template #icon>
-                <IconFileAnalytics :size="20" stroke-width="1.25" />
+                <IconFileReport :size="20" stroke-width="1.25" />
             </template>
         </SidebarLink>
 
@@ -189,7 +191,7 @@ watchEffect(() => {
             :active="route().current('trade_positions.closed_positions')"
         >
             <template #icon>
-                <IconFileAnalytics :size="20" stroke-width="1.25" />
+                <IconFileTime :size="20" stroke-width="1.25" />
             </template>
         </SidebarLink>
 
