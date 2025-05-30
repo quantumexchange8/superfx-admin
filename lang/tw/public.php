@@ -640,6 +640,7 @@ return [
     "empty_rebate_record_title" => "尚未有返傭紀錄",
     "empty_rebate_record_message" => "推廣交易以賺取返傭並增加您的收益！",
     "filter_date" => "按日期篩選",
+    "filter_open_time" => "按開盤時間篩選",
     "filter_closed_time" => "按收盤時間篩選",
     "filter_type" => "按類型篩選",
     "open_time" => "開盤時間",

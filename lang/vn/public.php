@@ -640,6 +640,7 @@ return [
     "empty_rebate_record_title" => "Chưa có hồ sơ rebate",
     "empty_rebate_record_message" => "Quảng bá giao dịch để kiếm rebate và tăng thu nhập của bạn!",
     "filter_date" => "Lọc theo ngày",
+    "filter_open_time" => "Lọc theo thời gian mở",
     "filter_closed_time" => "Lọc theo thời gian đóng",
     "filter_type" => "Lọc theo loại",
     "open_time" => "Thời gian mở",

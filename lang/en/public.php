@@ -640,6 +640,7 @@ return [
     "empty_rebate_record_title" => "No Rebate Records Yet",
     "empty_rebate_record_message" => "Promote trading to earn rebates and grow your earnings!",
     "filter_date" => "Filter by Date",
+    "filter_open_time" => "Filter by Open Time",
     "filter_closed_time" => "Filter by Closed Time",
     "filter_type" => "Filter by Type",
     "open_time" => "Open Time",
