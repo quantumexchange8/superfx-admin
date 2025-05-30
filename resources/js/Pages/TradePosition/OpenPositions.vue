@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { HandIcon, NetBalanceIcon, CoinsIcon, RocketIcon } from '@/Components/Icons/solid';
-import { onMounted, ref, computed, watch, watchEffect } from "vue";
+import { onMounted, onUnmounted, ref, computed, watch, watchEffect } from "vue";
 import { generalFormat, transactionFormat } from "@/Composables/index.js";
 import { FilterMatchMode } from 'primevue/api';
 import debounce from "lodash/debounce.js";
@@ -213,6 +213,8 @@ const exportOpenTrade = async () => {
     }
 };
 
+let intervalId;
+
 onMounted(() => {
     // Ensure filters are populated before fetching data
     if (Array.isArray(selectedDate.value)) {
@@ -231,7 +233,16 @@ onMounted(() => {
         filters: filters.value
     };
 
-    // loadLazyData();
+    loadLazyData();
+
+    intervalId = setInterval(() => {
+        loadLazyData();
+    }, 60000);
+
+});
+
+onUnmounted(() => {
+  clearInterval(intervalId);
 });
 
 const op = ref();
@@ -258,7 +269,7 @@ const minDate = ref(new Date(today.getFullYear(), today.getMonth(), 1));
 const maxDate = ref(today);
 
 // Reactive variable for selected date range
-const selectedDate = ref([minDate.value, maxDate.value]);
+const selectedDate = ref([]);
 
 const clearDate = () => {
     selectedDate.value = null;

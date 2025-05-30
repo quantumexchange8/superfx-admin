@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { HandIcon, NetBalanceIcon, CoinsIcon, RocketIcon } from '@/Components/Icons/solid';
-import { onMounted, ref, computed, watch, watchEffect } from "vue";
+import { onMounted, onUnmounted, ref, computed, watch, watchEffect } from "vue";
 import { generalFormat, transactionFormat } from "@/Composables/index.js";
 import { FilterMatchMode } from 'primevue/api';
 import debounce from "lodash/debounce.js";
@@ -111,6 +111,8 @@ watch([selectedUplines, selectedSymbols], ([newUplineId, newSymbol]) => {
     }
 });
 
+const skipFirstFilterWatch = ref(true);
+
 // Watch for changes on the entire 'filters' object and debounce the API call
 watch(filters, debounce(() => {
     // Count active filters, excluding null, undefined, empty strings, and empty arrays
@@ -132,6 +134,11 @@ watch(filters, debounce(() => {
 
         return filter !== null && filter !== '';  // Check if the value is not null or empty string
     }).length;
+
+    if (skipFirstFilterWatch.value) {
+        skipFirstFilterWatch.value = false;
+        return; // ⛔ Skip the initial load triggered by watcher
+    }
 
     page.value = 0; // Reset to first page when filters change
     loadLazyData(); // Call loadLazyData function to fetch the data
@@ -221,6 +228,8 @@ const exportClosedTrade = async () => {
     }
 };
 
+let intervalId;
+
 onMounted(() => {
     // Ensure filters are populated before fetching data
     if (Array.isArray(selectedDate.value)) {
@@ -239,7 +248,16 @@ onMounted(() => {
         filters: filters.value
     };
 
-    // loadLazyData();
+    loadLazyData();
+
+    intervalId = setInterval(() => {
+        loadLazyData();
+    }, 60000);
+
+});
+
+onUnmounted(() => {
+  clearInterval(intervalId);
 });
 
 const op = ref();
