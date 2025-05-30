@@ -56,12 +56,6 @@ const leave = (el) => {
                     v-show="sidebarState.isOpen || sidebarState.isHovered"
                     aria-hidden="true"
                     class="relative block w-5 h-5 ml-auto"
-                    :class="[
-                        {
-                            'text-primary-500': active,
-                            'text-gray-700 focus:bg-gray-100': !active,
-                        },
-                    ]"
                 >
                     <IconChevronDown
                         :class="[

@@ -36,14 +36,14 @@ const Tag = !props.external ? Link : 'a'
         :class="[
             'p-3 flex gap-3 items-center rounded transition-colors w-full focus:outline-none',
             {
-                'text-gray-700 hover:bg-gray-100 focus:bg-gray-100':
+                'text-gray-950 hover:text-primary-500 hover:bg-primary-50':
                     !active,
-                'text-primary-600 bg-primary-100':
+                'text-white bg-primary-500 hover:bg-primary-600':
                     active,
             },
         ]"
     >
-        <div class="max-w-5 text-primary-500">
+        <div class="max-w-5">
             <slot name="icon">
                 <EmptyCircleIcon aria-hidden="true" class="flex-shrink-0 w-5 h-5" />
             </slot>
@@ -69,16 +69,16 @@ const Tag = !props.external ? Link : 'a'
         v-else
         type="button"
         :class="[
-            'p-3 flex gap-3 items-center rounded transition-colors w-full focus:outline-none',
+            'p-3 flex gap-3 items-center rounded-lg transition-colors w-full',
             {
-                'text-gray-700 hover:bg-gray-100 focus:bg-gray-100':
+                'text-gray-950 hover:text-primary-500 hover:bg-primary-50':
                     !active,
-                'text-primary-600 bg-primary-100':
+                'text-white bg-primary-500 hover:bg-primary-600':
                     active,
             },
         ]"
     >
-        <div class="max-w-5 text-primary-500">
+        <div class="max-w-5">
             <slot name="icon">
                 <EmptyCircleIcon aria-hidden="true" class="flex-shrink-0 w-5 h-5" />
             </slot>

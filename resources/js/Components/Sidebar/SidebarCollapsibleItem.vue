@@ -26,7 +26,7 @@ const Tag = external ? 'a' : Link
 <template>
     <li
         :class="[
-            'text-sm rounded hover:cursor-pointer mt-1 ',
+            'text-sm rounded-lg hover:cursor-pointer hover:bg-primary-50 mt-1',
             {
                 'bg-primary-100': active,
                 'hover:bg-gray-100 focus:bg-gray-100': !active,
@@ -38,14 +38,14 @@ const Tag = external ? 'a' : Link
             :href="href"
             v-bind="$attrs"
             :class="[
-                'p-3 flex gap-3 rounded items-center w-full focus:outline-none',
+                'p-3 flex gap-3 items-center hover:text-primary-500 w-full',
                 {
-                    'text-primary-600': active,
-                    'text-gray-700 focus:bg-gray-100': !active,
+                    'text-primary-500': active,
+                    'text-gray-950': !active,
                 },
             ]"
         >
-            <div class="p-1 flex items-center justify-center text-transparent">
+            <div class="p-1 flex items-center justify-center">
                 <EmptyCircleIcon
                     aria-hidden="true"
                     class="flex-shrink-0 w-2.5 h-2.5"
