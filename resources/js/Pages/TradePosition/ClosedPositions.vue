@@ -187,6 +187,8 @@ const loadLazyData = (event) => {
 
 const onPage = (event) => {
     lazyParams.value = event;
+    first.value = event.first;
+    rows.value = event.rows;
     loadLazyData(event);
 };
 
@@ -251,6 +253,8 @@ onMounted(() => {
     loadLazyData();
 
     intervalId = setInterval(() => {
+        first.value = 0;
+        page.value = 0;
         loadLazyData();
     }, 60000);
 
