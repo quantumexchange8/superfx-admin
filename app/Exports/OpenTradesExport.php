@@ -46,6 +46,10 @@ class OpenTradesExport implements FromCollection, WithHeadings
         $data = [];
 
         foreach ($this->records as $record) {
+            $currency = strtolower(optional(optional($record->trading_account)->account_type)->currency);
+            $swapKey = "trade_swap_{$currency}";
+            $profitKey = "trade_profit_{$currency}";
+
             $data[] = [
                 $record->created_at->format('Y/m/d'),
                 $record->trade_symbol,
@@ -72,8 +76,8 @@ class OpenTradesExport implements FromCollection, WithHeadings
                 number_format((float) (string)$record->trade_stop_loss, 2, '.', ''),
                 number_format((float) (string)$record->trade_take_profit, 2, '.', ''),
                 number_format((float) (string)$record->trade_commission, 2, '.', ''),
-                number_format((float) (string)$record->trade_swap, 2, '.', ''),
-                number_format((float) (string)$record->trade_profit, 2, '.', ''),
+                number_format((float) (string)($record->$swapKey ?? 0), 2, '.', ''),
+                number_format((float) (string)($record->$profitKey ?? 0), 2, '.', ''),
             
             ];
         }
