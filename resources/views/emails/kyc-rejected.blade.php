@@ -431,7 +431,7 @@
                                                                 <div align="center" class="alignment"
                                                                     style="line-height:10px">
                                                                     <div style="max-width: 337.5px;"><img alt=""
-                                                                            height="auto" src="{{ asset('email/images/10_fn.jpg') }}"
+                                                                            height="auto" src="{{ asset('email/images/30_fn.png') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%; border-radius: 20px 20px 20px 20px;"
                                                                             title="" width="337.5" /></div>
                                                                 </div>
@@ -575,10 +575,10 @@
                                                         <tr>
                                                             <td class="pad">
                                                                 <div align="center" class="alignment"><a
-                                                                        href="https://SuperFinglobal.com/welcome-bonus"
+                                                                        href="https://superfin.global/30-bonus"
                                                                         style="color:#ffffff;text-decoration:none;"
                                                                         target="_blank"><!--[if mso]>
-<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"  href="https://SuperFinglobal.com/welcome-bonus"  style="height:42px;width:127px;v-text-anchor:middle;" arcsize="10%" fillcolor="#00e288">
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"  href="https://superfin.global/30-bonus"  style="height:42px;width:127px;v-text-anchor:middle;" arcsize="10%" fillcolor="#00e288">
 <v:stroke dashstyle="Solid" weight="0px" color="#00e288"/>
 <w:anchorlock/>
 <v:textbox inset="0px,0px,0px,0px">
@@ -601,10 +601,10 @@
                                                         <tr>
                                                             <td class="pad">
                                                                 <div align="center" class="alignment"><a
-                                                                        href="https://SuperFinglobal.com/partnership-program"
+                                                                        href="https://superfin.global/partners"
                                                                         style="color:#ffffff;text-decoration:none;"
                                                                         target="_blank"><!--[if mso]>
-<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"  href="https://SuperFinglobal.com/partnership-program"  style="height:42px;width:127px;v-text-anchor:middle;" arcsize="10%" fillcolor="#00e288">
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"  href="https://superfin.global/partners"  style="height:42px;width:127px;v-text-anchor:middle;" arcsize="10%" fillcolor="#00e288">
 <v:stroke dashstyle="Solid" weight="0px" color="#00e288"/>
 <w:anchorlock/>
 <v:textbox inset="0px,0px,0px,0px">
@@ -695,7 +695,7 @@
                                                                         width="180px">
                                                                         <tr>
                                                                             <td style="padding:0 0 0 4px;"><a
-                                                                                    href="https://www.facebook.com/SuperFinglobal/"
+                                                                                    href="https://www.facebook.com/superforexglobal/"
                                                                                     target="_blank"><img alt="Facebook"
                                                                                         height="auto"
                                                                                         src="{{ asset('email/images/facebook2x.png') }}"
@@ -1096,7 +1096,7 @@
                                                                     <p style="margin: 0;"><strong>REGULATED BY
                                                                             IFSC</strong><br /><br />International
                                                                         Financial Services Commission<br /><br />E-Mail:
-                                                                        <u>support@SuperFinglobal.com</u>
+                                                                        <u>support@superfin.global</u>
                                                                     </p>
                                                                 </div>
                                                             </td>
@@ -1221,7 +1221,7 @@
                                                                 <div
                                                                     style="color:#989898;direction:ltr;font-family:Arial, 'Helvetica Neue', Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:120%;text-align:center;mso-line-height-alt:19.2px;">
                                                                     <p style="margin: 0;"><a
-                                                                            href="https://my.SuperFins.com"
+                                                                            href="{{ url(config('app.member_production_url')) }}"
                                                                             rel="noopener"
                                                                             style="text-decoration: underline; color: #989898;"
                                                                             target="_blank">Dashboard</a></p>
@@ -1242,7 +1242,7 @@
                                                                 <div
                                                                     style="color:#989898;direction:ltr;font-family:Arial, 'Helvetica Neue', Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:120%;text-align:center;mso-line-height-alt:19.2px;">
                                                                     <p style="margin: 0;"><a
-                                                                            href="https://SuperFinglobal.com/contacts"
+                                                                            href="https://superfin.global/contact-us"
                                                                             rel="noopener"
                                                                             style="text-decoration: underline; color: #989898;"
                                                                             target="_blank">Contact Info</a></p>
@@ -1263,7 +1263,7 @@
                                                                 <div
                                                                     style="color:#989898;direction:ltr;font-family:Arial, 'Helvetica Neue', Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:120%;text-align:center;mso-line-height-alt:19.2px;">
                                                                     <p style="margin: 0;"><a
-                                                                            href="https://SuperFinglobal.com/regulation"
+                                                                            href="https://superfin.global/terms-and-conditions"
                                                                             rel="noopener"
                                                                             style="text-decoration: underline; color: #989898;"
                                                                             target="_blank">Terms and Conditions</a></p>
@@ -1284,7 +1284,7 @@
                                                                 <div
                                                                     style="color:#989898;direction:ltr;font-family:Arial, 'Helvetica Neue', Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:120%;text-align:center;mso-line-height-alt:19.2px;">
                                                                     <p style="margin: 0;"><a
-                                                                            href="https://SuperFin.com/#mt4"
+                                                                            href="https://superfin.global/mt4"
                                                                             rel="noopener"
                                                                             style="text-decoration: underline; color: #989898;"
                                                                             target="_blank">Metatrader 4</a></p>

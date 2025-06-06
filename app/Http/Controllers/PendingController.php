@@ -2,25 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CurrencyConversionRate;
-use App\Models\PaymentGateway;
 use App\Models\User;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use App\Models\Wallet;
 use App\Models\AssetRevoke;
 use App\Models\TradingUser;
 use App\Models\Transaction;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Models\PaymentGateway;
+use App\Models\TradingAccount;
+use Illuminate\Support\Carbon;
 use App\Services\MetaFourService;
+use App\Mail\FailedWithdrawalMail;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use App\Mail\WithdrawalApprovalMail;
-use App\Models\TradingAccount;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use App\Models\CurrencyConversionRate;
 use App\Services\RunningNumberService;
 use App\Services\ChangeTraderBalanceType;
 
@@ -448,6 +449,8 @@ class PendingController extends Controller
         } else {
             // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
             $this->handleTransactionUpdate($transaction);
+
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
 
             return response()->json([
                 'status' => 'fail',
