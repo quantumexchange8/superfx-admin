@@ -149,21 +149,16 @@ class PaymentService
     {
         $loginUrl = $paymentGateway->payment_url . '/auth-service/api/v1.0/user/login';
 
-        $username = 'username';
-        $password = hash('sha256', $username . 'password');
+        $username = 'm122user1';
+        $password = hash('sha256', $username . '2025@SuperFin');
         $requestTime = now('Asia/Ho_Chi_Minh')->format('YmdHis');
         $requestId = (string) Str::uuid();
         $tenant = 'SUPERFINFX';
-
-        // Example signature — adjust this based on their actual signing rule
-        $signatureString = $username . $requestTime . $paymentGateway->payment_app_key;
-        $signature = hash('sha256', $signatureString);
 
         $headers = [
             'p-request-id'  => $requestId,
             'p-request-time'=> $requestTime,
             'p-tenant'      => $tenant,
-            'p-signature'   => $signature,
         ];
 
         $params = [
