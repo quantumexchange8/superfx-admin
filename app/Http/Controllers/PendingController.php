@@ -107,9 +107,11 @@ class PendingController extends Controller
         ]);
 
         if ($transaction->status == 'rejected') {
-
             // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
             $this->handleTransactionUpdate($transaction);
+
+            $user = User::find($transaction->user_id);
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
 
             return redirect()->back()->with('toast', [
                 'title' => trans('public.toast_reject_withdrawal_request'),
@@ -488,7 +490,7 @@ class PendingController extends Controller
                 $tradingUser = TradingUser::where('meta_login', $transaction->from_meta_login)->with('trading_account', 'accountType')->first();
                 $multiplier = $tradingUser->accountType ? $tradingUser->accountType->balance_multiplier : 1;
                 $adjustedAmount = $transaction->amount * $multiplier;
-    
+
                 $trade = (new MetaFourService)->createTrade(
                     $transaction->from_meta_login,
                     $adjustedAmount,
