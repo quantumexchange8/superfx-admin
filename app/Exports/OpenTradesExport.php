@@ -51,34 +51,57 @@ class OpenTradesExport implements FromCollection, WithHeadings
             $profitKey = "trade_profit_{$currency}";
 
             $data[] = [
+                // $record->created_at->format('Y/m/d'),
+                // $record->trade_symbol,
+                // $record->trade_deal_id,
+                // $record->trade_open_time,
+                // number_format((float) (string)$record->trade_open_price, 2, '.', ''),
+                // $record->trade_type,
+                // // Check if user exists and has attributes
+                // isset($record->user) ? $record->user->name : '',
+                // isset($record->user) ? $record->user->email : '',
+                // isset($record->user) ? $record->user->id_number : '',
+
+                // // Check if upline exists for the user
+                // isset($record->user->upline) ? $record->user->upline->name : '',
+                // isset($record->user->upline) ? $record->user->upline->email : '',
+                // isset($record->user->upline) ? $record->user->upline->id_number : '',
+                
+                // $record->meta_login,
+                // // Check if trading_account and account_type exist
+                // isset($record->trading_account) && isset($record->trading_account->account_type) ? $record->trading_account->account_type->name : '',
+                // isset($record->trading_account) && isset($record->trading_account->account_type) ? $record->trading_account->account_type->currency : '',
+
+                // number_format((float) (string)$record->trade_lots, 2, '.', ''),
+                // number_format((float) (string)$record->trade_stop_loss, 2, '.', ''),
+                // number_format((float) (string)$record->trade_take_profit, 2, '.', ''),
+                // number_format((float) (string)$record->trade_commission, 2, '.', ''),
+                // number_format((float) (string)($record->$swapKey ?? 0), 2, '.', ''),
+                // number_format((float) (string)($record->$profitKey ?? 0), 2, '.', ''),
+            
                 $record->created_at->format('Y/m/d'),
                 $record->trade_symbol,
                 $record->trade_deal_id,
                 $record->trade_open_time,
                 number_format((float) (string)$record->trade_open_price, 2, '.', ''),
                 $record->trade_type,
-                // Check if user exists and has attributes
-                isset($record->user) ? $record->user->name : '',
-                isset($record->user) ? $record->user->email : '',
-                isset($record->user) ? $record->user->id_number : '',
-
-                // Check if upline exists for the user
-                isset($record->user->upline) ? $record->user->upline->name : '',
-                isset($record->user->upline) ? $record->user->upline->email : '',
-                isset($record->user->upline) ? $record->user->upline->id_number : '',
-                
+                $record->name,
+                $record->email,
+                $record->id_number,
+                $record->upline_name,
+                $record->upline_email,
+                $record->upline_id_number,
                 $record->meta_login,
-                // Check if trading_account and account_type exist
-                isset($record->trading_account) && isset($record->trading_account->account_type) ? $record->trading_account->account_type->name : '',
-                isset($record->trading_account) && isset($record->trading_account->account_type) ? $record->trading_account->account_type->currency : '',
-
+                $record->account_type_name,
+                $record->account_type_currency,
+    
                 number_format((float) (string)$record->trade_lots, 2, '.', ''),
                 number_format((float) (string)$record->trade_stop_loss, 2, '.', ''),
                 number_format((float) (string)$record->trade_take_profit, 2, '.', ''),
                 number_format((float) (string)$record->trade_commission, 2, '.', ''),
                 number_format((float) (string)($record->$swapKey ?? 0), 2, '.', ''),
                 number_format((float) (string)($record->$profitKey ?? 0), 2, '.', ''),
-            
+
             ];
         }
 

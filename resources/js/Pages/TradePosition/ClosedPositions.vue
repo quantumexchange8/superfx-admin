@@ -36,7 +36,7 @@ const props = defineProps({
 const exportStatus = ref(false);
 const isLoading = ref(false);
 const dt = ref(null);
-const openTrades = ref();
+const closedTrades = ref();
 const selectedUplines = ref();
 const selectedSymbols = ref();
 const { formatDate, formatAmount } = transactionFormat();
@@ -166,7 +166,7 @@ const loadLazyData = (event) => {
             const response = await fetch(url);
 
             const results = await response.json();
-            openTrades.value = results?.data?.data;
+            closedTrades.value = results?.data?.data;
             totalRecords.value = results?.data?.total;
 
             totalLots.value = results?.totalLots;
@@ -179,7 +179,7 @@ const loadLazyData = (event) => {
 
         }, 100);
     } catch (error) {
-        openTrades.value = [];
+        closedTrades.value = [];
         totalRecords.value = 0;
         isLoading.value = false;
     }
@@ -390,10 +390,10 @@ const clearFilter = () => {
                     class="w-full"
                 >
                     <DataTable
-                        :value="openTrades"
+                        :value="closedTrades"
                         :rowsPerPageOptions="[10, 20, 50, 100]"
                         lazy
-                        :paginator="openTrades?.length > 0"
+                        :paginator="closedTrades?.length > 0"
                         removableSort
                         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
                         :currentPageReportTemplate="$t('public.paginator_caption')"
@@ -488,7 +488,7 @@ const clearFilter = () => {
                                 <span class="text-sm text-gray-700">{{ $t('public.loading_closed_trades_caption') }}</span>
                             </div>
                         </template>
-                        <template v-if="openTrades?.length > 0">
+                        <template v-if="closedTrades?.length > 0">
                             <Column
                                 field="trade_deal_id"
                                 sortable

@@ -27,36 +27,44 @@ class TradePositionController extends Controller
         if ($request->has('lazyEvent')) {
             $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true); //only() extract parameters in lazyEvent
 
-            $query = OpenTrade::with([
-                    'user:id,name,email,id_number,upline_id',
-                    'user.upline:id,name,email,id_number',
-                    'trading_account:id,meta_login,account_type_id',
-                    'trading_account.accountType:id,name,slug,account_group,currency,color',
+            $query = OpenTrade::query()
+                ->leftJoin('users as user', 'open_trade.user_id', '=', 'user.id')
+                ->leftJoin('users as upline', 'user.upline_id', '=', 'upline.id')
+                ->leftJoin('trading_accounts', 'open_trade.meta_login', '=', 'trading_accounts.meta_login')
+                ->leftJoin('account_types', 'trading_accounts.account_type_id', '=', 'account_types.id')
+                ->select([
+                    'open_trade.*',
+                    'user.name as name',
+                    'user.email as email',
+                    'user.id_number as id_number',
+                    'upline.id as upline_id',
+                    'upline.name as upline_name',
+                    'upline.email as upline_email',
+                    'upline.id_number as upline_id_number',
+                    'account_types.name as account_type_name',
+                    'account_types.slug as account_type_slug',
+                    'account_types.account_group as account_type_account_group',
+                    'account_types.currency as account_type_currency',
+                    'account_types.color as account_type_color',
                 ])
-                ->whereIn('trade_type', ['buy', 'sell'])
-                ->where('status', 'open');
-
+                ->whereIn('open_trade.trade_type', ['buy', 'sell'])
+                ->where('open_trade.status', 'open');
+        
             // Handle search functionality
             $search = $data['filters']['global'];
             if ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->whereHas('user.upline', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('email', 'like', '%' . $search . '%')
-                            ->orWhere('id_number', 'like', '%' . $search . '%');
-                    })
-                    ->orWhereHas('user', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('email', 'like', '%' . $search . '%')
-                            ->orWhere('id_number', 'like', '%' . $search . '%');
-                    })
-                    ->orWhereHas('trading_account.accountType', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('slug', 'like', '%' . $search . '%')
-                            ->orWhere('account_group', 'like', '%' . $search . '%');
-                    })
-                    ->orWhere('meta_login', 'like', '%' . $search . '%')
-                    ->orWhere('trade_deal_id', 'like', '%' . $search . '%');
+                $query->where(function ($q) use ($search) {
+                    $q->where('user.name', 'like', "%{$search}%")
+                      ->orWhere('user.email', 'like', "%{$search}%")
+                      ->orWhere('user.id_number', 'like', "%{$search}%")
+                      ->orWhere('upline.name', 'like', "%{$search}%")
+                      ->orWhere('upline.email', 'like', "%{$search}%")
+                      ->orWhere('upline.id_number', 'like', "%{$search}%")
+                      ->orWhere('account_types.name', 'like', "%{$search}%")
+                      ->orWhere('account_types.slug', 'like', "%{$search}%")
+                      ->orWhere('account_types.account_group', 'like', "%{$search}%")
+                      ->orWhere('open_trade.meta_login', 'like', "%{$search}%")
+                      ->orWhere('open_trade.trade_deal_id', 'like', "%{$search}%");
                 });
             }
 
@@ -123,48 +131,17 @@ class TradePositionController extends Controller
 
             $openTrades = $query->paginate($rowsPerPage);
             
-            foreach ($openTrades as $openTrade) {
-                // Flatten user-related fields if user exists
-                if ($openTrade->user) {
-                    $openTrade->name = $openTrade->user->name ?? null;
-                    $openTrade->email = $openTrade->user->email ?? null;
-                    $openTrade->id_number = $openTrade->user->id_number ?? null;
-            
-                    // Flatten upline-related fields if upline exists
-                    $upline = $openTrade->user->upline;
-                    if ($upline) {
-                        $openTrade->upline_id = $upline->id ?? null;
-                        $openTrade->upline_name = $upline->name ?? null;
-                        $openTrade->upline_email = $upline->email ?? null;
-                        $openTrade->upline_id_number = $upline->id_number ?? null;
-                    }
-                }
-            
-                // Flatten trading_account-related fields if trading_account exists
-                if ($openTrade->trading_account) {
-                    $accountType = $openTrade->trading_account->accountType;
-                    if ($accountType) {
-                        $openTrade->account_type_name = $accountType->name ?? null;
-                        $openTrade->account_type_slug = $accountType->slug ?? null;
-                        $openTrade->account_type_currency = $accountType->currency ?? null;
-                        $openTrade->account_type_color = $accountType->color ?? null;
-                    }
-                }
-            
-                // Remove unnecessary nested relationships to keep data clean
-                unset($openTrade->user);
-                unset($openTrade->trading_account);
-            }
+            return response()->json([
+                'success' => true,
+                'data' => $openTrades,
+                'totalLots' => $totalLots,
+                'totalCommission' => $totalCommission,
+                'totalSwap' => $totalSwap,
+                'totalProfit' => $totalProfit,
+            ]);
         }
         
-        return response()->json([
-            'success' => true,
-            'data' => $openTrades,
-            'totalLots' => $totalLots,
-            'totalCommission' => $totalCommission,
-            'totalSwap' => $totalSwap,
-            'totalProfit' => $totalProfit,
-        ]);
+        return response()->json(['success' => false, 'data' => []]);
 
     }
 
@@ -181,37 +158,51 @@ class TradePositionController extends Controller
         if ($request->has('lazyEvent')) {
             $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true); //only() extract parameters in lazyEvent
 
-            $query = TradeBrokerHistory::with([
-                    'user:id,name,email,id_number,upline_id',
-                    'user.upline:id,name,email,id_number',
-                    'trading_account:id,meta_login,account_type_id',
-                    'trading_account.accountType:id,name,slug,account_group,currency,color',
+            $query = TradeBrokerHistory::query()
+                ->leftJoin('users as user', 'trade_broker_histories.user_id', '=', 'user.id')
+                ->leftJoin('users as upline', 'user.upline_id', '=', 'upline.id')
+                ->leftJoin('trading_accounts', 'trade_broker_histories.meta_login', '=', 'trading_accounts.meta_login')
+                ->leftJoin('account_types', 'trading_accounts.account_type_id', '=', 'account_types.id')
+                ->select([
+                    // all trade_broker_histories columns
+                    'trade_broker_histories.*',
+            
+                    // user columns with alias
+                    'user.name as name',
+                    'user.email as email',
+                    'user.id_number as id_number',
+            
+                    // upline columns with alias
+                    'upline.id as upline_id',
+                    'upline.name as upline_name',
+                    'upline.email as upline_email',
+                    'upline.id_number as upline_id_number',
+            
+                    // account_types columns with alias
+                    'account_types.name as account_type_name',
+                    'account_types.slug as account_type_slug',
+                    'account_types.currency as account_type_currency',
+                    'account_types.color as account_type_color',
                 ]);
-
+        
             // Handle search functionality
             $search = $data['filters']['global'];
             if ($search) {
                 $query->where(function ($query) use ($search) {
-                    $query->whereHas('user.upline', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('email', 'like', '%' . $search . '%')
-                            ->orWhere('id_number', 'like', '%' . $search . '%');
-                    })
-                    ->orWhereHas('user', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('email', 'like', '%' . $search . '%')
-                            ->orWhere('id_number', 'like', '%' . $search . '%');
-                    })
-                    ->orWhereHas('trading_account.accountType', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('slug', 'like', '%' . $search . '%')
-                            ->orWhere('account_group', 'like', '%' . $search . '%');
-                    })
-                    ->orWhere('meta_login', 'like', '%' . $search . '%')
-                    ->orWhere('trade_deal_id', 'like', '%' . $search . '%');
+                    $query->where('user.name', 'like', '%' . $search . '%')
+                        ->orWhere('user.email', 'like', '%' . $search . '%')
+                        ->orWhere('user.id_number', 'like', '%' . $search . '%')
+                        ->orWhere('upline.name', 'like', '%' . $search . '%')
+                        ->orWhere('upline.email', 'like', '%' . $search . '%')
+                        ->orWhere('upline.id_number', 'like', '%' . $search . '%')
+                        ->orWhere('account_types.name', 'like', '%' . $search . '%')
+                        ->orWhere('account_types.slug', 'like', '%' . $search . '%')
+                        ->orWhere('account_types.account_group', 'like', '%' . $search . '%')
+                        ->orWhere('trade_broker_histories.meta_login', 'like', '%' . $search . '%')
+                        ->orWhere('trade_broker_histories.trade_deal_id', 'like', '%' . $search . '%');
                 });
             }
-
+            
             $startDate = $data['filters']['start_date'];
             $endDate = $data['filters']['end_date'];
 
@@ -284,49 +275,17 @@ class TradePositionController extends Controller
             $totalProfit = (clone $query)->sum('trade_profit_usd');
 
             $closeTrades = $query->paginate($rowsPerPage);
-            
-            foreach ($closeTrades as $closeTrade) {
-                // Flatten user-related fields if user exists
-                if ($closeTrade->user) {
-                    $closeTrade->name = $closeTrade->user->name ?? null;
-                    $closeTrade->email = $closeTrade->user->email ?? null;
-                    $closeTrade->id_number = $closeTrade->user->id_number ?? null;
-            
-                    // Flatten upline-related fields if upline exists
-                    $upline = $closeTrade->user->upline;
-                    if ($upline) {
-                        $closeTrade->upline_id = $upline->id ?? null;
-                        $closeTrade->upline_name = $upline->name ?? null;
-                        $closeTrade->upline_email = $upline->email ?? null;
-                        $closeTrade->upline_id_number = $upline->id_number ?? null;
-                    }
-                }
-            
-                // Flatten trading_account-related fields if trading_account exists
-                if ($closeTrade->trading_account) {
-                    $accountType = $closeTrade->trading_account->accountType;
-                    if ($accountType) {
-                        $closeTrade->account_type_name = $accountType->name ?? null;
-                        $closeTrade->account_type_slug = $accountType->slug ?? null;
-                        $closeTrade->account_type_currency = $accountType->currency ?? null;
-                        $closeTrade->account_type_color = $accountType->color ?? null;
-                    }
-                }
-            
-                // Remove unnecessary nested relationships to keep data clean
-                unset($closeTrade->user);
-                unset($closeTrade->trading_account);
-            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $closeTrades,
+                'totalLots' => $totalLots,
+                'totalCommission' => $totalCommission,
+                'totalSwap' => $totalSwap,
+                'totalProfit' => $totalProfit,
+            ]);
         }
         
-        return response()->json([
-            'success' => true,
-            'data' => $closeTrades,
-            'totalLots' => $totalLots,
-            'totalCommission' => $totalCommission,
-            'totalSwap' => $totalSwap,
-            'totalProfit' => $totalProfit,
-        ]);
-
+        return response()->json(['success' => false, 'data' => []]);
     }
 }
