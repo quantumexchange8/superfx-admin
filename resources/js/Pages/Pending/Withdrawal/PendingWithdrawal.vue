@@ -102,15 +102,17 @@ const form = useForm({
     id: '',
     action: '',
     remarks: '',
+    service: '',
 })
 
-const submit = (transactionId) => {
+const submit = (transaction) => {
     if (form.remarks === '') {
         form.remarks = approvalAction.value === 'approve' ? 'Withdrawal approved ' : 'Withdrawal rejected. Please submit again.'
     }
 
-    form.id = transactionId;
+    form.id = transaction.id;
     form.action = approvalAction.value;
+    form.service = transaction.payment_service.payment_app_name;
 
     form.post(route('pending.withdrawalApproval'), {
         onSuccess: () => {
@@ -329,6 +331,14 @@ const handleFilter = (e) => {
                             $ {{ formatAmount(pendingData.balance) }}
                         </div>
                     </div>
+                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                        <div class="w-[140px] text-gray-500 text-xs font-medium">
+                            {{ $t('public.payment_service') }}
+                        </div>
+                        <div class="text-gray-950 text-sm font-medium">
+                            {{ pendingData.payment_service.name }}
+                        </div>
+                    </div>
                 </div>
 
                 <div v-if="pendingData.payment_platform === 'crypto' || !pendingData.payment_platform" class="flex flex-col gap-3 items-start w-full pt-4">
@@ -464,7 +474,7 @@ const handleFilter = (e) => {
                 <Button
                     variant="primary-flat"
                     class="w-full md:w-[120px]"
-                    @click="submit(pendingData.id)"
+                    @click="submit(pendingData)"
                 >
                     {{ $t('public.confirm') }}
                 </Button>

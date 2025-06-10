@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\PaymentService;
+use Exception;
 use Inertia\Inertia;
 use App\Models\Wallet;
 use App\Models\AssetRevoke;
@@ -55,6 +57,8 @@ class PendingController extends Controller
                     $balance = $transaction->from_wallet ? $transaction->from_wallet->balance : 0;
                 }
 
+                $payment_gateway = PaymentGateway::firstWhere('payment_app_name', $transaction->comment);
+
                 return [
                     'id' => $transaction->id,
                     'created_at' => $transaction->created_at,
@@ -73,6 +77,7 @@ class PendingController extends Controller
                     'payment_account_no' => $transaction->payment_account_no,
                     'payment_account_type' => $transaction->payment_account_type,
                     'bank_code' => $transaction->bank_code,
+                    'payment_service' => $payment_gateway,
                 ];
             });
 
@@ -84,6 +89,9 @@ class PendingController extends Controller
         ]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function withdrawalApproval(Request $request)
     {
         $action = $request->action;
@@ -118,120 +126,19 @@ class PendingController extends Controller
                 'type' => 'success'
             ]);
         } else {
-            $environment = App::environment() == 'production' ? 'production' : 'local';
+            $paymentService = new PaymentService();
+            $result = $paymentService->processTransaction($transaction);
 
-            $payment_gateway = PaymentGateway::where([
-                ['platform', $transaction->payment_platform],
-                ['environment', $environment],
-            ])->first();
-
-            $conversion_rate = null;
-            $conversion_amount = $transaction->transaction_amount;
-
-            if ($transaction->payment_platform == 'bank') {
-                $conversion_rate = CurrencyConversionRate::firstWhere('base_currency', 'VND');
-
-                if ($conversion_rate) {
-                    $conversion_amount = round((float) $transaction->transaction_amount * $conversion_rate->withdrawal_rate);
-                }
-            } else {
-                $transaction->update([
-                    'from_currency' => 'USD',
-                    'to_currency' => 'USD',
-                ]);
-            }
-
-            $transaction->update([
-                'conversion_rate' => $conversion_rate?->withdrawal_rate,
-                'conversion_amount' => $conversion_amount,
-            ]);
-
-            // POST to payment gateway by diff methods
-            $params = [
-                'partner_id' => $payment_gateway->payment_app_number,
-                'timestamp' => Carbon::now()->timestamp,
-                'random' => Str::random(14),
-                'partner_order_code' => $transaction->transaction_number,
-                'amount' => $conversion_amount,
-                'notify_url' => route('transactionCallback'),
-            ];
-
-            switch ($transaction->payment_platform) {
-                case 'bank':
-                    $params = array_merge($params, [
-                        'payee_bank_code' => $transaction->bank_code,
-                        'payee_bank_account_type' => $transaction->payment_account_type,
-                        'payee_bank_account_no' => $transaction->payment_account_no,
-                        'payee_bank_account_name' => $transaction->payment_account_name,
-                    ]);
-
-                    $data = [
-                        $params['partner_id'],
-                        $params['timestamp'],
-                        $params['random'],
-                        $params['partner_order_code'],
-                        $params['amount'],
-                        $params['payee_bank_code'],
-                        $params['payee_bank_account_type'],
-                        $params['payee_bank_account_no'],
-                        $params['payee_bank_account_name'],
-                        '',
-                        '',
-                        $payment_gateway->payment_app_key,
-                    ];
-
-                    $baseUrl = $payment_gateway->payment_url . '/gateway/bnb/transferATM.do';
-                    break;
-
-                case 'crypto':
-                    $params = array_merge($params, [
-                        'channel_code' => $transaction->payment_account_type,
-                        'address' => $transaction->payment_account_no,
-                    ]);
-
-                    $data = [
-                        $params['partner_id'],
-                        $params['timestamp'],
-                        $params['random'],
-                        $params['partner_order_code'],
-                        $params['channel_code'],
-                        $params['address'],
-                        $params['amount'],
-                        $params['notify_url'],
-                        '',
-                        '',
-                        $payment_gateway->payment_app_key,
-                    ];
-
-                    $baseUrl = $payment_gateway->payment_url . '/gateway/usdt/transfer.do';
-                    break;
-
-                default:
-                    return back()
-                        ->with('toast', [
-                            'title' => 'Payment Account platform not found',
-                            'type' => 'error'
-                        ]);
-            }
-
-            $hashedCode = md5(implode(':', $data));
-            $params['sign'] = $hashedCode;
-
-            $response = Http::post($baseUrl, $params);
-            $responseData = $response->json();
-            Log::debug('Approve Withdraw Response: ', $responseData);
-
-            if ($responseData['code'] == 200) {
+            if ($result['success']) {
                 return redirect()->back()->with('toast', [
                     'title' => trans('public.toast_approve_withdrawal_request'),
-                    'type' => 'success',
+                    'type'  => 'success',
                 ]);
             }
 
-            // Handle error scenario if "code" is not present in the response
             return redirect()->back()->with('toast', [
-                'title' => $responseData['msg'] ?? 'Payment gateway error',
-                'type' => 'error',
+                'title' => $result['message'],
+                'type'  => 'error',
             ]);
         }
     }

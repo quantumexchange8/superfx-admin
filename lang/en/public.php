@@ -711,4 +711,5 @@ return [
     "loading_closed_trades_caption" => "Loading closed trades data. Please wait.",
     "empty_closed_trades_title" => "No Closed Trades yet",
     "empty_closed_trades_message" => "There are no closed trades to display right now. Once trades are closed, you'll see them here!",
+    "payment_service" => "Payment Service",
 ];
