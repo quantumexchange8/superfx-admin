@@ -168,7 +168,7 @@ class PaymentService
             'password' => base64_encode($password),
         ];
 
-        $privateKeyPath = public_path('keys/private.pem');
+        $privateKeyPath = storage_path('app/keys/private.pem');
 
         $signature = $this->createSignature($headers, $params, $privateKeyPath);
 
@@ -206,7 +206,7 @@ class PaymentService
         $headerString = $filteredHeaders->implode('');
 
         // Step 2: Combine with request body
-        $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE);
+        $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $stringToSign = $headerString . $bodyString;
 
         // Step 3: Sign the string with RSA private key (SHA256withRSA)
