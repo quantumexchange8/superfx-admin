@@ -122,12 +122,14 @@ class PaymentService
             throw new Exception("Unable to retrieve access token from GatewayB");
         }
 
-        dd($accessToken);
         $params = [
-            'merchant_id' => $paymentGateway->payment_app_number,
-            'order_id'    => $transaction->transaction_number,
-            'amount'      => $conversionAmount,
-            // other params...
+            'auditNumber' => $transaction->transaction_number,
+            'amount' => $conversionAmount,
+            'bankId'    => $transaction->bank_code,
+            'bankRefNumber'    => $transaction->payment_account_no,
+            'bankRefName'    => $transaction->payment_account_name,
+            'bankCode'    => $transaction->payment_account_name,
+            'content'    => 'Withdraw',
         ];
 
         $params['signature'] = sha1(json_encode($params) . $paymentGateway->payment_app_key);
@@ -214,6 +216,9 @@ class PaymentService
             throw new Exception('Private key file not found or unreadable.');
         }
 
+        Log::info('Private Key : ', (array)$privateKey);
+        Log::info('Sign Request Header : ' . $headerString);
+        Log::info('Sign Request Body : ' . $bodyString);
         $signature = '';
         $success = openssl_sign($stringToSign, $signature, $privateKey, OPENSSL_ALGO_SHA256);
 
@@ -222,7 +227,7 @@ class PaymentService
         }
 
         // Return base64-encoded signature
-        return base64_encode($signature);
+        return $signature;
     }
 
     protected function handleResponse($response, $paymentGateway)
