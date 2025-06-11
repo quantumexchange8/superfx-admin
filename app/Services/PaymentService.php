@@ -219,6 +219,7 @@ class PaymentService
         Log::info('Private Key : ', (array)$privateKey);
         Log::info('Sign Request Header : ' . $headerString);
         Log::info('Sign Request Body : ' . $bodyString);
+        Log::info('String to sign : ' . $stringToSign);
         $signature = '';
         $success = openssl_sign($stringToSign, $signature, $privateKey, 'RSA-SHA256');
 
