@@ -221,7 +221,7 @@ class PaymentService
         Log::info('Sign Request Body : ' . $bodyString);
         Log::info('String to sign : ' . $stringToSign);
         $signature = '';
-        $success = openssl_sign($stringToSign, $signature, $privateKey, 'RSA-SHA256');
+        $success = openssl_sign($stringToSign, $signature, $privateKey, OPENSSL_ALGO_SHA256);
 
         if (!$success) {
             throw new Exception('Failed to generate RSA signature.');
