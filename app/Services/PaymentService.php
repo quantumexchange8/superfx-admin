@@ -206,7 +206,7 @@ class PaymentService
         $headerString = $filteredHeaders->implode('');
 
         // Step 2: Combine with request body
-        $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE);
         $stringToSign = $headerString . $bodyString;
 
         // Step 3: Sign the string with RSA private key (SHA256withRSA)
