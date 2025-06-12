@@ -34,6 +34,7 @@ Route::get('/', function () {
 });
 
 Route::post('transaction_callback', [PendingController::class, 'transactionCallback'])->name('transactionCallback');
+Route::post('payment_hot_payout_callback', [PendingController::class, 'payment_hot_payout_callback'])->name('payment_hot_payout_callback');
 
 Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -231,7 +232,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         // Additional routes can be added as necessary
         // Route::get('/details/{id}', [TradePositionController::class, 'details'])->name('trade_positions.details');
     });
-    
+
     /**
      * ==============================
      *          Report
