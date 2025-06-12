@@ -123,7 +123,7 @@ class PaymentService
         }
 
         $params = [
-            'auditNumber' => $transaction->transaction_number,
+            'audit' => $transaction->transaction_number,
             'amount' => $conversionAmount,
             'bankId'    => $transaction->bank_code,
             'bankRefNumber'    => $transaction->payment_account_no,
@@ -132,13 +132,19 @@ class PaymentService
             'content'    => 'Withdraw',
         ];
 
-        $params['signature'] = sha1(json_encode($params) . $paymentGateway->payment_app_key);
-
         $url = $paymentGateway->payout_url . '/merchant-transaction-service/api/v2.0/transfer_247';
 
         $headers = [
+            'p-request-id'  => (string) Str::uuid(),
+            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
+            'p-tenant'      => 'SUPERFINFX',
             'Authorization' => 'Bearer ' . $accessToken,
         ];
+
+        $privateKeyPath = storage_path('app/keys/private.pem');
+
+        $signature = $this->createSignature($headers, $params, $privateKeyPath);
+        $headers['p-signature'] = $signature;
 
         return Http::withHeaders($headers)->post($url, $params);
     }
