@@ -146,6 +146,9 @@ class PaymentService
         $signature = $this->createSignature($headers, $params, $privateKeyPath);
         $headers['p-signature'] = $signature;
 
+        Log::info('Transfer 24/7 header: ', $headers);
+        Log::info('Transfer 24/7 body: ', $params);
+
         return Http::withHeaders($headers)->post($url, $params);
     }
 
@@ -235,14 +238,15 @@ class PaymentService
 
     protected function handleResponse($response, $paymentGateway)
     {
+        Log::debug('Payment hot IPN Response:', $response);
         $responseData = $response->json();
         Log::debug('Payment Gateway Response:', $responseData);
 
         $code = $responseData['code'] ?? null;
 
         $isSuccess = match ($paymentGateway->payment_app_name) {
-            'GatewayA' => $code == 200,
-            'GatewayB' => $code === 'SUCCESS',
+            'payme-bank' => $code == 200,
+            'payment-hot' => $code == 'SUCCESS',
             default   => false,
         };
 
