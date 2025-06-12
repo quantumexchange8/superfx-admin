@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\User;
 use Inertia\Inertia;
+use App\Models\JobRunLog;
 use App\Models\TradingUser;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -30,13 +31,10 @@ class TradingAccountController extends Controller
 {
     public function index()
     {
-        $last_refresh_datetime = DB::table('jobs')
-            ->where('queue', 'refresh_accounts')
-            ->orderByDesc('reserved_at')
-            ->first();
+        $last_refresh_datetime = JobRunLog::where('queue', 'refresh_accounts')->first();
 
         return Inertia::render('Member/Account/AccountListing', [
-            'last_refresh_datetime' => $last_refresh_datetime?->reserved_at,
+            'last_refresh_datetime' => $last_refresh_datetime?->last_ran_at,
             'leverages' => (new GeneralController())->getLeverages(true),
             'accountTypes' => (new GeneralController())->getAccountTypes(true),
         ]);

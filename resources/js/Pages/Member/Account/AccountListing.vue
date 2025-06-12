@@ -11,7 +11,7 @@ import { router } from "@inertiajs/vue3";
 import dayjs from "dayjs";
 
 defineProps({
-    last_refresh_datetime: Number,
+    last_refresh_datetime: [String, Number],
     leverages: Array,
     accountTypes: Array,
 });
