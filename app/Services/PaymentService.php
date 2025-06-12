@@ -119,7 +119,7 @@ class PaymentService
         $accessToken = $this->getAuthToken($paymentGateway);
 
         if (!$accessToken) {
-            throw new Exception("Unable to retrieve access token from GatewayB");
+            throw new Exception("Unable to retrieve access token from Payment Hot");
         }
 
         $params = [
@@ -128,7 +128,7 @@ class PaymentService
             'bankId'    => $transaction->bank_code,
             'bankRefNumber'    => $transaction->payment_account_no,
             'bankRefName'    => $transaction->payment_account_name,
-            'bankCode'    => $transaction->payment_account_name,
+            'bankCode'    => $transaction->bank_bin_code,
             'content'    => 'Withdraw',
         ];
 
@@ -181,7 +181,7 @@ class PaymentService
         Log::info('Login response: ', $responseData);
 
         if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
-            return $responseData['accessToken'];
+            return $responseData['data']['accessToken'];
         }
 
         Log::error('Failed to get access token', ['response' => $responseData]);
@@ -216,10 +216,6 @@ class PaymentService
             throw new Exception('Private key file not found or unreadable.');
         }
 
-        Log::info('Private Key : ', (array)$privateKey);
-        Log::info('Sign Request Header : ' . $headerString);
-        Log::info('Sign Request Body : ' . $bodyString);
-        Log::info('String to sign : ' . $stringToSign);
         $signature = '';
         $success = openssl_sign($stringToSign, $signature, $privateKey, OPENSSL_ALGO_SHA256);
 

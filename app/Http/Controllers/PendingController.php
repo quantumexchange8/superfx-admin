@@ -425,4 +425,76 @@ class PendingController extends Controller
         }
     }
 
+    public function payment_hot_payout_callback(Request $request)
+    {
+        $apiKey = $request->header('P-API-KEY');
+        $signature = $request->header('P-SIGNATURE');
+        $payment_gateway = PaymentGateway::firstWhere([
+            'payment_app_name' => 'payment-hot',
+            'environment' => app()->environment(),
+        ]);
+
+        // Check API Key
+        if ($apiKey != $payment_gateway->payment_api_key) {
+            return response()->json(['message' => 'Invalid key'], 400);
+        }
+
+        $bodyContent = $request->getContent();
+        $dataArray = json_decode($bodyContent, true);
+        $jsonString = json_encode($dataArray, JSON_UNESCAPED_UNICODE);
+
+        Log::debug("Payment Hot Callback Response: " , $dataArray);
+
+        $concatenatedString = $jsonString . $payment_gateway->secondary_key;
+        $hashBody = hash('sha256', $concatenatedString, true);
+        $hashedSign = base64_encode($hashBody);
+
+        if ($signature != $hashedSign) {
+            return response()->json(['message' => 'Invalid JSON body'], 400);
+        }
+
+        $transaction = Transaction::firstWhere('transaction_number', $dataArray['auditNumber']);
+        $status = $dataArray['code'] == 'SUCCESS' ? 'successful' : 'failed';
+
+        $transaction->update([
+            'status' => $status,
+            'approved_at' => now(),
+        ]);
+
+        $user = User::find($transaction->user_id);
+
+        if ($transaction->status == 'successful') {
+            // send mail
+            // Check if `meta_login` exists
+            if ($transaction->from_meta_login) {
+                $data = (new MetaFourService())->getUser($transaction->from_meta_login);
+
+                Mail::to($user->email)->send(new WithdrawalApprovalMail(
+                        $user,
+                        $transaction->from_meta_login,
+                        $data['group'],
+                        $transaction->transaction_amount,
+                        $transaction->payment_account_no,
+                        $transaction->payment_platform)
+                );
+            } else {
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform));
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Transaction success',
+            ]);
+        } else {
+            // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
+            $this->handleTransactionUpdate($transaction);
+
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Transaction failed',
+            ]);
+        }
+    }
 }
