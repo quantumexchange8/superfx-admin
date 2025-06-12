@@ -204,13 +204,13 @@ class TradingAccountController extends Controller
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
                 $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
-                $account->user_name = $account->users->name;
-                $account->user_email = $account->users->email;
-                $account->equity = $account->trading_account->equity;
-                $account->account_type = $account->accountType->slug;
-                $account->account_type_color = $account->accountType->color;
-                $account->account_group = $account->accountType->account_group;
-
+                $account->user_name = optional($account->users)->name;
+                $account->user_email = optional($account->users)->email;
+                $account->equity = optional($account->trading_account)->equity ?? 0;
+                $account->account_type = optional($account->accountType)->slug;
+                $account->account_type_color = optional($account->accountType)->color;
+                $account->account_group = optional($account->accountType)->account_group;
+            
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);
@@ -275,13 +275,13 @@ class TradingAccountController extends Controller
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
                 $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
-                $account->user_name = $account->users->name;
-                $account->user_email = $account->users->email;
-                $account->equity = $account->trading_account->equity;
-                $account->account_type = $account->accountType->slug;
-                $account->account_type_color = $account->accountType->color;
-                $account->account_group = $account->accountType->account_group;
-
+                $account->user_name = optional($account->users)->name;
+                $account->user_email = optional($account->users)->email;
+                $account->equity = optional($account->trading_account)->equity;
+                $account->account_type = optional($account->accountType)->slug;
+                $account->account_type_color = optional($account->accountType)->color;
+                $account->account_group = optional($account->accountType)->account_group;
+            
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);
