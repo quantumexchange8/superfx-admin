@@ -6,6 +6,7 @@ use App\Models\JobRunLog;
 use App\Models\TradingUser;
 use Illuminate\Bus\Queueable;
 use App\Models\TradingAccount;
+use Illuminate\Support\Carbon;
 use App\Services\MetaFourService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
@@ -59,7 +60,7 @@ class UpdateAllAccountJob implements ShouldQueue
         // Log this job's latest successful run
         JobRunLog::updateOrCreate(
             ['queue' => 'refresh_accounts'],
-            ['last_ran_at' => now()]
+                    ['last_ran_at' => Carbon::now('Asia/Riyadh')]
         );
     }
 }
