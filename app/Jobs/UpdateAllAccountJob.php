@@ -57,12 +57,13 @@ class UpdateAllAccountJob implements ShouldQueue
                 Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
             }
         }
-    
         // Log this job's latest successful run
         // Store job run time in Riyadh timezone manually
+        $time = Carbon::createFromFormat('Y-m-d H:i:s', now('Asia/Riyadh')->format('Y-m-d H:i:s'), 'Asia/Riyadh')->format('Y-m-d H:i:s');
+
         DB::table('job_run_logs')->updateOrInsert(
             ['queue' => 'refresh_accounts'],
-            ['last_ran_at' => Carbon::now('Asia/Riyadh')->format('Y-m-d H:i:s')]
+            ['last_ran_at' => $time]
         );
     }
 }
