@@ -60,7 +60,7 @@ class UpdateAllAccountJob implements ShouldQueue
         // Log this job's latest successful run
         JobRunLog::updateOrCreate(
             ['queue' => 'refresh_accounts'],
-            ['last_ran_at' => Carbon::now('Asia/Riyadh')->toDateTimeString()]
+            ['last_ran_at' => Carbon::now('Asia/Riyadh')->format('Y-m-d H:i:s')]
         );
     }
 }
