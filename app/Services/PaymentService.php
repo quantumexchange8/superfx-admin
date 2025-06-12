@@ -134,7 +134,7 @@ class PaymentService
 
         $params['signature'] = sha1(json_encode($params) . $paymentGateway->payment_app_key);
 
-        $url = $paymentGateway->payment_url . '/merchant-transaction-service/api/v2.0/transfer_247';
+        $url = $paymentGateway->payout_url . '/merchant-transaction-service/api/v2.0/transfer_247';
 
         $headers = [
             'Authorization' => 'Bearer ' . $accessToken,
@@ -149,7 +149,7 @@ class PaymentService
      */
     protected function getAuthToken($paymentGateway)
     {
-        $loginUrl = $paymentGateway->payment_url . '/auth-service/api/v1.0/user/login';
+        $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
 
         $username = 'm122user1';
         $password = hash('sha256', $username . '2025@SuperFin');
