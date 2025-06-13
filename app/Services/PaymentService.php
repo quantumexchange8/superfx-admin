@@ -321,6 +321,9 @@ class PaymentService
             return $aPriority <=> $bPriority;
         });
 
+        // Log the sorted headers before hashing
+        Log::info('Sorted headers for hashing:', $sortedHeaders->toArray());
+
         // Concatenate header values
         $headerString = $sortedHeaders->implode('');
 
