@@ -8,12 +8,15 @@ use Carbon\Carbon;
 use Exception;
 use Http;
 use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\RedirectResponse;
 use Log;
 use Str;
 
 class PaymentService
 {
+    private string $tenant = 'SUPERFINFX';
+    private string $username = 'm122user1';
+    private string $password = '2025@SuperFin';
+
     /**
      * @throws Exception
      */
@@ -122,6 +125,9 @@ class PaymentService
             throw new Exception("Unable to retrieve access token from Payment Hot");
         }
 
+        // Implore Transfer - get verified key
+        $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
+
         $params = [
             'audit' => $transaction->transaction_number,
             'amount' => $conversionAmount,
@@ -137,8 +143,9 @@ class PaymentService
         $headers = [
             'p-request-id'  => (string) Str::uuid(),
             'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
-            'p-tenant'      => 'SUPERFINFX',
+            'p-tenant'      => $this->tenant,
             'Authorization' => 'Bearer ' . $accessToken,
+            'verification' => $verifiedKey,
         ];
 
         $privateKeyPath = storage_path('app/keys/private.pem');
@@ -160,21 +167,19 @@ class PaymentService
     {
         $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
 
-        $username = 'm122user1';
-        $password = hash('sha256', $username . '2025@SuperFin');
+        $hash_password = hash('sha256', $this->username . $this->password);
         $requestTime = now('Asia/Ho_Chi_Minh')->format('YmdHis');
         $requestId = (string) Str::uuid();
-        $tenant = 'SUPERFINFX';
 
         $headers = [
             'p-request-id'  => $requestId,
             'p-request-time'=> $requestTime,
-            'p-tenant'      => $tenant,
+            'p-tenant'      => $this->tenant,
         ];
 
         $params = [
-            'username' => $username,
-            'password' => base64_encode($password),
+            'username' => $this->username,
+            'password' => base64_encode($hash_password),
         ];
 
         $privateKeyPath = storage_path('app/keys/private.pem');
@@ -194,6 +199,48 @@ class PaymentService
         }
 
         Log::error('Failed to get access token', ['response' => $responseData]);
+        return null;
+    }
+
+    /**
+     * @throws ConnectionException
+     * @throws Exception
+     */
+    protected function getVerifiedKey($paymentGateway, $accessToken)
+    {
+        $implore_url = $paymentGateway->payout_url . '/auth-service/api/v1.0/implore-auth';
+
+        $headers = [
+            'p-request-id'  => (string) Str::uuid(),
+            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
+            'p-tenant'      => $this->tenant,
+            'Authorization' => 'Bearer ' . $accessToken,
+        ];
+
+        $params = [
+            'phone' => $this->username,
+            'api' => '/merchant-transaction-service/api/v2.0/transfer_247',
+            'authMode' => 'PASSCODE',
+            'authValue' => base64_encode(hash('sha256', $this->username . $this->password)),
+        ];
+
+        $privateKeyPath = storage_path('app/keys/private.pem');
+
+        $signature = $this->createSignature($headers, $params, $privateKeyPath);
+
+        // Then attach signature to your headers
+        $headers['p-signature'] = $signature;
+
+        $response = Http::withHeaders($headers)->post($implore_url, $params);
+        $responseData = $response->json();
+
+        Log::info('Implore response: ', $responseData);
+
+        if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
+            return $responseData['data']['verifiedKey'];
+        }
+
+        Log::error('Failed to get verified key', ['response' => $responseData]);
         return null;
     }
 
