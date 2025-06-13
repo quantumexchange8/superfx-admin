@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
+use Carbon\Carbon;
 use App\Models\JobRunLog;
 use App\Models\TradingUser;
 use Illuminate\Bus\Queueable;
 use App\Models\TradingAccount;
-use Illuminate\Support\Carbon;
 use App\Services\MetaFourService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -59,7 +59,7 @@ class UpdateAllAccountJob implements ShouldQueue
         }
         // Log this job's latest successful run
         // Store job run time in Riyadh timezone manually
-        $time = Carbon::createFromFormat('Y-m-d H:i:s', now('Asia/Riyadh')->format('Y-m-d H:i:s'), 'Asia/Riyadh')->format('Y-m-d H:i:s');
+        $time = Carbon::createFromTimestamp(time(), 'Asia/Riyadh')->format('Y-m-d H:i:s');
 
         DB::table('job_run_logs')->updateOrInsert(
             ['queue' => 'refresh_accounts'],
