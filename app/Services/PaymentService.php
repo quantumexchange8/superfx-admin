@@ -119,15 +119,18 @@ class PaymentService
      */
     protected function processGatewayB($transaction, $paymentGateway, $conversionAmount)
     {
+        $requestId = (string) Str::uuid();
+        $requestTime =  now('Asia/Ho_Chi_Minh')->format('YmdHis');
+
         // Login - get token
-        $accessToken = $this->getAuthToken($paymentGateway);
+        $accessToken = $this->getAuthToken($paymentGateway, $requestId, $requestTime);
 
         if (!$accessToken) {
             throw new Exception("Unable to retrieve access token from Payment Hot");
         }
 
         // Implore Transfer - get verified key
-        $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
+        $verifiedKey = $this->getVerifiedKey($paymentGateway, $requestId, $requestTime, $accessToken);
 
         $params = [
             'audit' => $transaction->transaction_number,
@@ -164,13 +167,11 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getAuthToken($paymentGateway)
+    protected function getAuthToken($paymentGateway, $requestId, $requestTime)
     {
         $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
 
         $hash_password = hash('sha256', $this->username . $this->password);
-        $requestTime = now('Asia/Ho_Chi_Minh')->format('YmdHis');
-        $requestId = (string) Str::uuid();
 
         $headers = [
             'p-request-id'  => $requestId,
@@ -207,13 +208,13 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getVerifiedKey($paymentGateway, $accessToken)
+    protected function getVerifiedKey($paymentGateway, $requestId, $requestTime, $accessToken)
     {
         $implore_url = $paymentGateway->payout_url . '/auth-service/api/v1.0/implore-auth';
 
         $headers = [
-            'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
+            'p-request-id'  => $requestId,
+            'p-request-time'=> $requestTime,
             'p-tenant'      => $this->tenant,
             'Authorization' => 'Bearer ' . $accessToken,
         ];
@@ -231,6 +232,9 @@ class PaymentService
 
         // Then attach signature to your headers
         $headers['p-signature'] = $signature;
+
+        Log::info('Implore Header: ', $headers);
+        Log::info('Implore Body: ', $params);
 
         $response = Http::withHeaders($headers)->post($implore_url, $params);
         $responseData = $response->json();
