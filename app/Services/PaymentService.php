@@ -42,7 +42,7 @@ class PaymentService
         $conversionAmount = $transaction->transaction_amount;
         $conversionRate = null;
 
-        if ($transaction->payment_platform === 'bank') {
+        if ($transaction->payment_platform == 'bank') {
             $conversionRate = CurrencyConversionRate::firstWhere('base_currency', 'VND');
             if ($conversionRate) {
                 $conversionAmount = round($conversionAmount * $conversionRate->withdrawal_rate);
@@ -59,8 +59,13 @@ class PaymentService
             'conversion_amount' => $conversionAmount,
         ]);
 
-        // Delegate to specific handler
         $response = $this->handleBankPayment($transaction, $paymentGateway, $conversionAmount);
+        // Delegate to specific handler
+//        if ($transaction->payment_platform == 'bank') {
+//            $response = $this->handleBankPayment($transaction, $paymentGateway, $conversionAmount);
+//        } else {
+//            $response = $this->handleCryptoPayment($transaction, $paymentGateway, $conversionAmount);
+//        }
         return $this->handleResponse($response, $paymentGateway);
     }
 
@@ -75,6 +80,30 @@ class PaymentService
             'payment-hot' => $this->processGatewayB($transaction, $paymentGateway, $conversionAmount),
             default => throw new Exception("Unsupported bank gateway: " . $paymentGateway->payment_app_name),
         };
+    }
+
+    protected function handleCryptoPayment($transaction, $paymentGateway, $conversionAmount)
+    {
+//        $params = array_merge($params, [
+//            'channel_code' => $transaction->payment_account_type,
+//            'address' => $transaction->payment_account_no,
+//        ]);
+//
+//        $data = [
+//            $params['partner_id'],
+//            $params['timestamp'],
+//            $params['random'],
+//            $params['partner_order_code'],
+//            $params['channel_code'],
+//            $params['address'],
+//            $params['amount'],
+//            $params['notify_url'],
+//            '',
+//            '',
+//            $payment_gateway->payment_app_key,
+//        ];
+//
+//        $baseUrl = $payment_gateway->payment_url . '/gateway/usdt/transfer.do';
     }
 
     protected function processGatewayA($transaction, $paymentGateway, $conversionAmount)
@@ -236,6 +265,18 @@ class PaymentService
         Log::info('Implore Header: ', $headers);
         Log::info('Implore Body: ', $params);
 
+        $curlCommand = "curl -X POST '$implore_url'";
+
+// Append headers
+        foreach ($headers as $key => $value) {
+            $curlCommand .= " -H '$key: $value'";
+        }
+
+// Append JSON body
+        $curlCommand .= " -d '" . json_encode($params) . "'";
+
+// Log it
+        Log::info("Outgoing HTTP request (curl style): " . $curlCommand);
         $response = Http::withHeaders($headers)->post($implore_url, $params);
         $responseData = $response->json();
 
@@ -254,17 +295,34 @@ class PaymentService
      */
     protected function createSignature(array $headers, array $body, $privateKeyPath)
     {
-        // Step 1: Filter and sort headers
-        $filteredHeaders = collect($headers)
-            ->filter(function ($value, $key) {
-                return $key === 'Authorization'
-                    || $key === 'verification'
-                    || Str::startsWith($key, 'p-');
-            })
-            ->sortKeys();
+        // Step 1: Filter headers
+        $filteredHeaders = collect($headers)->filter(function ($value, $key) {
+            return $key == 'Authorization'
+                || $key == 'verification'
+                || Str::startsWith($key, 'p-');
+        });
+
+        // Step 2: Sort headers with custom order
+        $sortedHeaders = $filteredHeaders->sortKeysUsing(function ($a, $b) {
+            $priority = [
+                'Authorization' => 1,
+                'verification'  => 2,
+            ];
+
+            $aPriority = $priority[$a] ?? 3;
+            $bPriority = $priority[$b] ?? 3;
+
+            // If both are p- prefixed headers, sort alphabetically
+            if ($aPriority == 3 && $bPriority == 3) {
+                return strcmp($a, $b);
+            }
+
+            // Sort by defined priority
+            return $aPriority <=> $bPriority;
+        });
 
         // Concatenate header values
-        $headerString = $filteredHeaders->implode('');
+        $headerString = $sortedHeaders->implode('');
 
         // Step 2: Combine with request body
         $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
