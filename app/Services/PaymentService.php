@@ -16,6 +16,7 @@ class PaymentService
     private string $tenant = 'SUPERFINFX';
     private string $username = 'm122user1';
     private string $password = '2025@SuperFin';
+    private string $passcode = '668899';
 
     /**
      * @throws Exception
@@ -221,7 +222,7 @@ class PaymentService
             'phone' => $this->username,
             'api' => '/merchant-transaction-service/api/v2.0/transfer_247',
             'authMode' => 'PASSCODE',
-            'authValue' => base64_encode(hash('sha256', $this->username . $this->password)),
+            'authValue' => base64_encode(hash('sha256', $this->username . $this->passcode)),
         ];
 
         $privateKeyPath = storage_path('app/keys/private.pem');
@@ -230,9 +231,6 @@ class PaymentService
 
         // Then attach signature to your headers
         $headers['p-signature'] = $signature;
-
-        Log::info('Implore Header: ', $headers);
-        Log::info('Implore Body: ', $params);
 
         $response = Http::withHeaders($headers)->post($implore_url, $params);
         $responseData = $response->json();
