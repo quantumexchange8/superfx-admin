@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\JobRunLog;
 use App\Models\TradingUser;
 use Illuminate\Console\Command;
 use App\Services\MetaFourService;
@@ -52,5 +53,11 @@ class UpdateAllAccountsCommand extends Command
                 Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
             }
         }
+        // Log this job's latest successful run
+        JobRunLog::updateOrCreate([
+            'queue' => 'refresh_accounts'
+        ],[
+            'last_ran_at' => now()
+        ]);
     }
 }

@@ -58,12 +58,10 @@ class UpdateAllAccountJob implements ShouldQueue
             }
         }
         // Log this job's latest successful run
-        // Store job run time in Riyadh timezone manually
-        $time = Carbon::createFromTimestamp(time(), 'Asia/Riyadh')->format('Y-m-d H:i:s');
-
-        DB::table('job_run_logs')->updateOrInsert(
-            ['queue' => 'refresh_accounts'],
-            ['last_ran_at' => $time]
-        );
+        JobRunLog::updateOrCreate([
+            'queue' => 'refresh_accounts'
+        ],[
+            'last_ran_at' => now()
+        ]);
     }
 }
