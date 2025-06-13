@@ -257,7 +257,7 @@ class PaymentService
         // Step 1: Filter and sort headers
         $filteredHeaders = collect($headers)
             ->filter(function ($value, $key) {
-                return $key === 'authorization'
+                return $key === 'Authorization'
                     || $key === 'verification'
                     || Str::startsWith($key, 'p-');
             })
