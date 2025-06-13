@@ -231,6 +231,9 @@ class PaymentService
         // Then attach signature to your headers
         $headers['p-signature'] = $signature;
 
+        Log::info('Implore Header: ', $headers);
+        Log::info('Implore Body: ', $params);
+
         $response = Http::withHeaders($headers)->post($implore_url, $params);
         $responseData = $response->json();
 
