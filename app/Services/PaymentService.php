@@ -277,10 +277,23 @@ class PaymentService
 
 // Log it
         Log::info("Outgoing HTTP request (curl style): " . $curlCommand);
-        $response = Http::withHeaders($headers)->post($implore_url, $params);
-        $responseData = $response->json();
+        // Ensure Content-Type is application/json
+        $headers['Content-Type'] = 'application/json';
 
-        Log::info('Implore response: ', (array)$response);
+// Log outgoing request
+        Log::info('Sending HTTP POST to ' . $implore_url);
+        Log::info('Request headers: ', $headers);
+        Log::info('Request body: ', $params);
+
+// Send POST request with JSON body
+        $response = Http::withHeaders($headers)->post($implore_url, $params);
+
+// Log response status + body
+        Log::info('Implore response status: ' . $response->status());
+        Log::info('Implore response body: ' . $response->body());
+
+// Try to decode response JSON
+        $responseData = $response->json();
         Log::info('Implore response data: ', $responseData);
 
         if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
