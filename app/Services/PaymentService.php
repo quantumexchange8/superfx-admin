@@ -249,10 +249,10 @@ class PaymentService
         ];
 
         $params = [
+            'authValue' => base64_encode(hash('sha256', $this->username . $this->passcode)),
             'phone' => $this->username,
             'api' => '/merchant-transaction-service/api/v2.0/transfer_247',
             'authMode' => 'PASSCODE',
-            'authValue' => base64_encode(hash('sha256', $this->username . $this->passcode)),
         ];
 
         $privateKeyPath = storage_path('app/keys/private.pem');
@@ -280,7 +280,8 @@ class PaymentService
         $response = Http::withHeaders($headers)->post($implore_url, $params);
         $responseData = $response->json();
 
-        Log::info('Implore response: ', $responseData);
+        Log::info('Implore response: ', (array)$response);
+        Log::info('Implore response data: ', $responseData);
 
         if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
             return $responseData['data']['verifiedKey'];
