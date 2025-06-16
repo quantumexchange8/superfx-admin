@@ -345,6 +345,9 @@ class PaymentService
         $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $stringToSign = $headerString . $bodyString;
 
+        // Log the string before hashing
+        Log::info('string for RSA hashing:', [$stringToSign]);
+
         // Step 3: Sign the string with RSA private key (SHA256withRSA)
         $privateKey = file_get_contents($privateKeyPath);
 
