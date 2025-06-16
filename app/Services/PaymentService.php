@@ -148,18 +148,15 @@ class PaymentService
      */
     protected function processGatewayB($transaction, $paymentGateway, $conversionAmount)
     {
-        $requestId = (string) Str::uuid();
-        $requestTime =  now('Asia/Ho_Chi_Minh')->format('YmdHis');
-
         // Login - get token
-        $accessToken = $this->getAuthToken($paymentGateway, $requestId, $requestTime);
+        $accessToken = $this->getAuthToken($paymentGateway);
 
         if (!$accessToken) {
             throw new Exception("Unable to retrieve access token from Payment Hot");
         }
 
         // Implore Transfer - get verified key
-        $verifiedKey = $this->getVerifiedKey($paymentGateway, $requestId, $requestTime, $accessToken);
+        $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
 
         $params = [
             'audit' => $transaction->transaction_number,
@@ -196,15 +193,15 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getAuthToken($paymentGateway, $requestId, $requestTime)
+    protected function getAuthToken($paymentGateway)
     {
         $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
 
         $hash_password = hash('sha256', $this->username . $this->password);
 
         $headers = [
-            'p-request-id'  => $requestId,
-            'p-request-time'=> $requestTime,
+            'p-request-id'  => (string) Str::uuid(),
+            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
             'p-tenant'      => $this->tenant,
         ];
 
@@ -237,13 +234,13 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getVerifiedKey($paymentGateway, $requestId, $requestTime, $accessToken)
+    protected function getVerifiedKey($paymentGateway, $accessToken)
     {
         $implore_url = $paymentGateway->payout_url . '/auth-service/api/v1.0/implore-auth';
 
         $headers = [
-            'p-request-id'  => $requestId,
-            'p-request-time'=> $requestTime,
+            'p-request-id'  => (string) Str::uuid(),
+            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
             'p-tenant'      => $this->tenant,
             'Authorization' => 'Bearer ' . $accessToken,
         ];
