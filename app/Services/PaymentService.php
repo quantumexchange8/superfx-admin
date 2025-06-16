@@ -338,14 +338,16 @@ class PaymentService
         Log::info('Sorted headers for hashing:', $sortedHeaders->toArray());
 
         // Concatenate header values
-        $headerString = $sortedHeaders->implode('');
+        $headerString = $sortedHeaders->implode(''); // no delimiter, plain concatenation
 
-        // Step 2: Combine with request body
+        // Encode body as clean JSON string
         $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        // Final string to sign (no spaces, no newlines)
         $stringToSign = $headerString . $bodyString;
 
-        // Log the string before hashing
-        Log::info('string for RSA hashing: ' . $stringToSign);
+        // Log the exact string you will hash
+        Log::info("String to hash: $stringToSign");
 
         // Step 3: Sign the string with RSA private key (SHA256withRSA)
         $privateKey = file_get_contents($privateKeyPath);
