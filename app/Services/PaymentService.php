@@ -148,15 +148,17 @@ class PaymentService
      */
     protected function processGatewayB($transaction, $paymentGateway, $conversionAmount)
     {
+        $requestTime = now('Asia/Ho_Chi_Minh')->format('YmdHis');
+
         // Login - get token
-        $accessToken = $this->getAuthToken($paymentGateway);
+        $accessToken = $this->getAuthToken($paymentGateway, $requestTime);
 
         if (!$accessToken) {
             throw new Exception("Unable to retrieve access token from Payment Hot");
         }
 
         // Implore Transfer - get verified key
-        $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
+        $verifiedKey = $this->getVerifiedKey($paymentGateway, $requestTime, $accessToken);
 
         $params = [
             'audit' => $transaction->transaction_number,
@@ -193,7 +195,7 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getAuthToken($paymentGateway)
+    protected function getAuthToken($paymentGateway, $requestTime)
     {
         $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
 
@@ -201,7 +203,7 @@ class PaymentService
 
         $headers = [
             'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
+            'p-request-time'=> $requestTime,
             'p-tenant'      => $this->tenant,
         ];
 
@@ -234,13 +236,13 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getVerifiedKey($paymentGateway, $accessToken)
+    protected function getVerifiedKey($paymentGateway, $requestTime, $accessToken)
     {
         $implore_url = $paymentGateway->payout_url . '/auth-service/api/v1.0/implore-auth';
 
         $headers = [
             'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
+            'p-request-time'=> $requestTime,
             'p-tenant'      => $this->tenant,
             'Authorization' => 'Bearer ' . $accessToken,
         ];
@@ -343,7 +345,7 @@ class PaymentService
         $stringToSign = $headerString . $bodyString;
 
         // Log the string before hashing
-        Log::info('string for RSA hashing:', [$stringToSign]);
+        Log::info('string for RSA hashing: ' . $stringToSign);
 
         // Step 3: Sign the string with RSA private key (SHA256withRSA)
         $privateKey = file_get_contents($privateKeyPath);
