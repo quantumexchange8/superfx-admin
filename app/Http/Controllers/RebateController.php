@@ -296,21 +296,49 @@ class RebateController extends Controller
             'upline_shares' => floatval($upline_rebate[5]->amount),
         ];
 
-        $downline = $user->directChildren()->where('role', 'ib')->first();
+        $downlines = $user->directChildren()->where('role', 'ib')->get();
 
-        if ($downline) {
-            $downline_rebate = User::find($downline->id)->rebateAllocations()->where('account_type_id', $type_id)->get();
+        if ($downlines->isNotEmpty()) {
+            $rebateCategories = [
+                'downline_forex' => null,
+                'downline_indexes' => null,
+                'downline_commodities' => null,
+                'downline_metals' => null,
+                'downline_cryptocurrency' => null,
+                'downline_shares' => null,
+            ];
 
-            if (!$downline_rebate->isEmpty()) {
-                $rebates += [
-                    'downline_forex' => floatval($downline_rebate[0]->amount),
-                    'downline_indexes' => floatval($downline_rebate[1]->amount),
-                    'downline_commodities' => floatval($downline_rebate[2]->amount),
-                    'downline_metals' => floatval($downline_rebate[3]->amount),
-                    'downline_cryptocurrency' => floatval($downline_rebate[4]->amount),
-                    'downline_shares' => floatval($downline_rebate[5]->amount),
-                ];
+            foreach ($downlines as $downline) {
+                $downline_rebate = $downline->rebateAllocations()->where('account_type_id', $type_id)->get();
+
+                if (!$downline_rebate->isEmpty()) {
+                    $rebateCategories['downline_forex'] = is_null($rebateCategories['downline_forex'])
+                        ? floatval($downline_rebate[0]->amount)
+                        : max($rebateCategories['downline_forex'], floatval($downline_rebate[0]->amount));
+
+                    $rebateCategories['downline_indexes'] = is_null($rebateCategories['downline_indexes'])
+                        ? floatval($downline_rebate[1]->amount)
+                        : max($rebateCategories['downline_indexes'], floatval($downline_rebate[1]->amount));
+
+                    $rebateCategories['downline_commodities'] = is_null($rebateCategories['downline_commodities'])
+                        ? floatval($downline_rebate[2]->amount)
+                        : max($rebateCategories['downline_commodities'], floatval($downline_rebate[2]->amount));
+
+                    $rebateCategories['downline_metals'] = is_null($rebateCategories['downline_metals'])
+                        ? floatval($downline_rebate[3]->amount)
+                        : max($rebateCategories['downline_metals'], floatval($downline_rebate[3]->amount));
+
+                    $rebateCategories['downline_cryptocurrency'] = is_null($rebateCategories['downline_cryptocurrency'])
+                        ? floatval($downline_rebate[4]->amount)
+                        : max($rebateCategories['downline_cryptocurrency'], floatval($downline_rebate[4]->amount));
+
+                    $rebateCategories['downline_shares'] = is_null($rebateCategories['downline_shares'])
+                        ? floatval($downline_rebate[5]->amount)
+                        : max($rebateCategories['downline_shares'], floatval($downline_rebate[5]->amount));
+                }
             }
+
+            $rebates += $rebateCategories;
         }
 
         return $rebates;
