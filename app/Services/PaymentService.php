@@ -189,7 +189,9 @@ class PaymentService
         Log::info('Transfer 24/7 header: ', $headers);
         Log::info('Transfer 24/7 body: ', $params);
 
-        return Http::withHeaders($headers)->post($url, $params);
+        return Http::withHeaders($headers)
+            ->withBody(json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))
+            ->post($url);
     }
 
     /**
