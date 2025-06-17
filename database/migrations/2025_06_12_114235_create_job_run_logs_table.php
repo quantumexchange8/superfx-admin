@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('job_run_logs', function (Blueprint $table) {
             $table->id();
             $table->string('queue')->unique();
-            $table->string('last_ran_at')->nullable();
+            $table->timestamp('last_ran_at')->nullable();
             $table->timestamps();
         });
     }
