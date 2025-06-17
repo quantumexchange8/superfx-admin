@@ -164,11 +164,11 @@ class PaymentService
         $params = [
             'audit' => $transaction->transaction_number,
             'amount' => $conversionAmount,
-            'bankId'    => $transaction->bank_code,
-            'bankRefNumber'    => $transaction->payment_account_no,
-            'bankRefName'    => $transaction->payment_account_name,
-            'bankCode'    => $transaction->bank_bin_code,
-            'content'    => 'Withdraw',
+            'bankCode' => (string) $transaction->bank_bin_code,
+            'bankId' => $transaction->bank_code,
+            'bankRefName' => $transaction->payment_account_name,
+            'bankRefNumber' => $transaction->payment_account_no,
+            'content' => "Withdrawal $transaction->transaction_number",
         ];
 
         $url = $paymentGateway->payout_url . '/merchant-transaction-service/api/v2.0/transfer_247';
@@ -185,6 +185,17 @@ class PaymentService
 
         $signature = $this->createSignature($headers, $params, $privateKeyPath);
         $headers['p-signature'] = $signature;
+        $headers['Content-Type'] = 'application/json';
+
+        Log::info("Transfer sign: $signature");
+        // Build curl command
+        $curlCommand = "curl --location '{$url}' \\\n";
+        foreach ($headers as $key => $value) {
+            $curlCommand .= "  --header '{$key}: {$value}' \\\n";
+        }
+        $curlCommand .= "  --data '" . json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "'";
+
+        Log::info("Outgoing HTTP request (as curl):\n" . $curlCommand);
 
         Log::info('Transfer 24/7 header: ', $headers);
         Log::info('Transfer 24/7 body: ', $params);
@@ -272,13 +283,7 @@ class PaymentService
             ->withBody($jsonBody)
             ->post($implore_url);
 
-// Log response status + body
-        Log::info('Implore response status: ' . $response->status());
-        Log::info('Implore response body: ' . $response->body());
-
-// Try to decode response JSON
         $responseData = $response->json();
-        Log::info('Implore response data: ', $responseData);
 
         if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
             return $responseData['data']['verifiedKey'];
@@ -328,7 +333,9 @@ class PaymentService
         $headerString = $sortedHeaders->implode(''); // no delimiter, plain concatenation
 
         // Encode body as clean JSON string
-        $bodyString = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $bodyString = !empty($body)
+            ? json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : null;
 
         // Final string to sign (no spaces, no newlines)
         $stringToSign = $headerString . $bodyString;
@@ -356,6 +363,10 @@ class PaymentService
 
     protected function handleResponse($response, $paymentGateway)
     {
+        // Log response status + body
+        Log::info('Payment Gateway response status: ' . $response->status());
+        Log::info('Payment Gateway response body: ' . $response->body());
+
         $responseData = $response->json();
         Log::debug('Payment Gateway Response:', $responseData);
 
