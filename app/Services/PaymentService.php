@@ -59,13 +59,12 @@ class PaymentService
             'conversion_amount' => $conversionAmount,
         ]);
 
-        $response = $this->handleBankPayment($transaction, $paymentGateway, $conversionAmount);
         // Delegate to specific handler
-//        if ($transaction->payment_platform == 'bank') {
-//            $response = $this->handleBankPayment($transaction, $paymentGateway, $conversionAmount);
-//        } else {
-//            $response = $this->handleCryptoPayment($transaction, $paymentGateway, $conversionAmount);
-//        }
+        if ($transaction->payment_platform == 'bank') {
+            $response = $this->handleBankPayment($transaction, $paymentGateway, $conversionAmount);
+        } else {
+            $response = $this->handleCryptoPayment($transaction, $paymentGateway, $conversionAmount);
+        }
         return $this->handleResponse($response, $paymentGateway);
     }
 
@@ -84,26 +83,30 @@ class PaymentService
 
     protected function handleCryptoPayment($transaction, $paymentGateway, $conversionAmount)
     {
-//        $params = array_merge($params, [
-//            'channel_code' => $transaction->payment_account_type,
-//            'address' => $transaction->payment_account_no,
-//        ]);
-//
-//        $data = [
-//            $params['partner_id'],
-//            $params['timestamp'],
-//            $params['random'],
-//            $params['partner_order_code'],
-//            $params['channel_code'],
-//            $params['address'],
-//            $params['amount'],
-//            $params['notify_url'],
-//            '',
-//            '',
-//            $payment_gateway->payment_app_key,
-//        ];
-//
-//        $baseUrl = $payment_gateway->payment_url . '/gateway/usdt/transfer.do';
+        $params = [
+            'partner_id' => $paymentGateway->payment_app_number,
+            'timestamp' => Carbon::now()->timestamp,
+            'random' => Str::random(14),
+            'partner_order_code' => $transaction->transaction_number,
+            'amount' => $conversionAmount,
+            'notify_url' => route('transactionCallback'),
+        ];
+
+        $data = [
+            $params['partner_id'],
+            $params['timestamp'],
+            $params['random'],
+            $params['partner_order_code'],
+            $params['amount'],
+            'channel_code' => $transaction->payment_account_type,
+            'address' => $transaction->payment_account_no,
+            $paymentGateway->payment_app_key,
+        ];
+
+        $params['sign'] = md5(implode(':', $data));
+
+        $url = $paymentGateway->payment_url . '/gateway/usdt/transfer.do';
+        return Http::post($url, $params);
     }
 
     protected function processGatewayA($transaction, $paymentGateway, $conversionAmount)
@@ -148,17 +151,15 @@ class PaymentService
      */
     protected function processGatewayB($transaction, $paymentGateway, $conversionAmount)
     {
-        $requestTime = now('Asia/Ho_Chi_Minh')->format('YmdHis');
-
         // Login - get token
-        $accessToken = $this->getAuthToken($paymentGateway, $requestTime);
+        $accessToken = $this->getAuthToken($paymentGateway);
 
         if (!$accessToken) {
             throw new Exception("Unable to retrieve access token from Payment Hot");
         }
 
         // Implore Transfer - get verified key
-        $verifiedKey = $this->getVerifiedKey($paymentGateway, $requestTime, $accessToken);
+        $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
 
         $params = [
             'audit' => $transaction->transaction_number,
@@ -195,7 +196,7 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getAuthToken($paymentGateway, $requestTime)
+    protected function getAuthToken($paymentGateway)
     {
         $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
 
@@ -203,7 +204,7 @@ class PaymentService
 
         $headers = [
             'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> $requestTime,
+            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
             'p-tenant'      => $this->tenant,
         ];
 
@@ -218,6 +219,7 @@ class PaymentService
 
         // Then attach signature to your headers
         $headers['p-signature'] = $signature;
+        Log::info("Login sign: $signature");
 
         $response = Http::withHeaders($headers)->post($loginUrl, $params);
         $responseData = $response->json();
@@ -236,13 +238,13 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function getVerifiedKey($paymentGateway, $requestTime, $accessToken)
+    protected function getVerifiedKey($paymentGateway, $accessToken)
     {
         $implore_url = $paymentGateway->payout_url . '/auth-service/api/v1.0/implore-auth';
 
         $headers = [
             'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> $requestTime,
+            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
             'p-tenant'      => $this->tenant,
             'Authorization' => 'Bearer ' . $accessToken,
         ];
@@ -260,32 +262,13 @@ class PaymentService
 
         // Then attach signature to your headers
         $headers['p-signature'] = $signature;
-
-        Log::info('Implore Header: ', $headers);
-        Log::info('Implore Body: ', $params);
-
-        $curlCommand = "curl -X POST '$implore_url'";
-
-// Append headers
-        foreach ($headers as $key => $value) {
-            $curlCommand .= " -H '$key: $value'";
-        }
-
-// Append JSON body
-        $curlCommand .= " -d '" . json_encode($params) . "'";
-
-// Log it
-        Log::info("Outgoing HTTP request (curl style): " . $curlCommand);
-        // Ensure Content-Type is application/json
         $headers['Content-Type'] = 'application/json';
 
-// Log outgoing request
-        Log::info('Sending HTTP POST to ' . $implore_url);
-        Log::info('Request headers: ', $headers);
-        Log::info('Request body: ', $params);
+        $jsonBody = json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-// Send POST request with JSON body
-        $response = Http::withHeaders($headers)->post($implore_url, $params);
+        $response = Http::withHeaders($headers)
+            ->withBody($jsonBody)
+            ->post($implore_url);
 
 // Log response status + body
         Log::info('Implore response status: ' . $response->status());
@@ -308,29 +291,31 @@ class PaymentService
      */
     protected function createSignature(array $headers, array $body, $privateKeyPath)
     {
-        // Step 1: Filter headers
+        // Step 1: Filter relevant headers
         $filteredHeaders = collect($headers)->filter(function ($value, $key) {
-            return $key == 'Authorization'
-                || $key == 'verification'
+            return $key === 'Authorization'
+                || $key === 'Content-Type'
+                || $key === 'verification'
                 || Str::startsWith($key, 'p-');
         });
 
-        // Step 2: Sort headers with custom order
+        // Step 2: Sort with custom priority
         $sortedHeaders = $filteredHeaders->sortKeysUsing(function ($a, $b) {
             $priority = [
                 'Authorization' => 1,
-                'verification'  => 2,
+                'Content-Type'  => 2,
+                'verification'  => 3,
             ];
 
-            $aPriority = $priority[$a] ?? 3;
-            $bPriority = $priority[$b] ?? 3;
+            $aPriority = $priority[$a] ?? (Str::startsWith($a, 'p-') ? 4 : 5);
+            $bPriority = $priority[$b] ?? (Str::startsWith($b, 'p-') ? 4 : 5);
 
-            // If both are p- prefixed headers, sort alphabetically
-            if ($aPriority == 3 && $bPriority == 3) {
+            if ($aPriority === $bPriority) {
+                // If same priority (like two p- headers), sort alphabetically
                 return strcmp($a, $b);
             }
 
-            // Sort by defined priority
+            // Sort by priority value
             return $aPriority <=> $bPriority;
         });
 
@@ -369,7 +354,6 @@ class PaymentService
 
     protected function handleResponse($response, $paymentGateway)
     {
-        Log::debug('Payment hot IPN Response:', $response);
         $responseData = $response->json();
         Log::debug('Payment Gateway Response:', $responseData);
 
