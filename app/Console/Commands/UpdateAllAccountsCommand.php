@@ -32,9 +32,10 @@ class UpdateAllAccountsCommand extends Command
                 $accData = (new MetaFourService)->getUser($account->meta_login);
 
                 // If no data is returned (null or empty), mark the account as inactive and delete associated records
-                if (empty($accData)) {
+                if (empty($accData) || ($accData['status'] ?? null) !== 'success') {
                     if ($account->acc_status !== 'inactive') {
-                        $account->update(['acc_status' => 'inactive']);
+                        $account->acc_status = 'inactive';
+                        $account->save();
                     }
 
                     $tradingAccount = $account->trading_account;
