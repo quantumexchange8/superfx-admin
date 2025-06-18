@@ -38,12 +38,12 @@ class UpdateAllAccountsCommand extends Command
                         $account->save();
                     }
 
-                    $tradingAccount = $account->trading_account;
-                    if ($tradingAccount) {
-                        $tradingAccount->delete();
-                    }
+                    // $tradingAccount = $account->trading_account;
+                    // if ($tradingAccount) {
+                    //     $tradingAccount->delete();
+                    // }
                     
-                    $account->delete();
+                    // $account->delete();
                 } else {
                     // Proceed with updating account information
                     (new UpdateTradingUser)->execute($account->meta_login, $accData);

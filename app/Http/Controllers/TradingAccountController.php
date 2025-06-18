@@ -130,8 +130,7 @@ class TradingAccountController extends Controller
                     'users:id,name,email',
                     'trading_account:id,meta_login,equity',
                     'accountType:id,slug,account_group,color',
-                ]) // Eager load related models
-                ->where('acc_status', 'active');
+                ]);
 
             if ($request->last_logged_in_days) {
                 switch ($request->last_logged_in_days) {
@@ -196,7 +195,6 @@ class TradingAccountController extends Controller
                 'last_access as last_login',
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
             ])
-            ->where('acc_status', 'active')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
             
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
