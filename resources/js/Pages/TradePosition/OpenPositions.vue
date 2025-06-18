@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { HandIcon, NetBalanceIcon, CoinsIcon, RocketIcon } from '@/Components/Icons/solid';
-import { onMounted, onUnmounted, ref, computed, watch, watchEffect } from "vue";
+import { onMounted, onUnmounted, ref, h, computed, watch, watchEffect } from "vue";
 import { generalFormat, transactionFormat } from "@/Composables/index.js";
 import { FilterMatchMode } from 'primevue/api';
 import debounce from "lodash/debounce.js";
@@ -27,6 +27,7 @@ import StatusBadge from '@/Components/StatusBadge.vue';
 import Badge from '@/Components/Badge.vue';
 import RadioButton from 'primevue/radiobutton';
 import Vue3Autocounter from 'vue3-autocounter';
+import Avatar from "primevue/avatar";
 
 const props = defineProps({
   uplines: Array,
@@ -56,27 +57,27 @@ const counterDuration = ref(10);
 
 // data overview
 const dataOverviews = computed(() => [
-{
-        icon: HandIcon,
-        total: totalLots.value,
-        label: 'total_lots',
-    },
-    {
-        icon: NetBalanceIcon,
-        total: totalCommission.value,
-        label: 'total_commission',
-    },
-    {
-        icon: CoinsIcon,
-        total: totalSwap.value,
-        label: 'total_swap',
-    },
-    {
-        icon: RocketIcon,
-        total: totalProfit.value,
-        label: 'total_profit',
-    },
-]);
+  {
+    icon: 'TotalLots',
+    total: totalLots.value,
+    label: 'total_lots',
+  },
+  {
+    icon: 'TotalCommission',
+    total: totalCommission.value,
+    label: 'total_commission',
+  },
+  {
+    icon: 'TotalSwap',
+    total: totalSwap.value,
+    label: 'total_swap',
+  },
+  {
+    icon: 'TotalProfit',
+    total: totalProfit.value,
+    label: 'total_profit',
+  },
+])
 
 const filters = ref({
     global: null,
@@ -324,7 +325,12 @@ const clearFilter = () => {
                     :key="index"
                     class="flex justify-center items-center py-4 px-6 gap-5 self-stretch rounded-2xl bg-white shadow-toast md:flex-col md:flex-grow md:py-6 md:gap-3"
                 >
-                    <component :is="item.icon" class="w-12 h-12 grow-0 shrink-0" />
+                    <Avatar
+                        :image="`/img/icons/${item.icon}.png`"
+                        size="large"
+                        shape="circle"
+                        style="background-color: #f9fafb;"
+                    />
                     <div class="flex flex-col items-center gap-1 flex-grow md:flex-grow-0 md:self-stretch">
                         <div class="self-stretch text-gray-950 text-lg font-semibold md:text-xl md:text-center">
                             <vue3-autocounter

@@ -4,12 +4,12 @@ import IllustrationGreetings from '@/Pages/Dashboard/Partials/IllustrationGreeti
 import Button from '@/Components/Button.vue';
 import { IconRefresh, IconChevronRight, IconChevronDown } from '@tabler/icons-vue';
 import { transactionFormat } from '@/Composables/index.js';
-import { DepositIcon, WithdrawalIcon, RebateIcon } from '@/Components/Icons/solid';
 import Badge from '@/Components/Badge.vue';
 import Vue3Autocounter from 'vue3-autocounter';
 import { ref, watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import Dropdown from "primevue/dropdown";
+import Avatar from "primevue/avatar";
 import dayjs from "dayjs";
 import DashboardForum from "@/Pages/Dashboard/Partials/DashboardForum.vue";
 
@@ -242,7 +242,12 @@ const goToTransactionPage = (type) => {
 
                     <div class="flex flex-col justify-center items-center gap-4 self-stretch">
                         <div class="py-3 flex items-center gap-4 self-stretch rounded-xl">
-                            <DepositIcon />
+                            <Avatar
+                                :image="`/img/icons/TotalDeposit.png`"
+                                size="large"
+                                shape="circle"
+                                style="background-color: #f9fafb;"
+                            />
 
                             <div class="flex flex-col items-start gap-1 flex-1">
                                 <div class="self-stretch text-gray-500 text-xs">
@@ -263,7 +268,12 @@ const goToTransactionPage = (type) => {
                         </div>
 
                         <div class="py-3 flex items-center gap-4 self-stretch rounded-xl">
-                            <WithdrawalIcon />
+                            <Avatar
+                                :image="`/img/icons/TotalWithdrawal.png`"
+                                size="large"
+                                shape="circle"
+                                style="background-color: #f9fafb;"
+                            />
 
                             <div class="flex flex-col items-start gap-1 flex-1">
                                 <div class="self-stretch text-gray-500 text-xs">
@@ -284,7 +294,12 @@ const goToTransactionPage = (type) => {
                         </div>
 
                         <div class="py-3 flex items-center gap-4 self-stretch rounded-xl">
-                            <RebateIcon />
+                            <Avatar
+                                :image="`/img/icons/TotalCommission.png`"
+                                size="large"
+                                shape="circle"
+                                style="background-color: #f9fafb;"
+                            />
 
                             <div class="flex flex-col items-start gap-1 flex-1">
                                 <div class="self-stretch text-gray-500 text-xs">

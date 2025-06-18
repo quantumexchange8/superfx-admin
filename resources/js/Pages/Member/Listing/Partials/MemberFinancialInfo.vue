@@ -7,6 +7,7 @@ import WalletAdjustment from '@/Pages/Member/Listing/Partials/WalletAdjustment.v
 import {wTrans} from "laravel-vue-i18n";
 import {transactionFormat} from "@/Composables/index.js";
 import {usePage} from "@inertiajs/vue3";
+import Avatar from "primevue/avatar";
 
 const props = defineProps({
     user_id: Number
@@ -33,16 +34,16 @@ const getFinancialData = async () => {
 
 getFinancialData();
 
-const overviewData = computed(() =>  [
+const overviewData = computed(() => [
     {
         label: wTrans('public.total_deposit'),
         value: totalDeposit.value,
-        icon: h(DepositIcon),
+        icon: 'TotalDeposit',
     },
     {
         label: wTrans('public.total_withdrawal'),
         value: totalWithdrawal.value,
-        icon: h(WithdrawalIcon),
+        icon: 'TotalWithdrawal',
     },
 ]);
 
@@ -62,7 +63,12 @@ watchEffect(() => {
                     v-for="overview in overviewData"
                     class="py-5 px-6 flex flex-col md:flex-row xl:flex-col gap-5 items-start w-full bg-white shadow-toast rounded-2xl"
                 >
-                    <component :is="overview.icon" class="w-[42px] h-[42px]" />
+                    <Avatar
+                        :image="`/img/icons/${overview.icon}.png`"
+                        size="large"
+                        shape="circle"
+                        style="background-color: #f9fafb;"
+                    />
                     <div class="flex flex-col items-start gap-1 self-stretch">
                         <div class="text-gray-500 text-xs max-w-[90px] md:max-w-full truncate">{{ overview.label }}</div>
                         <div class="md:text-lg text-gray-950 font-semibold truncate">

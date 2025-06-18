@@ -86,7 +86,7 @@ watchEffect(() => {
                 class="px-6 border-b border-gray-50 last:border-0 py-2"
             >
                 <div class="flex gap-3 items-center self-stretch w-full">
-                    <div class="w-7 h-7 rounded-full overflow-hidden">
+                    <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
                         <template v-if="selected.profile_photo">
                             <img :src="selected.profile_photo" alt="profile_picture" />
                         </template>
@@ -113,7 +113,7 @@ watchEffect(() => {
                 class="px-6 border-b border-gray-50 last:border-0 py-2"
             >
                 <div v-if="ib" class="flex gap-3 items-center self-stretch w-full">
-                    <div class="w-7 h-7 rounded-full overflow-hidden">
+                    <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
                         <template v-if="ib.profile_photo">
                             <img :src="ib.profile_photo" alt="profile_picture" />
                         </template>
