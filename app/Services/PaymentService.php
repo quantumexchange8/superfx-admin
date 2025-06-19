@@ -301,30 +301,12 @@ class PaymentService
         // Step 1: Filter relevant headers
         $filteredHeaders = collect($headers)->filter(function ($value, $key) {
             return $key === 'Authorization'
-                || $key === 'Content-Type'
                 || $key === 'verification'
                 || Str::startsWith($key, 'p-');
         });
 
-        // Step 2: Sort with custom priority
-        $sortedHeaders = $filteredHeaders->sortKeysUsing(function ($a, $b) {
-            $priority = [
-                'Authorization' => 1,
-                'Content-Type'  => 2,
-                'verification'  => 3,
-            ];
-
-            $aPriority = $priority[$a] ?? (Str::startsWith($a, 'p-') ? 4 : 5);
-            $bPriority = $priority[$b] ?? (Str::startsWith($b, 'p-') ? 4 : 5);
-
-            if ($aPriority === $bPriority) {
-                // If same priority (like two p- headers), sort alphabetically
-                return strcmp($a, $b);
-            }
-
-            // Sort by priority value
-            return $aPriority <=> $bPriority;
-        });
+        // Step 2: Sort alphabetically by key
+        $sortedHeaders = $filteredHeaders->sortKeys();
 
         // Log the sorted headers before hashing
         Log::info('Sorted headers for hashing:', $sortedHeaders->toArray());
@@ -363,12 +345,7 @@ class PaymentService
 
     protected function handleResponse($response, $paymentGateway)
     {
-        // Log response status + body
-        Log::info('Payment Gateway response status: ' . $response->status());
-        Log::info('Payment Gateway response body: ' . $response->body());
-
         $responseData = $response->json();
-        Log::debug('Payment Gateway Response:', $responseData);
 
         $code = $responseData['code'] ?? null;
 
