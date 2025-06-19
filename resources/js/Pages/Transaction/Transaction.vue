@@ -92,17 +92,17 @@ function updateType(event) {
 // data overview
 const dataOverviews = computed(() => [
   {
-    icon: 'TotalProfit',
+    icon: 'TotalTransaction',
     total: totalTransaction.value,
     label: 'total_transaction',
   },
   {
-    icon: 'TotalSwap',
+    icon: 'TotalApprovedAmount',
     total: totalTransactionAmount.value,
     label: selectedType.value !== 'payout' ? 'total_approved_amount' : 'total_payout_amount',
   },
   {
-    icon: 'TotalCommission',
+    icon: 'MaximumAmount',
     total: maxAmount.value,
     label: 'maximum_amount',
   },

@@ -295,7 +295,7 @@ const goToTransactionPage = (type) => {
 
                         <div class="py-3 flex items-center gap-4 self-stretch rounded-xl">
                             <Avatar
-                                :image="`/img/icons/TotalCommission.png`"
+                                :image="`/img/icons/TotalRebatePayout.png`"
                                 size="large"
                                 shape="circle"
                                 style="background-color: #f9fafb;"
