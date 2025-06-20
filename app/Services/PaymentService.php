@@ -355,6 +355,8 @@ class PaymentService
             default   => false,
         };
 
+        Log::info('Transfer response check:', $responseData);
+
         return [
             'success' => $isSuccess,
             'message' => $responseData['msg'] ?? 'Payment gateway error',
