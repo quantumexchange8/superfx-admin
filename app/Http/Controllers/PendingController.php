@@ -136,6 +136,19 @@ class PendingController extends Controller
                 ]);
             }
 
+            $transaction->update([
+                'status' => 'failed',
+                'approved_at' => now(),
+                'remarks' => $result['message'],
+            ]);
+
+            $user = User::find($transaction->user_id);
+
+            // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
+            $this->handleTransactionUpdate($transaction);
+
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+
             return redirect()->back()->with('toast', [
                 'title' => $result['message'],
                 'type'  => 'error',

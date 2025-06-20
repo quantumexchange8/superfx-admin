@@ -710,5 +710,6 @@ return [
     "empty_open_trades_message" => "目前没有持仓可显示。请留意后续出现的持仓信息！",
     "loading_closed_trades_caption" => "正在加载已平仓交易数据，请稍候。",
     "empty_closed_trades_title" => "暂无已平仓交易",
-    "empty_closed_trades_message" => "目前没有已平仓交易可显示。交易平仓后会在此显示！"
+    "empty_closed_trades_message" => "目前没有已平仓交易可显示。交易平仓后会在此显示！",
+    "payment_service" => "支付服务",
 ];

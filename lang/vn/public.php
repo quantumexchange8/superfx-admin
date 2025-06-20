@@ -710,5 +710,6 @@ return [
     "empty_open_trades_message" => "Hiện tại không có lệnh đang mở để hiển thị. Hãy theo dõi các lệnh mở sẽ xuất hiện tại đây!",
     "loading_closed_trades_caption" => "Đang tải dữ liệu lệnh đã đóng. Vui lòng chờ...",
     "empty_closed_trades_title" => "Chưa Có Lệnh Đã Đóng",
-    "empty_closed_trades_message" => "Hiện tại không có lệnh đã đóng để hiển thị. Khi có lệnh được đóng, chúng sẽ hiển thị tại đây!"
+    "empty_closed_trades_message" => "Hiện tại không có lệnh đã đóng để hiển thị. Khi có lệnh được đóng, chúng sẽ hiển thị tại đây!",
+    "payment_service" => "dịch vụ thanh toán",
 ];

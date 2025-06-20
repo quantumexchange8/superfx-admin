@@ -200,9 +200,6 @@ class PaymentService
 
         Log::info("Outgoing HTTP request (as curl):\n" . $curlCommand);
 
-        Log::info('Transfer 24/7 header: ', $headers);
-        Log::info('Transfer 24/7 body: ', $params);
-
         return Http::withHeaders($headers)
             ->withBody(json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))
             ->post($url);
@@ -235,12 +232,9 @@ class PaymentService
 
         // Then attach signature to your headers
         $headers['p-signature'] = $signature;
-        Log::info("Login sign: $signature");
 
         $response = Http::withHeaders($headers)->post($loginUrl, $params);
         $responseData = $response->json();
-
-        Log::info('Login response: ', $responseData);
 
         if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
             return $responseData['data']['accessToken'];
@@ -310,9 +304,6 @@ class PaymentService
 
         // Step 2: Sort alphabetically by key
         $sortedHeaders = $filteredHeaders->sortKeys();
-
-        // Log the sorted headers before hashing
-        Log::info('Sorted headers for hashing:', $sortedHeaders->toArray());
 
         // Concatenate header values
         $headerString = $sortedHeaders->implode(''); // no delimiter, plain concatenation

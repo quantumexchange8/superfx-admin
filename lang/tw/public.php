@@ -710,5 +710,6 @@ return [
     "empty_open_trades_message" => "目前沒有持倉可顯示。請留意後續出現的持倉資訊！",
     "loading_closed_trades_caption" => "正在載入已平倉交易資料，請稍候。",
     "empty_closed_trades_title" => "暫無已平倉交易",
-    "empty_closed_trades_message" => "目前沒有已平倉交易可顯示。交易平倉後會在此顯示！"
+    "empty_closed_trades_message" => "目前沒有已平倉交易可顯示。交易平倉後會在此顯示！",
+    "payment_service" => "支付服務",
 ];
