@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\JobRunLog;
 use App\Models\TradingUser;
 use Illuminate\Console\Command;
 use App\Services\MetaFourService;
@@ -31,17 +32,18 @@ class UpdateAllAccountsCommand extends Command
                 $accData = (new MetaFourService)->getUser($account->meta_login);
 
                 // If no data is returned (null or empty), mark the account as inactive and delete associated records
-                if (empty($accData)) {
+                if (empty($accData) || ($accData['status'] ?? null) !== 'success') {
                     if ($account->acc_status !== 'inactive') {
-                        $account->update(['acc_status' => 'inactive']);
+                        $account->acc_status = 'inactive';
+                        $account->save();
                     }
 
-                    $tradingAccount = $account->trading_account;
-                    if ($tradingAccount) {
-                        $tradingAccount->delete();
-                    }
+                    // $tradingAccount = $account->trading_account;
+                    // if ($tradingAccount) {
+                    //     $tradingAccount->delete();
+                    // }
                     
-                    $account->delete();
+                    // $account->delete();
                 } else {
                     // Proceed with updating account information
                     (new UpdateTradingUser)->execute($account->meta_login, $accData);
@@ -52,5 +54,11 @@ class UpdateAllAccountsCommand extends Command
                 Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
             }
         }
+        // Log this job's latest successful run
+        JobRunLog::updateOrCreate([
+            'queue' => 'refresh_accounts'
+        ],[
+            'last_ran_at' => now()
+        ]);
     }
 }

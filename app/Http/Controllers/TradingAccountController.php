@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\User;
 use Inertia\Inertia;
+use App\Models\JobRunLog;
 use App\Models\TradingUser;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -30,13 +31,10 @@ class TradingAccountController extends Controller
 {
     public function index()
     {
-        $last_refresh_datetime = DB::table('jobs')
-            ->where('queue', 'refresh_accounts')
-            ->orderByDesc('reserved_at')
-            ->first();
+        $last_refresh_datetime = JobRunLog::where('queue', 'refresh_accounts')->first();
 
         return Inertia::render('Member/Account/AccountListing', [
-            'last_refresh_datetime' => $last_refresh_datetime?->reserved_at,
+            'last_refresh_datetime' => $last_refresh_datetime?->last_ran_at,
             'leverages' => (new GeneralController())->getLeverages(true),
             'accountTypes' => (new GeneralController())->getAccountTypes(true),
         ]);
@@ -132,8 +130,7 @@ class TradingAccountController extends Controller
                     'users:id,name,email',
                     'trading_account:id,meta_login,equity',
                     'accountType:id,slug,account_group,color',
-                ]) // Eager load related models
-                ->where('acc_status', 'active');
+                ]);
 
             if ($request->last_logged_in_days) {
                 switch ($request->last_logged_in_days) {
@@ -198,19 +195,18 @@ class TradingAccountController extends Controller
                 'last_access as last_login',
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
             ])
-            ->where('acc_status', 'active')
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
             
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
                 $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
-                $account->user_name = $account->users->name;
-                $account->user_email = $account->users->email;
-                $account->equity = $account->trading_account->equity;
-                $account->account_type = $account->accountType->slug;
-                $account->account_type_color = $account->accountType->color;
-                $account->account_group = $account->accountType->account_group;
-
+                $account->user_name = optional($account->users)->name;
+                $account->user_email = optional($account->users)->email;
+                $account->equity = optional($account->trading_account)->equity ?? 0;
+                $account->account_type = optional($account->accountType)->slug;
+                $account->account_type_color = optional($account->accountType)->color;
+                $account->account_group = optional($account->accountType)->account_group;
+            
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);
@@ -275,13 +271,13 @@ class TradingAccountController extends Controller
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
                 $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
-                $account->user_name = $account->users->name;
-                $account->user_email = $account->users->email;
-                $account->equity = $account->trading_account->equity;
-                $account->account_type = $account->accountType->slug;
-                $account->account_type_color = $account->accountType->color;
-                $account->account_group = $account->accountType->account_group;
-
+                $account->user_name = optional($account->users)->name;
+                $account->user_email = optional($account->users)->email;
+                $account->equity = optional($account->trading_account)->equity;
+                $account->account_type = optional($account->accountType)->slug;
+                $account->account_type_color = optional($account->accountType)->color;
+                $account->account_group = optional($account->accountType)->account_group;
+            
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);

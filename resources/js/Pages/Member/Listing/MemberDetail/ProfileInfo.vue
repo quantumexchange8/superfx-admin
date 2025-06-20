@@ -342,15 +342,15 @@ const handleMemberStatus = () => {
                             :placeholder="$t('public.phone_code')"
                             class="w-[100px]"
                             scroll-height="236px"
-                            :invalid="!!form.errors.phone"
+                            :invalid="!!form.errors.dial_code"
                         >
                             <template #value="slotProps">
                                 <div v-if="slotProps.value" class="flex items-center">
                                     <div>{{ slotProps.value.phone_code }}</div>
                                 </div>
                                 <span v-else>
-                                            {{ slotProps.placeholder }}
-                                        </span>
+                                    {{ slotProps.placeholder }}
+                                </span>
                             </template>
                             <template #option="slotProps">
                                 <div class="flex items-center w-[262px] md:max-w-[236px]">
@@ -365,10 +365,10 @@ const handleMemberStatus = () => {
                             class="block w-full"
                             v-model="form.phone"
                             :placeholder="$t('public.phone_number')"
-                            :invalid="!!form.errors.phone"
+                            :invalid="!!(form.errors.phone || form.errors.phone_number)"
                         />
                     </div>
-                    <InputError :message="form.errors.phone" />
+                    <InputError :message="form.errors.phone || form.errors.phone_number" />
                 </div>
             </div>
             <div class="flex justify-end items-center pt-10 md:pt-7 gap-4 self-stretch">

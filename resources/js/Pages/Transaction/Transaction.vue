@@ -13,6 +13,7 @@ import WithdrawalTransactionTable from "@/Pages/Transaction/Partials/WithdrawalT
 import TransferTransactionTable from "@/Pages/Transaction/Partials/TransferTransactionTable.vue";
 import PayoutTransactionTable from "@/Pages/Transaction/Partials/PayoutTransactionTable.vue";
 import {wTrans} from "laravel-vue-i18n";
+import Avatar from "primevue/avatar";
 
 const totalTransaction = ref(999);
 const totalTransactionAmount = ref(999);
@@ -90,22 +91,22 @@ function updateType(event) {
 
 // data overview
 const dataOverviews = computed(() => [
-    {
-        icon: HandIcon,
-        total: totalTransaction.value,
-        label: 'total_transaction',
-    },
-    {
-        icon: CoinsIcon,
-        total: totalTransactionAmount.value,
-        label: selectedType.value !== 'payout' ? 'total_approved_amount' : 'total_payout_amount',
-    },
-    {
-        icon: RocketIcon,
-        total: maxAmount.value,
-        label: 'maximum_amount',
-    },
-]);
+  {
+    icon: 'TotalTransaction',
+    total: totalTransaction.value,
+    label: 'total_transaction',
+  },
+  {
+    icon: 'TotalApprovedAmount',
+    total: totalTransactionAmount.value,
+    label: selectedType.value !== 'payout' ? 'total_approved_amount' : 'total_payout_amount',
+  },
+  {
+    icon: 'MaximumAmount',
+    total: maxAmount.value,
+    label: 'maximum_amount',
+  },
+])
 // Function to get the current month and year as a string
 const getCurrentMonthYear = () => {
   const date = new Date();
@@ -175,7 +176,12 @@ const handleUpdateTotals = (data) => {
                     :key="index"
                     class="flex justify-center items-center py-4 px-6 gap-5 self-stretch rounded-2xl bg-white shadow-toast md:flex-col md:flex-grow md:py-6 md:gap-3"
                 >
-                    <component :is="item.icon" class="w-12 h-12 grow-0 shrink-0" />
+                    <Avatar
+                        :image="`/img/icons/${item.icon}.png`"
+                        size="large"
+                        shape="circle"
+                        style="background-color: #f9fafb;"
+                    />
                     <div class="flex flex-col items-center gap-1 flex-grow md:flex-grow-0 md:self-stretch">
                         <div class="self-stretch text-gray-950 text-lg font-semibold md:text-xl md:text-center">
                             <vue3-autocounter

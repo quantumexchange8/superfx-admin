@@ -841,7 +841,7 @@ class MemberController extends Controller
             'email' => trans('public.email'),
             'name' => trans('public.name'),
             'dial_code' => trans('public.phone_code'),
-            'phone' => trans('public.phone'),
+            'phone' => trans('public.phone_number'),
             'phone_number' => trans('public.phone_number'),
         ]);
         $validator->validate();

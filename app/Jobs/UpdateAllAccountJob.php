@@ -2,10 +2,13 @@
 
 namespace App\Jobs;
 
+use Carbon\Carbon;
+use App\Models\JobRunLog;
 use App\Models\TradingUser;
 use Illuminate\Bus\Queueable;
 use App\Models\TradingAccount;
 use App\Services\MetaFourService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
 use App\Services\Data\UpdateTradingUser;
@@ -29,33 +32,36 @@ class UpdateAllAccountJob implements ShouldQueue
     public function handle(): void
     {
         $trading_accounts = TradingUser::where('acc_status', 'active')->get();
-
+    
         foreach ($trading_accounts as $account) {
             try {
-                // Attempt to fetch user data
                 $accData = (new MetaFourService)->getUser($account->meta_login);
-
-                // If no data is returned (null or empty), mark the account as inactive
-                if (empty($accData)) {
+    
+                if (empty($accData) || ($accData['status'] ?? null) !== 'success') {
                     if ($account->acc_status !== 'inactive') {
-                        $account->update(['acc_status' => 'inactive']);
+                        $account->acc_status = 'inactive';
+                        $account->save();
                     }
-
-                    $tradingAccount = $account->trading_account;
-                    if ($tradingAccount) {
-                        $tradingAccount->delete();
-                    }
-                    
-                    $account->delete();
+    
+                    // $tradingAccount = $account->trading_account;
+                    // if ($tradingAccount) {
+                    //     $tradingAccount->delete();
+                    // }
+    
+                    // $account->delete();
                 } else {
-                    // Proceed with updating account information
                     (new UpdateTradingUser)->execute($account->meta_login, $accData);
                     (new UpdateTradingAccount)->execute($account->meta_login, $accData);
                 }
             } catch (\Exception $e) {
-                // Log the error if there was a failure (network issue, server error, etc.)
                 Log::error("Error fetching data for account {$account->meta_login}: {$e->getMessage()}");
             }
         }
+        // Log this job's latest successful run
+        JobRunLog::updateOrCreate([
+            'queue' => 'refresh_accounts'
+        ],[
+            'last_ran_at' => now()
+        ]);
     }
 }

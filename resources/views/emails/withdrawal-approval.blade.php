@@ -790,7 +790,7 @@
                                                                         width="180px">
                                                                         <tr>
                                                                             <td style="padding:0 0 0 4px;"><a
-                                                                                    href="https://www.facebook.com/superforexglobal/"
+                                                                                    href="https://www.facebook.com/superfinglobal/"
                                                                                     target="_blank"><img alt="Facebook"
                                                                                         height="auto"
                                                                                         src="{{ asset('email/withdrawal_approval/images/facebook2x.png') }}"

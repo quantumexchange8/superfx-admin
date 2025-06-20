@@ -381,7 +381,7 @@
 														<tr>
 															<td class="pad">
 																<div style="color:#3b455b;direction:ltr;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:1.2;text-align:left;mso-line-height-alt:19px;">
-																	<p style="margin: 0;">Are you trading with more than $5000 deposit? Join the SuperForex Membership Club now to get special benefits.I'm a new paragraph block.</p>
+																	<p style="margin: 0;">Are you trading with more than $5000 deposit? Join the SuperFin Membership Club now to get special benefits.I'm a new paragraph block.</p>
 																</div>
 															</td>
 														</tr>
@@ -482,7 +482,7 @@
 																		<tr>
 																			<td style="padding:0 0 0 4px;">
 																				<a
-                                                                                    href="https://www.facebook.com/superforexglobal/"
+                                                                                    href="https://www.facebook.com/superfinglobal/"
                                                                                     target="_blank"
 																				>
 																					<img 
