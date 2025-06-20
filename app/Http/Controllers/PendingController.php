@@ -499,6 +499,10 @@ class PendingController extends Controller
                 'message' => 'Transaction success',
             ]);
         } else {
+            $transaction->update([
+                'remarks' => $dataArray['message'],
+            ]);
+
             // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
             $this->handleTransactionUpdate($transaction);
 
