@@ -162,7 +162,7 @@ class PaymentService
         $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
 
         $params = [
-            'audit' => str_pad(mt_rand(0, 9999999999999999), 16, '0', STR_PAD_LEFT),
+            'audit' => (integer) str_pad(mt_rand(0, 9999999999999999), 16, '0', STR_PAD_LEFT),
             'amount' => $conversionAmount,
             'bankCode' => (string) $transaction->bank_bin_code,
             'bankId' => $transaction->bank_code,
@@ -357,6 +357,8 @@ class PaymentService
             'payment-hot' => $code == 'SUCCESS',
             default   => false,
         };
+
+        Log::info('Transfer response check:', $responseData);
 
         return [
             'success' => $isSuccess,
