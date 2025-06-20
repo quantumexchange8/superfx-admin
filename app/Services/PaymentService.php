@@ -162,7 +162,7 @@ class PaymentService
         $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
 
         $params = [
-            'audit' => $transaction->transaction_number,
+            'audit' => str_pad(mt_rand(0, 9999999999999999), 16, '0', STR_PAD_LEFT),
             'amount' => $conversionAmount,
             'bankCode' => (string) $transaction->bank_bin_code,
             'bankId' => $transaction->bank_code,
@@ -170,6 +170,9 @@ class PaymentService
             'bankRefNumber' => $transaction->payment_account_no,
             'content' => "Withdrawal $transaction->transaction_number",
         ];
+
+        $transaction->txn_hash = $params['audit'];
+        $transaction->save();
 
         $url = $paymentGateway->payout_url . '/merchant-transaction-service/api/v2.0/transfer_247';
 
@@ -354,8 +357,6 @@ class PaymentService
             'payment-hot' => $code == 'SUCCESS',
             default   => false,
         };
-
-        Log::info('Transfer response check:', $responseData);
 
         return [
             'success' => $isSuccess,

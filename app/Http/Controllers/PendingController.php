@@ -453,7 +453,7 @@ class PendingController extends Controller
             return response()->json(['message' => 'Invalid JSON body'], 400);
         }
 
-        $transaction = Transaction::firstWhere('transaction_number', $dataArray['auditNumber']);
+        $transaction = Transaction::firstWhere('txn_hash', $dataArray['auditNumber']);
         $status = $dataArray['code'] == 'SUCCESS' ? 'successful' : 'failed';
 
         $transaction->update([
