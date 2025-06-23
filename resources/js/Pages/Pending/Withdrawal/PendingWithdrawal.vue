@@ -1,5 +1,5 @@
 <script setup>
-import {IconCircleXFilled, IconSearch} from "@tabler/icons-vue";
+import {IconCircleXFilled, IconSearch, IconLoader} from "@tabler/icons-vue";
 import Loader from "@/Components/Loader.vue";
 import DataTable from "primevue/datatable";
 import InputText from "primevue/inputtext";
@@ -466,17 +466,22 @@ const handleFilter = (e) => {
                 <Button
                     type="button"
                     variant="gray-tonal"
-                    class="w-full md:w-[120px]"
+                    class="w-full md:w-fit"
                     @click="closeDialog"
+                    :disabled="form.processing"
                 >
                     {{ $t('public.cancel') }}
                 </Button>
                 <Button
                     variant="primary-flat"
-                    class="w-full md:w-[120px]"
+                    class="w-full md:w-fit"
                     @click="submit(pendingData)"
+                    :disabled="form.processing"
                 >
-                    {{ $t('public.confirm') }}
+                    <div v-if="form.processing" class="animate-spin">
+                        <IconLoader size="20" stroke-width="1.5" />
+                    </div>
+                    {{ form.processing ? $t('public.processing') : $t('public.confirm') }}
                 </Button>
             </div>
         </template>
