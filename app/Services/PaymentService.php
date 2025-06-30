@@ -14,9 +14,6 @@ use Str;
 class PaymentService
 {
     private string $tenant = 'SUPERFINFX';
-    private string $username = 'm122user1';
-    private string $password = '2025@SuperFin';
-    private string $passcode = '668899';
 
     /**
      * @throws Exception
@@ -213,7 +210,7 @@ class PaymentService
     {
         $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
 
-        $hash_password = hash('sha256', $this->username . $this->password);
+        $hash_password = hash('sha256', $paymentGateway->username . $paymentGateway->password);
 
         $headers = [
             'p-request-id'  => (string) Str::uuid(),
@@ -222,7 +219,7 @@ class PaymentService
         ];
 
         $params = [
-            'username' => $this->username,
+            'username' => $paymentGateway->username,
             'password' => base64_encode($hash_password),
         ];
 
@@ -260,8 +257,8 @@ class PaymentService
         ];
 
         $params = [
-            'authValue' => base64_encode(hash('sha256', $this->username . $this->passcode)),
-            'phone' => $this->username,
+            'authValue' => base64_encode(hash('sha256', $paymentGateway->username . $paymentGateway->passcode)),
+            'phone' => $paymentGateway->username,
             'api' => '/merchant-transaction-service/api/v2.0/transfer_247',
             'authMode' => 'PASSCODE',
         ];
