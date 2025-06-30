@@ -155,6 +155,26 @@ class PaymentService
             throw new Exception("Unable to retrieve access token from Payment Hot");
         }
 
+        // Get Banks
+        $bank_headers = [
+            'p-request-id'  => (string) Str::uuid(),
+            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
+            'p-tenant'      => $this->tenant,
+            'Authorization' => 'Bearer ' . $accessToken,
+        ];
+
+        $privateKeyPath = storage_path('app/keys/private.pem');
+
+        $bank_signature = $this->createSignature($bank_headers, [], $privateKeyPath);
+        $bank_headers['p-signature'] = $bank_signature;
+        $bank_headers['Content-Type'] = 'application/json';
+
+        $response = Http::withHeaders($bank_headers)->get("$paymentGateway->payout_url/bank-gateway-service/mch/api/v1.0/bank");
+        $responseData = $response->json();
+
+        Log::info('Banks', $responseData);
+        // End Get banks
+
         // Implore Transfer - get verified key
         $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
 

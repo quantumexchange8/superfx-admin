@@ -96,8 +96,6 @@ class PendingController extends Controller
     {
         $action = $request->action;
 
-        dd($action);
-
         $status = $action == 'approve' ? 'pending' : 'rejected';
 
         $transaction = Transaction::find($request->id);
