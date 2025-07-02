@@ -29,7 +29,7 @@ const requireConfirmation = (action_type) => {
         deactivate_account_type: {
             group: 'headless-gray',
             header: trans('public.deactivate_account_type_header'),
-            message: trans('public.deactivate_account_type_content'),
+            message: trans('public.deactivate_account_type_message'),
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.deactivate'),
             action: () => {
@@ -41,7 +41,7 @@ const requireConfirmation = (action_type) => {
         activate_account_type: {
             group: 'headless-primary',
             header: trans('public.activate_account_type_header'),
-            message: trans('public.activate_account_type_content'),
+            message: trans('public.activate_account_type_message'),
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {

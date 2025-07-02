@@ -7,6 +7,8 @@ import InputLabel from '@/Components/InputLabel.vue';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import { useForm } from '@inertiajs/vue3';
+import { useConfirm } from "primevue/useconfirm";
+import { trans, wTrans } from "laravel-vue-i18n";
 
 // Props
 const props = defineProps({
@@ -19,6 +21,7 @@ const visible = ref(false);
 // Selected MultiSelect values
 const selectedAccountTypes = ref([]);
 const selectedUsers = ref([]);
+const confirm = useConfirm();
 
 // Form data
 const form = useForm({
@@ -44,16 +47,45 @@ const closeDialog = () => {
     selectedUsers.value = [];
 };
 
+const requireConfirmation = (action_type) => {
+    const messages = {
+        create_markup_profile: {
+            group: 'headless-primary',
+            header: trans('public.create_profile_header'),
+            message: trans('public.create_profile_message'),
+            cancelButton: trans('public.cancel'),
+            acceptButton: trans('public.create'),
+            action: () => {
+                form.post(route('markup_profile.addMarkupProfile'), {
+                    onSuccess: () => {
+                        closeDialog();
+                    },
+                    onError: (e) => {
+                        console.log('Error submit form:', e);
+                    }
+                });
+            }
+        }
+    };
+
+    const { group, header, message, cancelButton, acceptButton, action } = messages[action_type];
+
+    confirm.require({
+        group,
+        header,
+        message,
+        cancelButton,
+        acceptButton,
+        accept: action,
+    });
+};
+
 // Submit Function
 const submitForm = () => {
     form.account_type_ids = selectedAccountTypes.value?.length ? selectedAccountTypes.value.map(type => type.value) : [];
     form.user_ids = selectedUsers.value?.length ? selectedUsers.value.map(user => user.value) : [];
 
-    form.post(route('markup_profile.addMarkupProfile'), {
-        onSuccess: () => {
-            closeDialog();
-        },
-    });
+    requireConfirmation('create_markup_profile');
 };
 </script>
 
