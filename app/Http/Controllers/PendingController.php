@@ -127,32 +127,42 @@ class PendingController extends Controller
             ]);
         } else {
             $paymentService = new PaymentService();
-            $result = $paymentService->processTransaction($transaction);
+            try {
+                $result = $paymentService->processTransaction($transaction);
 
-            if ($result['success']) {
+                if ($result['success']) {
+                    return redirect()->back()->with('toast', [
+                        'title' => trans('public.toast_approve_withdrawal_request'),
+                        'type'  => 'success',
+                    ]);
+                }
+
+                $transaction->update([
+                    'status' => 'failed',
+                    'approved_at' => now(),
+                    'remarks' => $result['message'],
+                ]);
+
+                $user = User::find($transaction->user_id);
+
+                // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
+                $this->handleTransactionUpdate($transaction);
+
+                Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+
                 return redirect()->back()->with('toast', [
-                    'title' => trans('public.toast_approve_withdrawal_request'),
-                    'type'  => 'success',
+                    'title' => $result['message'],
+                    'type'  => 'error',
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Payout transfer error: ' . $e->getMessage());
+
+                return redirect()->back()->with('toast', [
+                    'title'   => 'Error',
+                    'message' => $e->getMessage(),
+                    'type'    => 'error',
                 ]);
             }
-
-            $transaction->update([
-                'status' => 'failed',
-                'approved_at' => now(),
-                'remarks' => $result['message'],
-            ]);
-
-            $user = User::find($transaction->user_id);
-
-            // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
-            $this->handleTransactionUpdate($transaction);
-
-            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
-
-            return redirect()->back()->with('toast', [
-                'title' => $result['message'],
-                'type'  => 'error',
-            ]);
         }
     }
 
