@@ -58,7 +58,7 @@ const Tag = !props.external ? Link : 'a'
             </span>
             <Badge
                 v-if="pendingCounts > 0 && (sidebarState.isOpen || sidebarState.isHovered)"
-                class="text-xs text-white"
+                class="text-xs"
                 :pill="true"
             >
                 {{ pendingCounts }}

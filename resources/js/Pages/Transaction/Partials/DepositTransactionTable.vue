@@ -153,7 +153,7 @@ const clearFilter = () => {
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
         payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
     };
-    filteredValue.value = null; 
+    filteredValue.value = null;
 };
 
 const clearFilterGlobal = () => {
@@ -490,7 +490,7 @@ const exportDeposit = async () => {
     <Dialog v-model:visible="visible" modal :header="$t('public.deposit_details')" class="dialog-xs md:dialog-md">
         <div class="flex flex-col justify-center items-start pb-4 gap-3 self-stretch border-b border-gray-200 md:flex-row md:pt-4 md:justify-between">
             <!-- below md -->
-            <span class="md:hidden self-stretch text-gray-950 text-xl font-semibold">{{ data.transaction_amount }}</span>
+            <span class="md:hidden self-stretch text-gray-950 text-xl font-semibold">${{ data.transaction_amount }}</span>
             <div class="flex items-center gap-3 self-stretch">
                 <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
                     <DefaultProfilePhoto />
@@ -501,7 +501,7 @@ const exportDeposit = async () => {
                 </div>
             </div>
             <!-- above md -->
-            <span class="hidden md:block w-[180px] text-gray-950 text-right text-xl font-semibold">{{ data.transaction_amount }}</span>
+            <span class="hidden md:block w-[180px] text-gray-950 text-right text-xl font-semibold">${{ data.transaction_amount }}</span>
         </div>
 
         <div class="flex flex-col items-center py-4 gap-3 self-stretch border-gray-200"
@@ -533,7 +533,7 @@ const exportDeposit = async () => {
                 </div>
             </div> -->
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
-                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.receiving_address') }}</span>
+                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ data.payment_platform === 'bank' ? $t('public.account_no') : $t('public.receiving_address') }}</span>
                 <div class="flex justify-center items-center self-stretch" @click="copyToClipboard(data.to_wallet_address)">
                     <span class="flex-grow overflow-hidden text-gray-950 text-ellipsis text-sm font-medium break-words">{{ data.to_wallet_address }}</span>
                 </div>
@@ -550,9 +550,7 @@ const exportDeposit = async () => {
 
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ data.payment_account_type === 'card' ? $t('public.card_name') : $t('public.account_name') }}</span>
-                <span class="w-full text-gray-950 text-sm font-medium">{{ `${data.payment_account_no}` }}
-                    <!-- <span class="text-xs text-gray-500">{{ ` (${data.payment_account_no})` }}</span> -->
-                </span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ data.payment_account_name }}</span>
             </div>
         </div>
 
@@ -560,7 +558,7 @@ const exportDeposit = async () => {
         <div v-if="data.status !== 'processing'" class="flex flex-col items-center py-4 gap-3 self-stretch">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.remarks') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ data.remarks }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ data.remarks ?? '-' }}</span>
             </div>
         </div>
 
