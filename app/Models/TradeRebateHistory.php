@@ -13,17 +13,17 @@ class TradeRebateHistory extends Model
     // Relations
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'upline_user_id', 'id');
+        return $this->belongsTo(User::class, 'upline_user_id', 'id')->withTrashed();
     }
 
     public function upline(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'upline_user_id', 'id');
+        return $this->belongsTo(User::class, 'upline_user_id', 'id')->withTrashed();
     }
 
     public function downline(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'ticket_user_id', 'id');
+        return $this->belongsTo(User::class, 'ticket_user_id', 'id')->withTrashed();
     }
 
     public function of_account_type(): BelongsTo

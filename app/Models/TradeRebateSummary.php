@@ -13,12 +13,12 @@ class TradeRebateSummary extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $this->belongsTo(User::class, 'user_id', 'id')->withTrashed();
     }
 
     public function upline_user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'upline_user_id', 'id');
+        return $this->belongsTo(User::class, 'upline_user_id', 'id')->withTrashed();
     }
 
     public function symbolGroup(): belongsTo

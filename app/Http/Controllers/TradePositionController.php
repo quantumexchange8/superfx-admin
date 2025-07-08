@@ -82,13 +82,13 @@ class TradePositionController extends Controller
                 $uplineId = $data['filters']['upline_id'];
 
                 // Get upline and their children IDs
-                $upline = User::find($uplineId);
+                $upline = User::withTrashed()->find($uplineId);
                 $childrenIds = $upline ? $upline->getChildrenIds() : [];
                 $childrenIds[] = $uplineId;
             
                 // Filter OpenTrade by user.upline_id in childrenIds
                 $query->whereHas('user', function ($q) use ($childrenIds) {
-                    $q->whereIn('upline_id', $childrenIds);
+                    $q->withTrashed()->whereIn('upline_id', $childrenIds);
                 });
             }
 
@@ -227,13 +227,13 @@ class TradePositionController extends Controller
                 $uplineId = $data['filters']['upline_id'];
 
                 // Get upline and their children IDs
-                $upline = User::find($uplineId);
+                $upline = User::withTrashed()->find($uplineId);
                 $childrenIds = $upline ? $upline->getChildrenIds() : [];
                 $childrenIds[] = $uplineId;
             
                 // Filter OpenTrade by user.upline_id in childrenIds
                 $query->whereHas('trading_account.ofUser', function ($q) use ($childrenIds) {
-                    $q->whereIn('upline_id', $childrenIds);
+                    $q->withTrashed()->whereIn('upline_id', $childrenIds);
                 });
             }
 
