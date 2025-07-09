@@ -527,7 +527,7 @@ const isJson = (str) => {
     <Dialog v-model:visible="visible" modal :header="$t('public.withdrawal_details')" class="dialog-xs md:dialog-md">
         <div class="flex flex-col justify-center items-start pb-4 gap-3 self-stretch border-b border-gray-200 md:flex-row md:pt-4 md:justify-between">
             <!-- below md -->
-            <span class="md:hidden self-stretch text-gray-950 text-xl font-semibold">${{ data.transaction_amount }}</span>
+            <span class="md:hidden self-stretch text-gray-950 text-xl font-semibold">${{ formatAmount(data.transaction_amount ?? 0) }}</span>
             <div class="flex items-center gap-3 self-stretch">
                 <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
                     <DefaultProfilePhoto />
@@ -538,7 +538,7 @@ const isJson = (str) => {
                 </div>
             </div>
             <!-- above md -->
-            <span class="hidden md:block w-[180px] text-gray-950 text-right text-xl font-semibold">${{ data.transaction_amount }}</span>
+            <span class="hidden md:block w-[180px] text-gray-950 text-right text-xl font-semibold">${{ formatAmount(data.transaction_amount ?? 0) }}</span>
         </div>
 
         <div class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
@@ -570,6 +570,10 @@ const isJson = (str) => {
 
         <div v-if="data.payment_platform === 'crypto' || !data.payment_platform" class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.platform') }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ data.payment_gateway ?? 'Payme' }}</span>
+            </div>
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.wallet_name') }}</span>
                 <span class="w-full text-gray-950 text-sm font-medium">{{ data.to_wallet_name }}</span>
             </div>
@@ -582,6 +586,10 @@ const isJson = (str) => {
         </div>
 
         <div v-if="data.payment_platform === 'bank'" class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.platform') }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ data.payment_gateway }}</span>
+            </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.bank_name') }}</span>
                 <span class="w-full text-gray-950 text-sm font-medium">{{ isJson(data.payment_platform_name)

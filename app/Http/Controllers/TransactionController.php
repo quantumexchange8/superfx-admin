@@ -74,7 +74,7 @@ class TransactionController extends Controller
                 $query->where(function ($q) use ($selectedMonthsArray) {
                     foreach ($selectedMonthsArray as $range) {
                         [$month, $year] = explode('/', $range);
-            
+
                         // Restrict data to the selected months
                         $q->orWhere(function ($subQuery) use ($month, $year) {
                             $subQuery->whereMonth('execute_at', $month)
@@ -83,7 +83,7 @@ class TransactionController extends Controller
                     }
                 });
             }
-            
+
             // Apply date filter based on availability of startDate and/or endDate
             if ($startDate && $endDate) {
                 // Both startDate and endDate are provided
@@ -167,7 +167,7 @@ class TransactionController extends Controller
 
             $data = $summary;
         } else {
-            $query = Transaction::with('user', 'from_wallet', 'to_wallet');
+            $query = Transaction::with('user', 'from_wallet', 'to_wallet', 'payment_gateway');
 
             // Apply filtering for each selected month-year pair
             if (!empty($selectedMonthsArray)) {
@@ -222,6 +222,7 @@ class TransactionController extends Controller
                     $result['to_meta_login'] = $transaction->to_meta_login;
                     $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
                     $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->type : null;
+                    $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
                 } elseif ($type === 'withdrawal') {
                     $result['to_wallet_address'] = $transaction->to_wallet_address;
                     $result['from_meta_login'] = $transaction->from_meta_login;
@@ -230,6 +231,7 @@ class TransactionController extends Controller
                     $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
                     $result['to_wallet_name'] = $transaction->payment_account_id ? $transaction->payment_account->payment_account_name : null;
                     $result['approved_at'] = $transaction->approved_at;
+                    $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
                 } elseif ($type === 'transfer') {
                     $result['from_meta_login'] = $transaction->from_meta_login;
                     $result['to_meta_login'] = $transaction->to_meta_login;
@@ -252,7 +254,7 @@ class TransactionController extends Controller
                     return Excel::download(new TransferTransactionExport($data), now() . '-transfers.xlsx');
                 }
             }
-                                    
+
         }
 
         return response()->json([
