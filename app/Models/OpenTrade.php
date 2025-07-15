@@ -14,12 +14,12 @@ class OpenTrade extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $this->belongsTo(User::class, 'user_id', 'id')->withTrashed();
     }
 
     public function trading_account(): BelongsTo
     {
-        return $this->belongsTo(TradingAccount::class, 'meta_login', 'meta_login');
+        return $this->belongsTo(TradingAccount::class, 'meta_login', 'meta_login')->withTrashed();
     }
 
 }

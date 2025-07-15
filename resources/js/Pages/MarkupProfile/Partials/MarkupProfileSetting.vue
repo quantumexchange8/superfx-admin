@@ -25,6 +25,7 @@ const props = defineProps({
 
 const isLoading = ref(false);
 const visible = ref(false);
+const confirm = useConfirm();
 
 const openDialog = () => {
     visible.value = true;
@@ -67,19 +68,45 @@ const form = useForm({
     user_ids: [],
 })
 
+const requireConfirmation = (action_type) => {
+    const messages = {
+        update_markup_profile: {
+            group: 'headless-primary',
+            header: trans('public.update_profile_header'),
+            message: trans('public.update_profile_message'),
+            cancelButton: trans('public.cancel'),
+            acceptButton: trans('public.save'),
+            action: () => {
+                form.post(route('markup_profile.updateMarkupProfile'), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        closeDialog();
+                    },
+                    onError: (e) => {
+                        console.log('Error submit form:', e);
+                    }
+                });
+            }
+        }
+    };
+
+    const { group, header, message, cancelButton, acceptButton, action } = messages[action_type];
+
+    confirm.require({
+        group,
+        header,
+        message,
+        cancelButton,
+        acceptButton,
+        accept: action
+    });
+};
+
 const submitForm = () => {
     form.account_type_ids = selectedAccountTypes.value?.length ? selectedAccountTypes.value.map(type => type.value) : [];
     form.user_ids = selectedUsers.value?.length ? selectedUsers.value.map(user => user.value) : [];
 
-    form.post(route('markup_profile.updateMarkupProfile'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            closeDialog();
-        },
-        onError: (e) => {
-            console.log('Error submit form:', e);
-        }
-    })
+    requireConfirmation('update_markup_profile');
 }
 
 </script>
@@ -186,6 +213,7 @@ const submitForm = () => {
                             v-model="selectedUsers"
                             :options="props.users"
                             :placeholder="$t('public.select_user')"
+                            :virtualScrollerOptions="{ itemSize: 50 }"
                             filter
                             :filterFields="['name', 'email', 'id_number']"
                             :maxSelectedLabels="1"

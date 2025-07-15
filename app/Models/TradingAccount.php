@@ -33,7 +33,7 @@ class TradingAccount extends Model
 
     public function ofUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $this->belongsTo(User::class, 'user_id', 'id')->withTrashed();
     }
 
     public function transactions(): HasMany
