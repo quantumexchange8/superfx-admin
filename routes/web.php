@@ -81,6 +81,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::post('/transferUpline', [MemberController::class, 'transferUpline'])->name('member.transferUpline');
         Route::post('/upgradeIB', [MemberController::class, 'upgradeIB'])->name('member.upgradeIB');
         Route::post('/resetPassword', [MemberController::class, 'resetPassword'])->name('member.resetPassword');
+        Route::post('/verifyEmail', [MemberController::class, 'verifyEmail'])->name('member.verifyEmail');
         Route::post('/uploadKyc', [MemberController::class, 'uploadKyc'])->name('member.uploadKyc');
 
         Route::delete('/deleteMember', [MemberController::class, 'deleteMember'])->name('member.deleteMember');

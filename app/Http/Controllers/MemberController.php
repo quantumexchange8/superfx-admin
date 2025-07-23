@@ -134,6 +134,7 @@ class MemberController extends Controller
                 'id',
                 'name',
                 'email',
+                'email_verified_at',
                 'upline_id',
                 'kyc_status',
                 'role',
@@ -150,6 +151,7 @@ class MemberController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'email_verified_at' => $user->email_verified_at ?? null,
                 'upline_id' => $user->upline_id,
                 'role' => $user->role,
                 'id_number' => $user->id_number,
@@ -778,7 +780,27 @@ class MemberController extends Controller
             'title' => trans('public.toast_reset_password_success'),
             'type' => 'success'
         ]);
+    }
 
+    public function verifyEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => ['required', 'exists:users,id'],
+            'date' => ['required', ],
+        ])->setAttributeNames([
+            'date' => trans('public.date'),
+        ]);
+        $validator->validate();
+
+        $user = User::find($request->id);
+        $user->update([
+            'email_verified_at' => Carbon::parse($request->date),
+        ]);
+    
+        return redirect()->back()->with('toast', [
+            'title' => trans('public.toast_verify_email_success'),
+            'type' => 'success'
+        ]);
     }
 
     public function detail($id_number)

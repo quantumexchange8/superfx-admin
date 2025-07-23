@@ -5,6 +5,7 @@ import {
     IconArrowsRightLeft,
     IconUserUp,
     IconLockCog,
+    IconMailCheck,
     IconTrash,
     IconDeviceLaptop
 } from "@tabler/icons-vue";
@@ -19,6 +20,7 @@ import Dialog from "primevue/dialog";
 import TransferUpline from "@/Pages/Member/Listing/Partials/TransferUpline.vue";
 import UpgradeToAgent from "@/Pages/Member/Listing/Partials/UpgradeToAgent.vue";
 import ResetPassword from "@/Pages/Member/Listing/Partials/ResetPassword.vue";
+import VerifyEmail from "@/Pages/Member/Listing/Partials/VerifyEmail.vue";
 
 const props = defineProps({
     member: Object,
@@ -69,6 +71,14 @@ const items = ref([
         },
     },
     {
+        label: 'verify_email',
+        icon: h(IconMailCheck),
+        command: () => {
+            visible.value = true;
+            dialogType.value = 'verify_email';
+        },
+    },
+    {
         separator: true,
     },
     {
@@ -82,8 +92,13 @@ const items = ref([
 
 const filteredItems = computed(() => {
     return items.value.filter(item => {
-        return !(item.role && item.role === 'member' && props.member.role === 'ib');
+        // 1. Hide "upgrade_to_ib" for IBs
+        if (item.role === 'member' && props.member.role === 'ib') return false;
 
+        // 2. Hide "verify_email" if already verified
+        if (item.label === 'verify_email' && props.member.email_verified_at) return false;
+
+        return true;
     });
 });
 
@@ -221,6 +236,12 @@ const handleMemberStatus = () => {
         </template>
         <template v-if="dialogType === 'reset_password'">
             <ResetPassword
+                :member="member"
+                @update:visible="visible = false"
+            />
+        </template>
+        <template v-if="dialogType === 'verify_email'">
+            <VerifyEmail
                 :member="member"
                 @update:visible="visible = false"
             />

@@ -728,4 +728,5 @@ return [
     "cent10-new" => "Cent10-New",
     "cent15-new" => "Cent15-New",
     "pro-new" => "PRO-New",
+    "verify_email" => "Verify Email",
 ];
