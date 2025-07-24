@@ -729,4 +729,5 @@ return [
     "cent15-new" => "Cent15-New",
     "pro-new" => "PRO-New",
     "verify_email" => "验证邮件",
+    "verify_email_desc" => "确认以验证该用户的电子邮件地址。",
 ];

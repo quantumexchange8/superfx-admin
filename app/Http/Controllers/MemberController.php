@@ -786,15 +786,13 @@ class MemberController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id' => ['required', 'exists:users,id'],
-            'date' => ['required', ],
         ])->setAttributeNames([
-            'date' => trans('public.date'),
         ]);
         $validator->validate();
 
         $user = User::find($request->id);
         $user->update([
-            'email_verified_at' => Carbon::parse($request->date),
+            'email_verified_at' => Carbon::now(),
         ]);
     
         return redirect()->back()->with('toast', [

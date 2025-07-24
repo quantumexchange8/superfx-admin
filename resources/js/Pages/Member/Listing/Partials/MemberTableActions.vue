@@ -20,7 +20,6 @@ import Dialog from "primevue/dialog";
 import TransferUpline from "@/Pages/Member/Listing/Partials/TransferUpline.vue";
 import UpgradeToAgent from "@/Pages/Member/Listing/Partials/UpgradeToAgent.vue";
 import ResetPassword from "@/Pages/Member/Listing/Partials/ResetPassword.vue";
-import VerifyEmail from "@/Pages/Member/Listing/Partials/VerifyEmail.vue";
 
 const props = defineProps({
     member: Object,
@@ -74,8 +73,7 @@ const items = ref([
         label: 'verify_email',
         icon: h(IconMailCheck),
         command: () => {
-            visible.value = true;
-            dialogType.value = 'verify_email';
+            requireConfirmation('verify_email')
         },
     },
     {
@@ -138,6 +136,18 @@ const requireConfirmation = (action_type) => {
                 })
 
                 checked.value = !checked.value;
+            }
+        },
+        verify_email: {
+            group: 'headless-primary',
+            header: trans('public.verify_email'),
+            text: trans('public.verify_email_desc'),
+            cancelButton: trans('public.cancel'),
+            acceptButton: trans('public.confirm'),
+            action: () => {
+                router.post(route('member.verifyEmail'), {
+                    id: props.member.id
+                })
             }
         },
         delete_member: {
@@ -236,12 +246,6 @@ const handleMemberStatus = () => {
         </template>
         <template v-if="dialogType === 'reset_password'">
             <ResetPassword
-                :member="member"
-                @update:visible="visible = false"
-            />
-        </template>
-        <template v-if="dialogType === 'verify_email'">
-            <VerifyEmail
                 :member="member"
                 @update:visible="visible = false"
             />

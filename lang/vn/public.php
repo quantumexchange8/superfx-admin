@@ -729,4 +729,5 @@ return [
     "cent15-new" => "Cent15-New",
     "pro-new" => "PRO-New",
     "verify_email" => "Xác minh email",
+    "verify_email_desc" => "Xác nhận để xác minh địa chỉ email của người dùng này.",
 ];

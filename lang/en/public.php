@@ -729,4 +729,5 @@ return [
     "cent15-new" => "Cent15-New",
     "pro-new" => "PRO-New",
     "verify_email" => "Verify Email",
+    "verify_email_desc" => "Confirm to verify this user's email address.",
 ];
