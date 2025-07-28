@@ -180,7 +180,7 @@ const rowClicked = (data) => {
                                 {{ slotProps.data.account_types?.length ? slotProps.data.account_types.map(type => type.name).join(', ') : $t('public.no_account_type') }}
                             </template>
                         </Column>
-                        <Column field="total_acc" sortable bodyClass="text-center md:text-left" class="hidden md:table-cell md:w-1/5 max-w-0">
+                        <Column field="total_acc" bodyClass="text-center md:text-left" class="hidden md:table-cell md:w-1/5 max-w-0">
                             <template #header>
                                 <span class="w-14 truncate sm:w-auto">{{ $t('public.total_account') }}</span>
                             </template>
