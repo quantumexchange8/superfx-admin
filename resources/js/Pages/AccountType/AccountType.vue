@@ -184,7 +184,7 @@ const rowClicked = (data) => {
                                 {{ slotProps.data.trade_delay }}
                             </template>
                         </Column>
-                        <Column field="total_acc" class="w-1/3 md:w-1/5" bodyClass="text-center md:text-left">
+                        <Column field="total_account" sortable class="w-1/3 md:w-1/5" bodyClass="text-center md:text-left">
                             <template #header>
                                 <span class="w-14 truncate sm:w-auto">{{ $t('public.total_account') }}</span>
                             </template>

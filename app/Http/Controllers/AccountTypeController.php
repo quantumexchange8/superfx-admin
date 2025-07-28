@@ -51,12 +51,18 @@ class AccountTypeController extends Controller
             $locale = app()->getLocale();
             $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
     
-            $query = AccountType::with('trading_accounts:id,account_type_id');
+            $query = AccountType::withCount('trading_accounts');
     
             // Handle sorting
             if (!empty($data['sortField']) && isset($data['sortOrder'])) {
                 $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
-                $query->orderBy($data['sortField'], $order);
+
+                // Sort by actual field or by trading_accounts_count alias
+                if ($data['sortField'] === 'total_account') {
+                    $query->orderBy('trading_accounts_count', $order);
+                } else {
+                    $query->orderBy($data['sortField'], $order);
+                }
             } else {
                 $query->orderByDesc('created_at');
             }
@@ -75,7 +81,7 @@ class AccountTypeController extends Controller
                     $accountType->trade_delay = $accountType->trade_open_duration. ' sec';
                 }
 
-                $accountType->total_account = $accountType->trading_accounts->count();
+                $accountType->total_account = $accountType->trading_accounts_count;
                 $accountType->description_locale = $translations[$locale] ?? '-';
                 $accountType->description_en = $translations['en'] ?? '-';
                 $accountType->description_tw = $translations['tw'] ?? '-';

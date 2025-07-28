@@ -49,27 +49,31 @@ class MarkupProfileController extends Controller
     
             $query = MarkupProfile::with([
                 'markupProfileToAccountTypes.accountType:id,name',
-                'userToMarkupProfiles:id,markup_profile_id',
-            ]);
-    
-            // Sorting
+            ])->withCount('userToMarkupProfiles');
+        
+            // Handle sorting
             if (!empty($data['sortField']) && isset($data['sortOrder'])) {
                 $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
-                $query->orderBy($data['sortField'], $order);
+    
+                if ($data['sortField'] === 'total_account') {
+                    $query->orderBy('user_to_markup_profiles_count', $order);
+                } else {
+                    $query->orderBy($data['sortField'], $order);
+                }
             } else {
                 $query->orderByDesc('created_at');
             }
-    
-            // Pagination
+        
+            // Handle pagination
             $rowsPerPage = $data['rows'] ?? 15;
             $result = $query->paginate($rowsPerPage);
     
             // Transform data
             foreach ($result->items() as $profile) {
                 $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
-                $profile->total_account = $profile->userToMarkupProfiles ? $profile->userToMarkupProfiles->count() : 0;
+                $profile->total_account = $profile->user_to_markup_profiles_count ?? 0;
     
-                unset($profile->markupProfileToAccountTypes, $profile->userToMarkupProfiles);
+                unset($profile->markupProfileToAccountTypes, $profile->user_to_markup_profiles_count);
             }
         }
     
