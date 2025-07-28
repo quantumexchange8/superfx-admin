@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Button from '@/Components/Button.vue';
 import { IconRefresh } from '@tabler/icons-vue';
 import DataTable from 'primevue/datatable';
-import { onMounted, ref, watchEffect } from 'vue';
+import { onMounted, ref, watch, watchEffect } from 'vue';
 import Column from 'primevue/column';
 import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
@@ -17,28 +17,88 @@ const props = defineProps({
 })
 
 const markupProfiles = ref();
+const totalRecords = ref(0);
 const loading = ref(false);
+const dt = ref(null);
+const first = ref(0);
 
-const getMarkupProfiles = async () => {
+const lazyParams = ref({});
+const abortController = ref(null);
+
+// Load Account Types with Pagination + Sorting + Abort
+const loadLazyData = (event = {}) => {
     loading.value = true;
 
-    try {
-        const response = await axios.get('/markup_profile/getMarkupProfiles');
-        markupProfiles.value = response.data.markupProfiles;
-    } catch (error) {
-        console.error('Error getting markup profiles:', error);
-    } finally {
-        loading.value = false;
+    // Abort previous request if still pending
+    if (abortController.value) {
+        abortController.value.abort();
     }
-}
+
+    abortController.value = new AbortController();
+
+    lazyParams.value = {
+        ...lazyParams.value,
+        first: event.first ?? first.value,
+    };
+
+    setTimeout(async () => {
+        try {
+            const params = {
+                page: JSON.stringify((event.page ?? 0) + 1),
+                sortField: event.sortField,
+                sortOrder: event.sortOrder,
+                lazyEvent: JSON.stringify(lazyParams.value),
+            };
+
+            const url = route('markup_profile.getMarkupProfiles', params);
+
+            const response = await fetch(url, {
+                signal: abortController.value.signal,
+            });
+
+            const results = await response.json();
+
+            markupProfiles.value = results?.data?.data ?? [];
+            totalRecords.value = results?.data?.total ?? 0;
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('Request aborted');
+            } else {
+                console.error('Error getting markup profiles:', error);
+                markupProfiles.value = [];
+                totalRecords.value = 0;
+            }
+        } finally {
+            loading.value = false;
+        }
+    }, 100);
+};
+
+const onPage = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
+
+const onSort = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
 
 onMounted(() => {
-    getMarkupProfiles();
-})
+    lazyParams.value = {
+        first: dt.value?.first ?? 0,
+        rows: dt.value?.rows ?? 10,
+        sortField: null,
+        sortOrder: null,
+    };
 
-watchEffect(() => {
-    if (usePage().props.toast !== null) {
-        getMarkupProfiles();
+    loadLazyData();
+});
+
+watch(() => usePage().props.toast, (toast) => {
+    if (toast !== null) {
+        first.value = 0;
+        loadLazyData();
     }
 });
 
@@ -74,7 +134,9 @@ const rowClicked = (data) => {
             <div
                 class="py-6 px-4 md:p-6 flex flex-col justify-center items-center gap-6 self-stretch rounded-2xl border border-solid border-gray-200 bg-white shadow-table">
                 <DataTable
+                    v-model:first="first"
                     :value="markupProfiles"
+                    lazy
                     removableSort
                     :loading="loading"
                     @row-click="rowClicked($event.data)"
@@ -83,6 +145,11 @@ const rowClicked = (data) => {
                     :rowsPerPageOptions="[10, 20, 50, 100]"
                     paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
                     :currentPageReportTemplate="$t('public.paginator_caption')"
+                    ref="dt"
+                    dataKey="id"
+                    :totalRecords="totalRecords"
+                    @page="onPage($event)"
+                    @sort="onSort($event)"
                 >
                     <template #empty>
                         <Empty :title="$t('public.no_profile_header')"

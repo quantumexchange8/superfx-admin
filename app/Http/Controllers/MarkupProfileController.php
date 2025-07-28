@@ -24,24 +24,61 @@ class MarkupProfileController extends Controller
         ]);
     }
 
-    public function getMarkupProfiles()
+    // public function getMarkupProfiles()
+    // {
+    //     $markupProfiles = MarkupProfile::with([
+    //             'markupProfileToAccountTypes.accountType:id,name',
+    //             'userToMarkupProfiles'
+    //         ])->get();
+    
+    //     foreach ($markupProfiles as $profile) {
+    //         $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
+    //         $profile->total_account = $profile->userToMarkupProfiles ? $profile->userToMarkupProfiles->count() : 0;
+    
+    //         // Remove relations if not needed
+    //         unset($profile->markupProfileToAccountTypes, $profile->userToMarkupProfiles);
+    //     }
+    
+    //     return response()->json(['markupProfiles' => $markupProfiles]);
+    // }
+    
+    public function getMarkupProfiles(Request $request)
     {
-        $markupProfiles = MarkupProfile::with([
+        if ($request->has('lazyEvent')) {
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
+    
+            $query = MarkupProfile::with([
                 'markupProfileToAccountTypes.accountType:id,name',
-                'userToMarkupProfiles'
-            ])->get();
+                'userToMarkupProfiles:id,markup_profile_id',
+            ]);
     
-        foreach ($markupProfiles as $profile) {
-            $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
-            $profile->total_account = $profile->userToMarkupProfiles ? $profile->userToMarkupProfiles->count() : 0;
+            // Sorting
+            if (!empty($data['sortField']) && isset($data['sortOrder'])) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+                $query->orderBy($data['sortField'], $order);
+            } else {
+                $query->orderByDesc('created_at');
+            }
     
-            // Remove relations if not needed
-            unset($profile->markupProfileToAccountTypes, $profile->userToMarkupProfiles);
+            // Pagination
+            $rowsPerPage = $data['rows'] ?? 15;
+            $result = $query->paginate($rowsPerPage);
+    
+            // Transform data
+            foreach ($result->items() as $profile) {
+                $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
+                $profile->total_account = $profile->userToMarkupProfiles ? $profile->userToMarkupProfiles->count() : 0;
+    
+                unset($profile->markupProfileToAccountTypes, $profile->userToMarkupProfiles);
+            }
         }
     
-        return response()->json(['markupProfiles' => $markupProfiles]);
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
     }
-    
+
     public function addMarkupProfile(Request $request)
     {
         $validator = Validator::make($request->all(), [

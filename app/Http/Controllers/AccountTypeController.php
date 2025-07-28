@@ -19,32 +19,77 @@ class AccountTypeController extends Controller
         ]);
     }
 
-    public function getAccountTypes()
-    {
-        $accountTypes = AccountType::with('trading_accounts:id,account_type_id')
-            ->get()
-            ->map(function($accountType) {
-                $locale = app()->getLocale();
-                $translations = json_decode($accountType->descriptions, true);
+    // public function getAccountTypes()
+    // {
+    //     $accountTypes = AccountType::with('trading_accounts:id,account_type_id')
+    //         ->get()
+    //         ->map(function($accountType) {
+    //             $locale = app()->getLocale();
+    //             $translations = json_decode($accountType->descriptions, true);
 
+    //             if ($accountType->trade_open_duration >= 60) {
+    //                 $accountType['trade_delay'] = ($accountType->trade_open_duration / 60).' min';
+    //             } else {
+    //                 $accountType['trade_delay'] = $accountType->trade_open_duration. ' sec';
+    //             }
+
+    //             // need to change to calculate total account created for each type
+    //             $accountType['total_account'] = $accountType->trading_accounts()->count();
+    //             $accountType['description_locale'] = $translations[$locale] ?? '-';
+    //             $accountType['description_en'] = $translations['en'] ?? '-';
+    //             $accountType['description_tw'] = $translations['tw'] ?? '-';
+
+    //             return $accountType;
+    //         });
+
+    //     return response()->json(['accountTypes' => $accountTypes]);
+    // }
+
+    public function getAccountTypes(Request $request)
+    {
+        if ($request->has('lazyEvent')) {
+            $locale = app()->getLocale();
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
+    
+            $query = AccountType::with('trading_accounts:id,account_type_id');
+    
+            // Handle sorting
+            if (!empty($data['sortField']) && isset($data['sortOrder'])) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+                $query->orderBy($data['sortField'], $order);
+            } else {
+                $query->orderByDesc('created_at');
+            }
+    
+            // Handle pagination
+            $rowsPerPage = $data['rows'] ?? 15;
+            $result = $query->paginate($rowsPerPage);
+    
+            // Transform each account type
+            foreach ($result->items() as $accountType) {
+                $translations = json_decode($accountType->descriptions, true);
+    
                 if ($accountType->trade_open_duration >= 60) {
-                    $accountType['trade_delay'] = ($accountType->trade_open_duration / 60).' min';
+                    $accountType->trade_delay = ($accountType->trade_open_duration / 60).' min';
                 } else {
-                    $accountType['trade_delay'] = $accountType->trade_open_duration. ' sec';
+                    $accountType->trade_delay = $accountType->trade_open_duration. ' sec';
                 }
 
-                // need to change to calculate total account created for each type
-                $accountType['total_account'] = $accountType->trading_accounts()->count();
-                $accountType['description_locale'] = $translations[$locale] ?? '-';
-                $accountType['description_en'] = $translations['en'] ?? '-';
-                $accountType['description_tw'] = $translations['tw'] ?? '-';
-
-                return $accountType;
-            });
-
-        return response()->json(['accountTypes' => $accountTypes]);
+                $accountType->total_account = $accountType->trading_accounts->count();
+                $accountType->description_locale = $translations[$locale] ?? '-';
+                $accountType->description_en = $translations['en'] ?? '-';
+                $accountType->description_tw = $translations['tw'] ?? '-';
+    
+                unset($accountType->trading_accounts);
+            }
+    
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ]);
+        }
     }
-
+        
     public function syncAccountTypes()
     {
         //function
