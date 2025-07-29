@@ -20,6 +20,7 @@ use App\Models\LeaderboardBonus;
 use App\Services\CTraderService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class GeneralController extends Controller
 {
@@ -228,6 +229,10 @@ class GeneralController extends Controller
     public function getAccountTypes($returnAsArray = false)
     {
         $accountTypes = AccountType::where('status', 'active')
+            ->where('account_group', '!=', 'Demo Account')
+            ->whereHas('markupProfileToAccountTypes.markupProfile.userToMarkupProfiles', function ($query) {
+                $query->where('user_id', Auth::id());
+            })
             ->get()
             ->map(function ($accountType) {
                 return [
