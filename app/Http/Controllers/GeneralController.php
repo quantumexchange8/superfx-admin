@@ -272,9 +272,7 @@ class GeneralController extends Controller
     {
         $accountGroups = AccountType::where('status', 'active')
             ->where('account_group', '!=', 'Demo Account')
-            ->whereHas('markupProfileToAccountTypes.markupProfile.userToMarkupProfiles', function ($query) {
-                $query->where('user_id', Auth::id());
-            })
+            ->whereHas('markupProfileToAccountTypes.markupProfile.userToMarkupProfiles')
             ->get()
             ->map(function ($accountType) {
                 return [
