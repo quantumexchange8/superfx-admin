@@ -19,7 +19,7 @@ class MarkupProfileController extends Controller
     public function index()
     {
         return Inertia::render('MarkupProfile/MarkupProfile', [
-            'accountTypes' => (new GeneralController())->getAccountTypes(true),
+            'accountTypes' => (new GeneralController())->getAllAccountTypes(true),
             'users' => (new GeneralController())->getAllUsers(true),
         ]);
     }

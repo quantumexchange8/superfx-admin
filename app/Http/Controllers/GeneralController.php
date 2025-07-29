@@ -226,6 +226,26 @@ class GeneralController extends Controller
     //     ]);
     // }
 
+    public function getAllAccountTypes($returnAsArray = false)
+    {
+        $accountTypes = AccountType::where('status', 'active')
+            ->get()
+            ->map(function ($accountType) {
+                return [
+                    'value' => $accountType->id,
+                    'name' => trans('public.' . $accountType->slug),
+                ];
+            });
+    
+        if ($returnAsArray) {
+            return $accountTypes;
+        }
+    
+        return response()->json([
+            'accountTypes' => $accountTypes,
+        ]);
+    }
+
     public function getAccountTypes($returnAsArray = false)
     {
         $accountTypes = AccountType::where('status', 'active')
@@ -252,7 +272,12 @@ class GeneralController extends Controller
 
     public function getAccountGroups($returnAsArray = false)
     {
-        $accountGroups = AccountType::all()
+        $accountGroups = AccountType::where('status', 'active')
+            ->where('account_group', '!=', 'Demo Account')
+            ->whereHas('markupProfileToAccountTypes.markupProfile.userToMarkupProfiles', function ($query) {
+                $query->where('user_id', Auth::id());
+            })
+            ->get()
             ->map(function ($accountType) {
                 return [
                     'value' => $accountType->account_group,
