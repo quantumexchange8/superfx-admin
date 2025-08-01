@@ -322,6 +322,7 @@ class GeneralController extends Controller
                     'value' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'id_number' => $user->id_number,
                     // 'profile_photo' => $user->getFirstMediaUrl('profile_photo')
                 ];
             });

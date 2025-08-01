@@ -540,7 +540,7 @@ watchEffect(() => {
                     v-model="selectedUplines"
                     :options="uplines"
                     filter
-                    :filterFields="['name', 'email']"
+                    :filterFields="['name', 'email', 'id_number']"
                     optionLabel="name"
                     :placeholder="$t('public.filter_upline')"
                     class="w-full"

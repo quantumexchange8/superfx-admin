@@ -195,7 +195,7 @@ class TradingAccountController extends Controller
             $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
 
             // Export logic
-            if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
+            if ($request->has('exportStatus') && $request->exportStatus == true) {
                 $accounts = $query->clone();
                 return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
             }
