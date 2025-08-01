@@ -730,4 +730,6 @@ return [
     "pro-new" => "PRO-New",
     "verify_email" => "驗證郵件",
     "verify_email_desc" => "確認以驗證該用戶的電子郵件地址。",
+    "referrer_name" => "推薦人姓名",
+    "referrer_email" => "推薦人郵箱",
 ];

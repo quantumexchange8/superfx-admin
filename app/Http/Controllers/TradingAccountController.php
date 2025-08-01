@@ -37,6 +37,7 @@ class TradingAccountController extends Controller
             'last_refresh_datetime' => $last_refresh_datetime?->last_ran_at,
             'leverages' => (new GeneralController())->getLeverages(true),
             'accountTypes' => (new GeneralController())->getAccountTypes(true),
+            'uplines' => (new GeneralController())->getUplines(true),
         ]);
     }
 
@@ -127,7 +128,7 @@ class TradingAccountController extends Controller
         if ($type === 'all') {
             $query = TradingUser::query()
                 ->with([
-                    'users:id,name,email',
+                    'users:id,name,email,upline_id',
                     'trading_account:id,meta_login,equity',
                     'accountType:id,slug,account_group,color',
                 ]);
@@ -167,6 +168,23 @@ class TradingAccountController extends Controller
                 $query->where('account_type_id', $request->input('account_type'));
             }
 
+            if ($request->input('upline_id')) {
+                $uplineId = $request->input('upline_id');
+            
+                // Get upline and their children IDs
+                $upline = User::find($uplineId);
+                $childrenIds = $upline ? $upline->getChildrenIds() : [];
+                $childrenIds[] = $uplineId;
+            
+                // Filter only active users where upline_id is in the list or user is the upline
+                $query->whereHas('users', function ($q) use ($childrenIds, $uplineId) {
+                    $q->where(function ($query) use ($childrenIds, $uplineId) {
+                        $query->where('id', $uplineId)
+                            ->orWhereIn('upline_id', $childrenIds);
+                      });
+                });
+            }
+            
             // Handle sorting
             $sortField = $request->input('sortField', 'meta_login'); // Default to 'meta_login'
             $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
@@ -199,6 +217,7 @@ class TradingAccountController extends Controller
             
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
+                $account->upline_id = optional($account->users)->upline_id;
                 $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
                 $account->user_name = optional($account->users)->name;
                 $account->user_email = optional($account->users)->email;
@@ -222,7 +241,7 @@ class TradingAccountController extends Controller
             // Handle inactive accounts or other types
             $query = TradingUser::onlyTrashed() // Only consider soft-deleted trading users
                 ->withTrashed([
-                    'user:id,name,email', 
+                    'user:id,name,email,upline_id', 
                     'trading_account:id,user_id,meta_login',
                     'accountType:id,slug,account_group,color',
                 ]); // Include soft-deleted related users, trading accounts and account type
@@ -240,6 +259,23 @@ class TradingAccountController extends Controller
                 });
             }
 
+            // if ($request->input('upline_id')) {
+            //     $uplineId = $request->input('upline_id');
+            
+            //     // Get upline and their children IDs
+            //     $upline = User::withTrashed()->find($uplineId);
+            //     $childrenIds = $upline ? $upline->getChildrenIds() : [];
+            //     $childrenIds[] = $uplineId;
+            
+            //     // Filter only deleted users that match the upline logic
+            //     $query->whereHas('users', function ($q) use ($childrenIds, $uplineId) {
+            //         $q->onlyTrashed()->where(function ($query) use ($childrenIds, $uplineId) {
+            //             $query->where('id', $uplineId)
+            //                 ->orWhereIn('upline_id', $childrenIds);
+            //         });
+            //     });
+            // }
+                        
             // Handle sorting
             $sortField = $request->input('sortField', 'deleted_at'); // Default to 'created_at'
             $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending

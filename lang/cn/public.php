@@ -730,4 +730,6 @@ return [
     "pro-new" => "PRO-New",
     "verify_email" => "验证邮件",
     "verify_email_desc" => "确认以验证该用户的电子邮件地址。",
+    "referrer_name" => "推荐人姓名",
+    "referrer_email" => "推荐人邮箱",
 ];
