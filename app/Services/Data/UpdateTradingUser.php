@@ -20,25 +20,33 @@ class UpdateTradingUser
             ->where('meta_login', $meta_login)
             ->first();
 
-        $accountType = AccountType::query()
-            ->where('account_group', $data['group'])
-            ->first();
+        if ($data['status'] == 'success') {
+            $accountType = AccountType::query()
+                ->where('account_group', $data['group'])
+                ->first();
 
-        $tradingUser->meta_group = $data['group'];
-        $tradingUser->account_type_id = $accountType->id;
-        $tradingUser->leverage = $data['leverage'];
-        $tradingUser->registration = $data['registration_date'];
-        $tradingUser->last_ip = $data['last_ip'];
-        if (isset($data['last_login'])) { 
-            $tradingUser->last_access = $data['last_login'];
+            $tradingUser->meta_group = $data['group'];
+            $tradingUser->account_type_id = $accountType->id;
+            $tradingUser->leverage = $data['leverage'];
+            $tradingUser->registration = $data['registration_date'];
+            $tradingUser->last_ip = $data['last_ip'];
+            if (isset($data['last_login'])) {
+                $tradingUser->last_access = $data['last_login'];
+            }
+
+            $tradingUser->balance = $data['balance'];
+            $tradingUser->credit = $data['credit'];
+
+            DB::transaction(function () use ($tradingUser) {
+                $tradingUser->save();
+            });
+        } else {
+            $tradingUser->update([
+                'acc_status' => 'inactive',
+            ]);
+
+            $tradingUser->delete();
         }
-
-        $tradingUser->balance = $data['balance'];
-        $tradingUser->credit = $data['credit'];
-
-        DB::transaction(function () use ($tradingUser) {
-            $tradingUser->save();
-        });
 
         return $tradingUser;
     }

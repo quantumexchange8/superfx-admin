@@ -14,6 +14,7 @@ defineProps({
     last_refresh_datetime: [String, Number],
     leverages: Array,
     accountTypes: Array,
+    uplines: Array,
 });
 
 const tabs = ref([
@@ -87,6 +88,7 @@ const refreshAll = () => {
                             v-if="activeIndex === index" 
                             :leverages=leverages
                             :accountTypes=accountTypes
+                            :uplines=uplines
                         />
                     </TabPanel>
                 </TabView>

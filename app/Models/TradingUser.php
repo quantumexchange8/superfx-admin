@@ -11,6 +11,8 @@ class TradingUser extends Model
 {
     use SoftDeletes;
 
+    protected $guarded = ['id'];
+
     /**
      * Get the attributes that should be cast.
      *

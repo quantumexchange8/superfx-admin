@@ -134,6 +134,7 @@ class MemberController extends Controller
                 'id',
                 'name',
                 'email',
+                'email_verified_at',
                 'upline_id',
                 'kyc_status',
                 'role',
@@ -150,6 +151,7 @@ class MemberController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'email_verified_at' => $user->email_verified_at ?? null,
                 'upline_id' => $user->upline_id,
                 'role' => $user->role,
                 'id_number' => $user->id_number,
@@ -778,7 +780,25 @@ class MemberController extends Controller
             'title' => trans('public.toast_reset_password_success'),
             'type' => 'success'
         ]);
+    }
 
+    public function verifyEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => ['required', 'exists:users,id'],
+        ])->setAttributeNames([
+        ]);
+        $validator->validate();
+
+        $user = User::find($request->id);
+        $user->update([
+            'email_verified_at' => Carbon::now(),
+        ]);
+    
+        return redirect()->back()->with('toast', [
+            'title' => trans('public.toast_verify_email_success'),
+            'type' => 'success'
+        ]);
     }
 
     public function detail($id_number)
@@ -793,7 +813,15 @@ class MemberController extends Controller
     public function getUserData(Request $request)
     {
         $user = User::with(['groupHasUser', 'upline:id,name', 'country:id,name,phone_code'])->find($request->id);
-
+    
+        // Prepare kyc_verification with created_at
+        $kycVerification = [];
+        foreach ($user->getMedia('kyc_verification') as $media) {
+            $data = $media->toArray();
+            $data['created_at'] = $media->created_at->toDateTimeString();
+            $kycVerification[] = $data;
+        }
+    
         $userData = [
             'id' => $user->id,
             'name' => $user->name,
@@ -814,21 +842,21 @@ class MemberController extends Controller
             'upline_profile_photo' => $user->upline ? $user->upline->getFirstMediaUrl('profile_photo') : null,
             'total_direct_member' => $user->directChildren->where('role', 'member')->count(),
             'total_direct_ib' => $user->directChildren->where('role', 'ib')->count(),
-            'kyc_verification' => $user->getMedia('kyc_verification'),
+            'kyc_verification' => $kycVerification,
             'kyc_approved_at' => $user->kyc_approved_at,
             'kyc_status' => $user->kyc_status,
         ];
-
+    
         $paymentAccounts = $user->paymentAccounts()
             ->latest()
             ->get();
-
+    
         return response()->json([
             'userDetail' => $userData,
             'paymentAccounts' => $paymentAccounts
         ]);
     }
-
+    
     public function updateContactInfo(Request $request)
     {
         $validator = Validator::make($request->all(), [

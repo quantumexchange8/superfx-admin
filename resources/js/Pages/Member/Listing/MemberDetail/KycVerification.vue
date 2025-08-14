@@ -13,15 +13,14 @@ const props = defineProps({
 const kycVerification = ref([]);
 const visible = ref(false);
 
-// Watch the props.userDetail and transform the kyc_verification object into an array
 watch(() => props.userDetail, (newUserDetail) => {
-    // Check if kyc_verification exists and is an object before using Object.values()
-    if (newUserDetail && newUserDetail.kyc_verification) {
-        kycVerification.value = Object.values(newUserDetail.kyc_verification);
+    if (newUserDetail && Array.isArray(newUserDetail.kyc_verification)) {
+        kycVerification.value = newUserDetail.kyc_verification;
     } else {
-        kycVerification.value = []; // Set it to an empty array if kyc_verification doesn't exist
+        kycVerification.value = [];
     }
 }, { immediate: true });
+
 
 const openDialog = () => {
     visible.value = true

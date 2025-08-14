@@ -24,6 +24,7 @@ const props = defineProps({
   loadResults: Boolean,
   leverages: Array,
   accountTypes: Array,
+  uplines: Array,
 });
 
 // overlay panel
@@ -33,6 +34,8 @@ const accounts = ref([]);
 const totalRecords = ref(0);
 const leverages = ref();
 const accountTypes = ref();
+const selectedUplines = ref();
+const uplines = ref()
 const rows = ref(10);
 const page = ref(0);
 const sortField = ref(null);  
@@ -45,10 +48,10 @@ const visible = ref(false);
 
 // Watch both 'leverages' and 'accountTypes' props together
 watch(
-  () => [props.leverages, props.accountTypes], 
-  ([newLeverages, newAccountTypes]) => {
+  () => [props.leverages, props.accountTypes, props.uplines], ([newLeverages, newAccountTypes, newUplines]) => {
     leverages.value = newLeverages;
     accountTypes.value = newAccountTypes;
+    uplines.value = newUplines;
   },
   { immediate: true } // Optionally add `immediate: true` to run the watch immediately on component mount
 );
@@ -59,6 +62,14 @@ const filters = ref({
     balance: '',
     leverage: '',
     account_type: '',
+    upline_id: '',
+});
+
+// Watch selected values to update filters
+watch([selectedUplines], ([newUplineId]) => {
+    if (newUplineId) {
+        filters.value['upline_id'] = newUplineId.value;
+    }
 });
 
 const clearFilterGlobal = () => {
@@ -74,7 +85,9 @@ const clearFilter = () => {
         balance: '',
         leverage: '',
         account_type: '',
+        upline_id: '',
     };
+    selectedUplines.value = null;
 };
 
 // Watch for changes on the entire 'filters' object and debounce the API call
@@ -114,6 +127,10 @@ const constructUrl = (exportStatus = false) => {
 
     if (filters.value.account_type) {
         url += `&account_type=${filters.value.account_type.value}`;
+    }
+
+    if (filters.value.upline_id) {
+        url += `&upline_id=${filters.value.upline_id}`;
     }
 
     if (sortField.value && sortOrder.value !== null) {
@@ -510,6 +527,38 @@ watchEffect(() => {
                         <div class="flex items-center gap-2">
                             <div>{{ slotProps.option.name }}</div>
                         </div>
+                    </template>
+                </Dropdown>
+            </div>
+
+            <!-- Filter Upline-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_upline') }}
+                </div>
+                <Dropdown
+                    v-model="selectedUplines"
+                    :options="uplines"
+                    filter
+                    :filterFields="['name', 'email', 'id_number']"
+                    optionLabel="name"
+                    :placeholder="$t('public.filter_upline')"
+                    class="w-full"
+                    scroll-height="236px"
+                >
+                <template #option="{option}">
+                        <div class="flex flex-col">
+                            <span>{{ option.name }}</span>
+                            <span class="text-xs text-gray-400 max-w-52 truncate">{{ option.email }}</span>
+                        </div>
+                    </template>
+                    <template #value>
+                        <div v-if="selectedUplines">
+                            <span>{{ selectedUplines.name }}</span>
+                        </div>
+                        <span v-else class="text-gray-400">
+                            {{ $t('public.filter_upline') }}
+                        </span>
                     </template>
                 </Dropdown>
             </div>

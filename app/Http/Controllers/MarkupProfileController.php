@@ -19,29 +19,70 @@ class MarkupProfileController extends Controller
     public function index()
     {
         return Inertia::render('MarkupProfile/MarkupProfile', [
-            'accountTypes' => (new GeneralController())->getAccountTypes(true),
+            'accountTypes' => (new GeneralController())->getAllAccountTypes(true),
             'users' => (new GeneralController())->getAllUsers(true),
         ]);
     }
 
-    public function getMarkupProfiles()
+    // public function getMarkupProfiles()
+    // {
+    //     $markupProfiles = MarkupProfile::with([
+    //             'markupProfileToAccountTypes.accountType:id,name',
+    //             'userToMarkupProfiles'
+    //         ])->get();
+    
+    //     foreach ($markupProfiles as $profile) {
+    //         $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
+    //         $profile->total_account = $profile->userToMarkupProfiles ? $profile->userToMarkupProfiles->count() : 0;
+    
+    //         // Remove relations if not needed
+    //         unset($profile->markupProfileToAccountTypes, $profile->userToMarkupProfiles);
+    //     }
+    
+    //     return response()->json(['markupProfiles' => $markupProfiles]);
+    // }
+    
+    public function getMarkupProfiles(Request $request)
     {
-        $markupProfiles = MarkupProfile::with([
+        if ($request->has('lazyEvent')) {
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
+    
+            $query = MarkupProfile::with([
                 'markupProfileToAccountTypes.accountType:id,name',
-                'userToMarkupProfiles'
-            ])->get();
+            ])->withCount('userToMarkupProfiles');
+        
+            // Handle sorting
+            if (!empty($data['sortField']) && isset($data['sortOrder'])) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
     
-        foreach ($markupProfiles as $profile) {
-            $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
-            $profile->total_account = $profile->userToMarkupProfiles ? $profile->userToMarkupProfiles->count() : 0;
+                if ($data['sortField'] === 'total_account') {
+                    $query->orderBy('user_to_markup_profiles_count', $order);
+                } else {
+                    $query->orderBy($data['sortField'], $order);
+                }
+            } else {
+                $query->orderByDesc('created_at');
+            }
+        
+            // Handle pagination
+            $rowsPerPage = $data['rows'] ?? 15;
+            $result = $query->paginate($rowsPerPage);
     
-            // Remove relations if not needed
-            unset($profile->markupProfileToAccountTypes, $profile->userToMarkupProfiles);
+            // Transform data
+            foreach ($result->items() as $profile) {
+                $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
+                $profile->total_account = $profile->user_to_markup_profiles_count ?? 0;
+    
+                unset($profile->markupProfileToAccountTypes, $profile->user_to_markup_profiles_count);
+            }
         }
     
-        return response()->json(['markupProfiles' => $markupProfiles]);
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
     }
-    
+
     public function addMarkupProfile(Request $request)
     {
         $validator = Validator::make($request->all(), [

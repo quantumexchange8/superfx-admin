@@ -33,4 +33,10 @@ class AccountType extends Model
     {
         return $this->hasMany(TradingAccount::class, 'account_type_id', 'id');
     }
+
+    public function markupProfileToAccountTypes(): HasMany
+    {
+        return $this->hasMany(MarkupProfileToAccountType::class, 'account_type_id', 'id');
+    }
+
 }

@@ -20,6 +20,7 @@ use App\Models\LeaderboardBonus;
 use App\Services\CTraderService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class GeneralController extends Controller
 {
@@ -225,28 +226,54 @@ class GeneralController extends Controller
     //     ]);
     // }
 
-    public function getAccountTypes($returnAsArray = false)
+    public function getAllAccountTypes($returnAsArray = false)
     {
-        $accountTypes = AccountType::all()
+        $accountTypes = AccountType::where('status', 'active')
+            ->get()
             ->map(function ($accountType) {
                 return [
                     'value' => $accountType->id,
                     'name' => trans('public.' . $accountType->slug),
                 ];
             });
-
+    
         if ($returnAsArray) {
             return $accountTypes;
         }
-
+    
         return response()->json([
             'accountTypes' => $accountTypes,
         ]);
     }
 
+    public function getAccountTypes($returnAsArray = false)
+    {
+        $accountTypes = AccountType::where('status', 'active')
+            ->where('account_group', '!=', 'Demo Account')
+            ->whereHas('markupProfileToAccountTypes.markupProfile.userToMarkupProfiles')
+            ->get()
+            ->map(function ($accountType) {
+                return [
+                    'value' => $accountType->id,
+                    'name' => trans('public.' . $accountType->slug),
+                ];
+            });
+    
+        if ($returnAsArray) {
+            return $accountTypes;
+        }
+    
+        return response()->json([
+            'accountTypes' => $accountTypes,
+        ]);
+    }
+    
     public function getAccountGroups($returnAsArray = false)
     {
-        $accountGroups = AccountType::all()
+        $accountGroups = AccountType::where('status', 'active')
+            ->where('account_group', '!=', 'Demo Account')
+            ->whereHas('markupProfileToAccountTypes.markupProfile.userToMarkupProfiles')
+            ->get()
             ->map(function ($accountType) {
                 return [
                     'value' => $accountType->account_group,
@@ -295,6 +322,7 @@ class GeneralController extends Controller
                     'value' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'id_number' => $user->id_number,
                     // 'profile_photo' => $user->getFirstMediaUrl('profile_photo')
                 ];
             });

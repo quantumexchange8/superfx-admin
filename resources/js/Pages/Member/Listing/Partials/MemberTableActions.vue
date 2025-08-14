@@ -5,6 +5,7 @@ import {
     IconArrowsRightLeft,
     IconUserUp,
     IconLockCog,
+    IconMailCheck,
     IconTrash,
     IconDeviceLaptop
 } from "@tabler/icons-vue";
@@ -69,6 +70,13 @@ const items = ref([
         },
     },
     {
+        label: 'verify_email',
+        icon: h(IconMailCheck),
+        command: () => {
+            requireConfirmation('verify_email')
+        },
+    },
+    {
         separator: true,
     },
     {
@@ -82,8 +90,13 @@ const items = ref([
 
 const filteredItems = computed(() => {
     return items.value.filter(item => {
-        return !(item.role && item.role === 'member' && props.member.role === 'ib');
+        // 1. Hide "upgrade_to_ib" for IBs
+        if (item.role === 'member' && props.member.role === 'ib') return false;
 
+        // 2. Hide "verify_email" if already verified
+        if (item.label === 'verify_email' && props.member.email_verified_at) return false;
+
+        return true;
     });
 });
 
@@ -123,6 +136,18 @@ const requireConfirmation = (action_type) => {
                 })
 
                 checked.value = !checked.value;
+            }
+        },
+        verify_email: {
+            group: 'headless-primary',
+            header: trans('public.verify_email'),
+            text: trans('public.verify_email_desc'),
+            cancelButton: trans('public.cancel'),
+            acceptButton: trans('public.confirm'),
+            action: () => {
+                router.post(route('member.verifyEmail'), {
+                    id: props.member.id
+                })
             }
         },
         delete_member: {

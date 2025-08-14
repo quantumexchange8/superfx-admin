@@ -20,6 +20,7 @@ import {
     IconCircleXFilled,
     IconAdjustments,
     IconAlertCircleFilled,
+    IconCircleCheckFilled,
     IconDotsVertical,
     IconReportSearch,
     IconPencilMinus,
@@ -405,8 +406,9 @@ const paginator_caption = wTrans('public.paginator_caption');
                                         <div class="font-medium">
                                             {{ slotProps.data.name }}
                                         </div>
-                                        <div class="text-gray-500 text-xs">
-                                            {{ slotProps.data.email }}
+                                        <div class="text-gray-500 text-xs flex items-center gap-1">
+                                            <span>{{ slotProps.data.email }}</span>
+                                            <IconCircleCheckFilled size="16" class="text-success-500" v-if="slotProps.data.email_verified_at" />
                                         </div>
                                     </div>
                                 </div>
