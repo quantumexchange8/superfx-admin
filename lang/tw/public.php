@@ -716,7 +716,6 @@ return [
     "empty_closed_trades_title" => "暫無已平倉交易",
     "empty_closed_trades_message" => "目前沒有已平倉交易可顯示。交易平倉後會在此顯示！",
     "payment_service" => "支付服務",
-    "empty_closed_trades_message" => "目前沒有已平倉交易可顯示。交易平倉後會在此顯示！",
     "pro" => "PRO",
     "ecn-new" => "ECN-New",
     "standard-new" => "Standard-New",
