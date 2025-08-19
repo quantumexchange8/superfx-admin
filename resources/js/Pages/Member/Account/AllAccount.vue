@@ -7,6 +7,7 @@ import Loader from "@/Components/Loader.vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
 import OverlayPanel from 'primevue/overlaypanel';
 import Dropdown from "primevue/dropdown";
+import MultiSelect from "primevue/multiselect";
 import Empty from "@/Components/Empty.vue";
 import dayjs from "dayjs";
 import AccountTableActions from "@/Pages/Member/Account/Partials/AccountTableActions.vue";
@@ -61,7 +62,7 @@ const filters = ref({
     last_logged_in_days: '',
     balance: '',
     leverage: '',
-    account_type: '',
+    account_type: [],
     upline_id: '',
 });
 
@@ -84,7 +85,7 @@ const clearFilter = () => {
         last_logged_in_days: '',
         balance: '',
         leverage: '',
-        account_type: '',
+        account_type: [],
         upline_id: '',
     };
     selectedUplines.value = null;
@@ -125,8 +126,8 @@ const constructUrl = (exportStatus = false) => {
         url += `&leverage=${filters.value.leverage.value}`;
     }
 
-    if (filters.value.account_type) {
-        url += `&account_type=${filters.value.account_type.value}`;
+    if (filters.value.account_type?.length) {
+        url += `&account_type=${filters.value.account_type.map(item => item.value).join(',')}`;
     }
 
     if (filters.value.upline_id) {
@@ -160,7 +161,7 @@ const getResults = async () => {
         accounts.value = response?.data?.data?.data;
         totalRecords.value = response?.data?.data?.total;
     } catch (error) {
-        console.error('Error changing locale:', error);
+        console.error('Error fetching data:', error);
     } finally {
         loading.value = false;
     }
@@ -505,30 +506,34 @@ watchEffect(() => {
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_account_type') }}
                 </div>
-                <Dropdown
+                <MultiSelect
                     v-model="filters['account_type']"
                     :options="accountTypes"
+                    :placeholder="$t('public.account_type_placeholder')"
                     filter
                     :filterFields="['name']"
-                    optionLabel="name"
-                    :placeholder="$t('public.account_type_placeholder')"
-                    class="w-full"
-                    scroll-height="236px"
+                    :maxSelectedLabels="1"
+                    :selectedItemsLabel="`${filters['account_type']?.length} ${$t('public.account_types_selected')}`"
+                    class="w-full font-normal"
                 >
-                    <template #value="slotProps">
-                        <div v-if="slotProps.value" class="flex items-center gap-3">
-                            <div class="flex items-center gap-2">
-                                <div>{{ slotProps.value.name }}</div>
-                            </div>
-                        </div>
-                        <span v-else class="text-gray-400">{{ slotProps.placeholder }}</span>
-                    </template>
-                    <template #option="slotProps">
+                    <template #option="{ option }">
                         <div class="flex items-center gap-2">
-                            <div>{{ slotProps.option.name }}</div>
+                            <span>{{ option.name }}</span>
                         </div>
                     </template>
-                </Dropdown>
+
+                    <template #value>
+                        <div v-if="filters['account_type']?.length === 1">
+                            <span>{{ filters['account_type'][0].name }}</span>
+                        </div>
+                        <span v-else-if="filters['account_type']?.length > 1">
+                            {{ filters['account_type']?.length }} {{ $t('public.account_types_selected') }}
+                        </span>
+                        <span v-else class="text-gray-400">
+                            {{ $t('public.account_type_placeholder') }}
+                        </span>
+                    </template>
+                </MultiSelect>
             </div>
 
             <!-- Filter Upline-->

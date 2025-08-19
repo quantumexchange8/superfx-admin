@@ -165,7 +165,8 @@ class TradingAccountController extends Controller
             }
 
             if ($request->input('account_type')) {
-                $query->where('account_type_id', $request->input('account_type'));
+                $accountTypes = explode(',', $request->input('account_type'));
+                $query->whereIn('account_type_id', $accountTypes);
             }
 
             if ($request->input('upline_id')) {
