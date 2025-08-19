@@ -41,11 +41,13 @@ class UpdateTradingUser
                 $tradingUser->save();
             });
         } else {
-            $tradingUser->update([
-                'acc_status' => 'inactive',
-            ]);
+            if ($tradingUser->balance <= 0) {
+                $tradingUser->update([
+                    'acc_status' => 'inactive',
+                ]);
 
-            $tradingUser->delete();
+                // $tradingUser->delete();
+            }
         }
 
         return $tradingUser;
