@@ -229,6 +229,7 @@ class GeneralController extends Controller
     public function getAllAccountTypes($returnAsArray = false)
     {
         $accountTypes = AccountType::where('status', 'active')
+            ->where('account_group', '!=', 'Demo Account')
             ->get()
             ->map(function ($accountType) {
                 return [
