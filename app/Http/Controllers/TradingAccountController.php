@@ -36,7 +36,7 @@ class TradingAccountController extends Controller
         return Inertia::render('Member/Account/AccountListing', [
             'last_refresh_datetime' => $last_refresh_datetime?->last_ran_at,
             'leverages' => (new GeneralController())->getLeverages(true),
-            'accountTypes' => (new GeneralController())->getAccountTypes(true),
+            'accountTypes' => (new GeneralController())->getAllAccountTypes(true),
             'uplines' => (new GeneralController())->getUplines(true),
         ]);
     }
