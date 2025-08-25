@@ -367,6 +367,7 @@ class GeneralController extends Controller
                 'id' => $country->id,
                 'name' => $country->name,
                 'phone_code' => $country->phone_code,
+                'nationality' => $country->nationality,
             ];
         });
 
