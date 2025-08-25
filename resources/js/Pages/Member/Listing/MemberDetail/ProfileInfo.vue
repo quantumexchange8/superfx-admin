@@ -32,6 +32,9 @@ watch(() => props.userDetail, (user) => {
     checked.value = user.status === 'active';
 });
 
+let stopCountries = null;
+let stopCountry = null;
+
 const openDialog = () => {
     visible.value = true;
 
@@ -42,18 +45,38 @@ const openDialog = () => {
     form.email = props.userDetail.email;
     form.phone = props.userDetail.phone;
 
-    // wait until countries load
-    watch(countries, () => {
-        if (!countries.value?.length) return;
+    // clear any old watchers (important if dialog is reopened)
+    stopCountries?.();
+    stopCountry?.();
 
-        selectedDialCode.value = countries.value.find((country) => country.phone_code === props.userDetail?.dial_code);
+    // wait until countries load (run once per open)
+    stopCountries = watch(
+        countries,
+        (val) => {
+            if (!val?.length) return;
 
-        form.country = countries.value.find((country) => country.name === props.userDetail?.country)?.id || '';
+            // initial fill using userDetail
+            selectedDialCode.value = val.find((country) => country.phone_code === props.userDetail?.dial_code
+            );
 
-        form.nationality = countries.value.find((country) => country.nationality === props.userDetail?.nationality)?.nationality || '';
+            form.country = val.find((country) => country.name === props.userDetail?.country)?.id || "";
 
-        isLoading.value = false;
-    },
+            form.nationality = val.find((country) => country.nationality === props.userDetail?.nationality)?.nationality || "";
+
+            isLoading.value = false;
+
+            // stop this countries watcher now (acts like watchOnce)
+            stopCountries?.();
+
+            // attach country watcher AFTER initial set; no immediate trigger,
+            // so it will only run on subsequent changes by the user
+            stopCountry = watch(() => form.country, (newCountryId, oldCountryId) => {
+                    if (newCountryId === oldCountryId) return;
+                    const match = countries.value?.find((c) => c.id === newCountryId);
+                    form.nationality = match?.nationality || "";
+                }
+            );
+        },
         { immediate: true }
     );
 };
