@@ -7,7 +7,7 @@ import InputSwitch from "primevue/inputswitch";
 import {router} from "@inertiajs/vue3";
 import {useConfirm} from "primevue/useconfirm";
 import {trans} from "laravel-vue-i18n";
-import AccountTypeSetting from "@/Pages/AccountType/Partials//AccountTypeSetting.vue";
+import AccountTypeSetting from "@/Pages/AccountType/Partials/AccountTypeSetting.vue";
 
 const props = defineProps({
     accountType: Object,

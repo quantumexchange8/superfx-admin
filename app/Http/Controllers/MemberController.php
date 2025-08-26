@@ -865,12 +865,16 @@ class MemberController extends Controller
             'dial_code' => ['required'],
             'phone' => ['required', 'max:255'],
             'phone_number' => ['required', 'max:255', Rule::unique(User::class)->ignore($request->user_id)],
+            'country' => ['required'],
+            'nationality' => ['required'],
         ])->setAttributeNames([
             'email' => trans('public.email'),
             'name' => trans('public.name'),
             'dial_code' => trans('public.phone_code'),
             'phone' => trans('public.phone_number'),
             'phone_number' => trans('public.phone_number'),
+            'country' => trans('public.country'),
+            'nationality' => trans('public.nationality'),
         ]);
         $validator->validate();
 
@@ -883,6 +887,8 @@ class MemberController extends Controller
             'dial_code' => $request->dial_code['phone_code'],
             'phone' => $request->phone,
             'phone_number' => $request->phone_number,
+            'country_id' => $request->country,
+            'nationality' => $request->nationality,
         ]);
 
         return redirect()->back()->with('toast', [

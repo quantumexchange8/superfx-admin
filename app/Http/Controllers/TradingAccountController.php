@@ -36,7 +36,7 @@ class TradingAccountController extends Controller
         return Inertia::render('Member/Account/AccountListing', [
             'last_refresh_datetime' => $last_refresh_datetime?->last_ran_at,
             'leverages' => (new GeneralController())->getLeverages(true),
-            'accountTypes' => (new GeneralController())->getAccountTypes(true),
+            'accountTypes' => (new GeneralController())->getAllAccountTypes(true),
             'uplines' => (new GeneralController())->getUplines(true),
         ]);
     }
@@ -165,7 +165,8 @@ class TradingAccountController extends Controller
             }
 
             if ($request->input('account_type')) {
-                $query->where('account_type_id', $request->input('account_type'));
+                $accountTypes = explode(',', $request->input('account_type'));
+                $query->whereIn('account_type_id', $accountTypes);
             }
 
             if ($request->input('upline_id')) {

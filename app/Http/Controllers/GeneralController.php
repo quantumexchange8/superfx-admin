@@ -229,6 +229,7 @@ class GeneralController extends Controller
     public function getAllAccountTypes($returnAsArray = false)
     {
         $accountTypes = AccountType::where('status', 'active')
+            ->where('account_group', '!=', 'Demo Account')
             ->get()
             ->map(function ($accountType) {
                 return [
@@ -268,6 +269,27 @@ class GeneralController extends Controller
         ]);
     }
     
+    public function getAllAccountGroups($returnAsArray = false)
+    {
+        $accountGroups = AccountType::where('status', 'active')
+            ->where('account_group', '!=', 'Demo Account')
+            ->get()
+            ->map(function ($accountType) {
+                return [
+                    'value' => $accountType->account_group,
+                    'name' => trans('public.' . $accountType->slug),
+                ];
+            });
+
+        if ($returnAsArray) {
+            return $accountGroups;
+        }
+
+        return response()->json([
+            'accountGroups' => $accountGroups,
+        ]);
+    }
+
     public function getAccountGroups($returnAsArray = false)
     {
         $accountGroups = AccountType::where('status', 'active')
@@ -367,6 +389,7 @@ class GeneralController extends Controller
                 'id' => $country->id,
                 'name' => $country->name,
                 'phone_code' => $country->phone_code,
+                'nationality' => $country->nationality,
             ];
         });
 

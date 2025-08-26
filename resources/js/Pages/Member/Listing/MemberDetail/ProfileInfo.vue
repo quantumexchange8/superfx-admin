@@ -24,24 +24,62 @@ const props = defineProps({
 const checked = ref(false)
 const visible = ref(false)
 const countries = ref()
-const selectedCountry = ref();
+const selectedDialCode = ref();
+const isLoading = ref(false);
 const { formatRgbaColor } = generalFormat();
 
 watch(() => props.userDetail, (user) => {
     checked.value = user.status === 'active';
-    form.user_id = props.userDetail.id
-    form.name = props.userDetail.name
-    form.email = props.userDetail.email
-    form.phone = props.userDetail.phone
 });
 
-watch(countries, () => {
-    selectedCountry.value = countries.value.find(country => country.phone_code === props.userDetail?.dial_code);
-});
+let stopCountries = null;
+let stopCountry = null;
 
 const openDialog = () => {
-    visible.value = true
-}
+    visible.value = true;
+
+    if (!props.userDetail) return;
+
+    form.user_id = props.userDetail.id;
+    form.name = props.userDetail.name;
+    form.email = props.userDetail.email;
+    form.phone = props.userDetail.phone;
+
+    // clear any old watchers (important if dialog is reopened)
+    stopCountries?.();
+    stopCountry?.();
+
+    // wait until countries load (run once per open)
+    stopCountries = watch(
+        countries,
+        (val) => {
+            if (!val?.length) return;
+
+            // initial fill using userDetail
+            selectedDialCode.value = val.find((country) => country.phone_code === props.userDetail?.dial_code
+            );
+
+            form.country = val.find((country) => country.name === props.userDetail?.country)?.id || "";
+
+            form.nationality = val.find((country) => country.nationality === props.userDetail?.nationality)?.nationality || "";
+
+            isLoading.value = false;
+
+            // stop this countries watcher now (acts like watchOnce)
+            stopCountries?.();
+
+            // attach country watcher AFTER initial set; no immediate trigger,
+            // so it will only run on subsequent changes by the user
+            stopCountry = watch(() => form.country, (newCountryId, oldCountryId) => {
+                    if (newCountryId === oldCountryId) return;
+                    const match = countries.value?.find((c) => c.id === newCountryId);
+                    form.nationality = match?.nationality || "";
+                }
+            );
+        },
+        { immediate: true }
+    );
+};
 
 const form = useForm({
     user_id: '',
@@ -50,9 +88,13 @@ const form = useForm({
     dial_code: '',
     phone: '',
     phone_number: '',
+    country: '',
+    nationality: '',
 });
 
 const getResults = async () => {
+    isLoading.value = true;
+
     try {
         const response = await axios.get('/member/getFilterData');
         countries.value = response.data.countries;
@@ -64,10 +106,10 @@ const getResults = async () => {
 getResults();
 
 const submitForm = () => {
-    form.dial_code = selectedCountry.value;
+    form.dial_code = selectedDialCode.value;
 
-    if (selectedCountry.value) {
-        form.phone_number = selectedCountry.value.phone_code + form.phone;
+    if (selectedDialCode.value) {
+        form.phone_number = selectedDialCode.value.phone_code + form.phone;
     }
 
     form.post(route('member.updateContactInfo'), {
@@ -334,7 +376,7 @@ const handleMemberStatus = () => {
                     <InputLabel for="phone" :value="$t('public.phone_number')" />
                     <div class="flex gap-2 items-center self-stretch relative">
                         <Dropdown
-                            v-model="selectedCountry"
+                            v-model="selectedDialCode"
                             :options="countries"
                             filter
                             :filterFields="['name', 'phone_code']"
@@ -343,6 +385,8 @@ const handleMemberStatus = () => {
                             class="w-[100px]"
                             scroll-height="236px"
                             :invalid="!!form.errors.dial_code"
+                            :loading="isLoading"
+                            :disabled="isLoading"
                         >
                             <template #value="slotProps">
                                 <div v-if="slotProps.value" class="flex items-center">
@@ -366,10 +410,59 @@ const handleMemberStatus = () => {
                             v-model="form.phone"
                             :placeholder="$t('public.phone_number')"
                             :invalid="!!(form.errors.phone || form.errors.phone_number)"
+                            :disabled="isLoading"
                         />
                     </div>
                     <InputError :message="form.errors.phone || form.errors.phone_number" />
                 </div>
+                <div class="flex flex-col gap-1">
+                    <InputLabel for="country" :value="$t('public.country')" />
+                    <Dropdown
+                        id="country"
+                        v-model="form.country"
+                        :options="countries"
+                        filter
+                        optionLabel="name"
+                        optionValue="id"
+                        :placeholder="$t('public.select_country')"
+                        class="w-full"
+                        :invalid="!!form.errors.country"
+                        :loading="isLoading"
+                        :disabled="isLoading"
+                    >
+                        <template #option="slotProps">
+                            <div class="flex items-center">
+                                {{ slotProps.option.name }}
+                            </div>
+                        </template>
+                    </Dropdown>
+                    <InputError :message="form.errors.country" />
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <InputLabel for="nationality" :value="$t('public.nationality')" />
+                    <Dropdown
+                        id="nationality"
+                        v-model="form.nationality"
+                        :options="countries"
+                        filter
+                        optionLabel="nationality"
+                        optionValue="nationality"
+                        :placeholder="$t('public.select_nationality')"
+                        class="w-full"
+                        :invalid="!!form.errors.nationality"
+                        :loading="isLoading"
+                        :disabled="isLoading"
+                    >
+                        <template #option="slotProps">
+                            <div class="flex items-center">
+                                {{ slotProps.option.nationality }}
+                            </div>
+                        </template>
+                    </Dropdown>
+                    <InputError :message="form.errors.nationality" />
+                </div>
+
             </div>
             <div class="flex justify-end items-center pt-10 md:pt-7 gap-4 self-stretch">
                 <Button

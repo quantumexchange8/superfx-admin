@@ -15,7 +15,7 @@ const emit = defineEmits(['update:visible'])
 
 const getOptions = async () => {
     try {
-        const response = await axios.get('/getAccountGroups');
+        const response = await axios.get('/getAllAccountGroups');
         accountGroups.value = response.data.accountGroups;
     } catch (error) {
         console.error('Error changing locale:', error);

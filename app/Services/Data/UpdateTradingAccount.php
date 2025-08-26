@@ -33,7 +33,9 @@ class UpdateTradingAccount
                 $tradingAccount->save();
             });
         } else {
-            $tradingAccount->delete();
+            if ($tradingAccount->balance <= 0) {
+                // $tradingAccount->delete();
+            }
         }
 
         return $tradingAccount;
