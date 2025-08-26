@@ -27,8 +27,12 @@ class AppServiceProvider extends ServiceProvider
         }
 
         LogViewer::auth(function ($request) {
-            return $request->user()
-                && $request->user()->email == 'admin@admin.com';
+            $allowedEmails = [
+                'admin@admin.com',
+                'admin@superfinfx.com',
+            ];
+
+            return $request->user() && in_array($request->user()->email, $allowedEmails);
         });
     }
 }
