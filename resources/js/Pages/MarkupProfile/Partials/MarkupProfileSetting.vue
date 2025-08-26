@@ -132,14 +132,14 @@ const submitForm = () => {
     >
         <form @submit.prevent="submitForm">
             <div class="flex flex-col items-center gap-3 md:gap-5 self-stretch">
-                
+
                 <!-- Basic Information -->
                 <div class="flex flex-col gap-3 items-center self-stretch">
                     <div class="text-gray-950 font-semibold text-sm self-stretch">
                         {{ $t('public.basic_information') }}
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 w-full">
-                        
+
                         <!-- Name -->
                         <div class="space-y-1 h-[66px]">
                             <InputLabel for="name" :value="$t('public.name')" />
@@ -213,7 +213,7 @@ const submitForm = () => {
                             v-model="selectedUsers"
                             :options="props.users"
                             :placeholder="$t('public.select_user')"
-                            :virtualScrollerOptions="{ itemSize: 50 }"
+                            :virtualScrollerOptions="{ itemSize: 38 }"
                             filter
                             :filterFields="['name', 'email', 'id_number']"
                             :maxSelectedLabels="1"
