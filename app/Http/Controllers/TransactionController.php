@@ -222,6 +222,7 @@ class TransactionController extends Controller
                     $result['to_meta_login'] = $transaction->to_meta_login;
                     $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
                     $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->type : null;
+                    $result['payment_gateway_id'] = $transaction->payment_gateway_id ? $transaction->payment_gateway_id : null;
                     $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
                 } elseif ($type === 'withdrawal') {
                     $result['to_wallet_address'] = $transaction->to_wallet_address;
@@ -231,6 +232,7 @@ class TransactionController extends Controller
                     $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
                     $result['to_wallet_name'] = $transaction->payment_account_id ? $transaction->payment_account->payment_account_name : null;
                     $result['approved_at'] = $transaction->approved_at;
+                    $result['payment_gateway_id'] = $transaction->payment_gateway_id ? $transaction->payment_gateway_id : null;
                     $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
                 } elseif ($type === 'transfer') {
                     $result['from_meta_login'] = $transaction->from_meta_login;

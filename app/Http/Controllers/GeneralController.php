@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentGateway;
+use App\Models\PaymentMethod;
 use Carbon\Carbon;
 use App\Models\Bank;
 use App\Models\Team;
@@ -237,11 +239,11 @@ class GeneralController extends Controller
                     'name' => trans('public.' . $accountType->slug),
                 ];
             });
-    
+
         if ($returnAsArray) {
             return $accountTypes;
         }
-    
+
         return response()->json([
             'accountTypes' => $accountTypes,
         ]);
@@ -259,16 +261,16 @@ class GeneralController extends Controller
                     'name' => trans('public.' . $accountType->slug),
                 ];
             });
-    
+
         if ($returnAsArray) {
             return $accountTypes;
         }
-    
+
         return response()->json([
             'accountTypes' => $accountTypes,
         ]);
     }
-    
+
     public function getAllAccountGroups($returnAsArray = false)
     {
         $accountGroups = AccountType::where('status', 'active')
@@ -465,14 +467,31 @@ class GeneralController extends Controller
     public function getSymbols($returnAsArray = false)
     {
         $symbols = Symbol::distinct()->pluck('meta_symbol_name');
-    
+
         if ($returnAsArray) {
             return $symbols;
         }
-    
+
         return response()->json([
             'symbols' => $symbols,
         ]);
     }
-    
+
+    public function get_payment_gateways()
+    {
+        $payments = PaymentGateway::where([
+            'status' => 'active',
+            'environment' => 'production',
+        ])
+            ->select([
+                'id',
+                'name',
+                'platform',
+                'status'
+            ])->get();
+
+        return response()->json([
+            'paymentGateways' => $payments,
+        ]);
+    }
 }

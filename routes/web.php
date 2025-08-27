@@ -47,6 +47,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/getLeverages', [GeneralController::class, 'getLeverages'])->name('getLeverages');
     Route::get('/getAccountGroups', [GeneralController::class, 'getAccountGroups'])->name('getAccountGroups');
     Route::get('/getAllAccountGroups', [GeneralController::class, 'getAllAccountGroups'])->name('getAllAccountGroups');
+    Route::get('/get_payment_gateways', [GeneralController::class, 'get_payment_gateways'])->name('get_payment_gateways');
 
     /**
      * ==============================

@@ -47,6 +47,7 @@ const filteredValue = ref();
 const filteredValueCount = ref(0);
 
 onMounted(() => {
+    getPaymentGateways();
     getResults(props.selectedType, props.selectedMonths);
 })
 
@@ -117,7 +118,7 @@ const recalculateTotals = () => {
             (!filters.value.role?.value || transaction.role === filters.value.role.value) &&
             (!filters.value.transaction_amount?.value[0] || !filters.value.transaction_amount?.value[1] || (transaction.transaction_amount >= filters.value.transaction_amount.value[0] && transaction.transaction_amount <= filters.value.transaction_amount.value[1])) &&
             (!filters.value.status?.value || transaction.status === filters.value.status.value) &&
-            (!filters.value.payment_platform?.value || transaction.payment_platform === filters.value.payment_platform.value)
+            (!filters.value.payment_platform?.value || transaction.payment_gateway_id === filters.value.payment_platform.value)
         );
     });
 
@@ -212,6 +213,22 @@ const exportDeposit = async () => {
     } finally {
         loading.value = false;
         exportStatus.value = false;
+    }
+};
+
+const paymentGateways = ref([]);
+const loadingPaymentGateway = ref(false);
+
+const getPaymentGateways = async () => {
+    loadingPaymentGateway.value = true;
+    try {
+        const response = await axios.get('/get_payment_gateways');
+        paymentGateways.value = response.data.paymentGateways;
+
+    } catch (error) {
+        console.error('Error fetching selectedCountry:', error);
+    } finally {
+        loadingPaymentGateway.value = false;
     }
 };
 </script>
@@ -462,14 +479,18 @@ const exportDeposit = async () => {
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_payment_platform') }}
                 </div>
-                <div  class="flex flex-col gap-1 self-stretch">
+                <div
+                    v-for="payment_gateway in paymentGateways"
+                    class="flex flex-col gap-1 self-stretch"
+                >
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['payment_platform'].value" inputId="bank" value="bank" class="w-4 h-4" />
-                        <label for="bank">{{ $t('public.bank') }}</label>
-                    </div>
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['payment_platform'].value" inputId="crypto" value="crypto" class="w-4 h-4" />
-                        <label for="crypto">{{ $t('public.crypto') }}</label>
+                        <RadioButton
+                            v-model="filters['payment_platform'].value"
+                            :inputId="`payment_gateway_${payment_gateway.id}`"
+                            :value="payment_gateway.id"
+                            class="w-4 h-4"
+                        />
+                        <label :for="`payment_gateway_${payment_gateway.id}`">{{ payment_gateway.name }}</label>
                     </div>
                 </div>
             </div>
@@ -526,12 +547,10 @@ const exportDeposit = async () => {
         </div>
 
         <div v-if="data.status !== 'processing'" class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
-            <!-- <div v-if="data.status != 'failed'" class="flex flex-col md:flex-row items-start gap-1 self-stretch">
-                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.sent_address') }}</span>
-                <div class="flex justify-center items-center self-stretch" @click="copyToClipboard(data.from_wallet_address)">
-                    <span class="flex-grow overflow-hidden text-gray-950 text-ellipsis text-sm font-medium break-words">{{ data.from_wallet_address }}</span>
-                </div>
-            </div> -->
+            <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.platform') }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ data.payment_gateway ?? 'Payme' }}</span>
+            </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ data.payment_platform === 'bank' ? $t('public.account_no') : $t('public.receiving_address') }}</span>
                 <div class="flex justify-center items-center self-stretch" @click="copyToClipboard(data.to_wallet_address)">
