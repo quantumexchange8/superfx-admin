@@ -102,7 +102,6 @@ const form = useForm({
     id: '',
     action: '',
     remarks: '',
-    service: '',
 })
 
 const submit = (transaction) => {
@@ -112,7 +111,6 @@ const submit = (transaction) => {
 
     form.id = transaction.id;
     form.action = approvalAction.value;
-    form.service = transaction.payment_service.payment_app_name;
 
     form.post(route('pending.withdrawalApproval'), {
         onSuccess: () => {
