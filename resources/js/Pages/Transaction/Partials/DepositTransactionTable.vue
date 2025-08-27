@@ -84,7 +84,7 @@ const filters = ref({
     role: { value: null, matchMode: FilterMatchMode.EQUALS },
     transaction_amount: { value: [minFilterAmount.value, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
     status: { value: null, matchMode: FilterMatchMode.EQUALS },
-    payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
+    payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
 // Watch minFilterAmount and maxFilterAmount to update the amount filter
@@ -118,7 +118,7 @@ const recalculateTotals = () => {
             (!filters.value.role?.value || transaction.role === filters.value.role.value) &&
             (!filters.value.transaction_amount?.value[0] || !filters.value.transaction_amount?.value[1] || (transaction.transaction_amount >= filters.value.transaction_amount.value[0] && transaction.transaction_amount <= filters.value.transaction_amount.value[1])) &&
             (!filters.value.status?.value || transaction.status === filters.value.status.value) &&
-            (!filters.value.payment_platform?.value || transaction.payment_gateway_id === filters.value.payment_platform.value)
+            (!filters.value.payment_gateway_id?.value || transaction.payment_gateway_id === filters.value.payment_gateway_id.value)
         );
     });
 
@@ -152,7 +152,7 @@ const clearFilter = () => {
         role: { value: null, matchMode: FilterMatchMode.EQUALS },
         transaction_amount: { value: [null, null], matchMode: FilterMatchMode.BETWEEN },
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
-        payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
+        payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
     };
     filteredValue.value = null;
 };
@@ -485,7 +485,7 @@ const getPaymentGateways = async () => {
                 >
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <RadioButton
-                            v-model="filters['payment_platform'].value"
+                            v-model="filters['payment_gateway_id'].value"
                             :inputId="`payment_gateway_${payment_gateway.id}`"
                             :value="payment_gateway.id"
                             class="w-4 h-4"
