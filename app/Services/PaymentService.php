@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Exception;
 use Http;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\RedirectResponse;
 use Log;
 use Str;
 
@@ -18,7 +19,7 @@ class PaymentService
     /**
      * @throws Exception
      */
-    public function processTransaction($transaction)
+    public function processTransaction($transaction): array|RedirectResponse
     {
         $environment = in_array(app()->environment(), ['local', 'staging']) ? 'staging' : 'production';
 

@@ -331,14 +331,6 @@ const handleFilter = (e) => {
                             $ {{ formatAmount(pendingData.balance) }}
                         </div>
                     </div>
-                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
-                        <div class="w-[140px] text-gray-500 text-xs font-medium">
-                            {{ $t('public.payment_service') }}
-                        </div>
-                        <div class="text-gray-950 text-sm font-medium">
-                            {{ pendingData.payment_service.name }}
-                        </div>
-                    </div>
                 </div>
 
                 <div v-if="pendingData.payment_platform === 'crypto' || !pendingData.payment_platform" class="flex flex-col gap-3 items-start w-full pt-4">
