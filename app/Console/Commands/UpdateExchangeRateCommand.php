@@ -19,30 +19,42 @@ class UpdateExchangeRateCommand extends Command
      */
     public function handle(): void
     {
-        $currencies = CurrencyConversionRate::whereNot('base_currency', 'USDT')
+        $currencies = CurrencyConversionRate::whereNot('base_currency', 'USD')
             ->get();
 
         foreach ($currencies as $currency) {
-            if ($currency->api_key) {
+            if ($currency->base_currency == 'VND') {
+                if ($currency->api_key) {
+                    $response = Http::acceptJson()
+                        ->withHeaders([
+                            'Authorization' => 'Bearer ' . $currency->api_key,
+                        ])
+                        ->get($currency->api_host)
+                        ->json();
+
+                    $results = $response['results'];
+
+                    foreach ($results as $result) {
+                        if ($result['currency'] == $currency->target_currency) {
+                            $currency->update([
+                                'deposit_rate' => $result['sell'],
+                                'withdrawal_rate' => $result['buy_transfer'],
+                            ]);
+
+                            break;
+                        }
+                    }
+                }
+            } elseif ($currency->base_currency == 'CNY') {
                 $response = Http::acceptJson()
-                    ->withHeaders([
-                        'Authorization' => 'Bearer ' . $currency->api_key,
-                    ])
                     ->get($currency->api_host)
                     ->json();
 
-                $results = $response['results'];
-
-                foreach ($results as $result) {
-                    if ($result['currency'] == $currency->target_currency) {
-                        $currency->update([
-                            'deposit_rate' => $result['sell'],
-                            'withdrawal_rate' => $result['buy_transfer'],
-                        ]);
-
-                        break;
-                    }
-                }
+                $result = $response['data'];
+                $currency->update([
+                    'deposit_rate' => $result['bid'] * 1.015,
+                    'withdrawal_rate' => $result['bid'],
+                ]);
             }
         }
     }
