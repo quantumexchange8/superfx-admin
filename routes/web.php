@@ -34,7 +34,7 @@ Route::get('/', function () {
 });
 
 Route::post('transaction_callback', [PendingController::class, 'transactionCallback'])->name('transactionCallback');
-Route::post('payment_hot_payout_callback', [PendingController::class, 'payment_hot_payout_callback'])->name('payment_hot_payout_callback');
+Route::post('zpay_payout_callback', [PendingController::class, 'zpay_payout_callback'])->name('zpay_payout_callback');
 
 Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

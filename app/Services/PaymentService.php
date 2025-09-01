@@ -2,376 +2,134 @@
 
 namespace App\Services;
 
-use App\Models\CurrencyConversionRate;
-use App\Models\PaymentGateway;
+use Auth;
 use Carbon\Carbon;
 use Exception;
-use Http;
 use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\RedirectResponse;
-use Log;
-use Str;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PaymentService
 {
-    private string $tenant = 'SUPERFINFX';
-
-    /**
-     * @throws Exception
-     */
-    public function processTransaction($transaction): array|RedirectResponse
-    {
-        $environment = in_array(app()->environment(), ['local', 'staging']) ? 'staging' : 'production';
-
-        $paymentGateway = PaymentGateway::where([
-            'id' => $transaction->payment_gateway_id,
-            'platform' => $transaction->payment_platform,
-            'environment' => $environment,
-        ])->first();
-
-        if (!$paymentGateway) {
-            return back()->with('toast', [
-                'title' => 'Payment gateway not found.',
-                'type' => 'error',
-            ]);
-        }
-
-        // Common param building
-        $conversionAmount = $transaction->transaction_amount;
-        $conversionRate = null;
-
-        if ($transaction->payment_platform == 'bank') {
-            $conversionRate = CurrencyConversionRate::firstWhere('base_currency', 'VND');
-            if ($conversionRate) {
-                $conversionAmount = round($conversionAmount * $conversionRate->withdrawal_rate);
-            }
-        } else {
-            $transaction->update([
-                'from_currency' => 'USD',
-                'to_currency' => 'USD',
-            ]);
-        }
-
-        $transaction->update([
-            'conversion_rate' => $conversionRate?->withdrawal_rate,
-            'conversion_amount' => $conversionAmount,
-        ]);
-
-        // Delegate to specific handler
-        if ($transaction->payment_platform == 'bank') {
-            $response = $this->handleBankPayment($transaction, $paymentGateway, $conversionAmount);
-        } else {
-            $response = $this->handleCryptoPayment($transaction, $paymentGateway, $conversionAmount);
-        }
-        return $this->handleResponse($response, $paymentGateway);
-    }
-
-    /**
-     * @throws Exception
-     */
-    protected function handleBankPayment($transaction, $paymentGateway, $conversionAmount)
-    {
-        // You can switch based on payment_app_name to different method
-        return match ($paymentGateway->payment_app_name) {
-            'payme-bank' => $this->processGatewayA($transaction, $paymentGateway, $conversionAmount),
-            'payment-hot' => $this->processGatewayB($transaction, $paymentGateway, $conversionAmount),
-            default => throw new Exception("Unsupported bank gateway: " . $paymentGateway->payment_app_name),
-        };
-    }
-
-    protected function handleCryptoPayment($transaction, $paymentGateway, $conversionAmount)
-    {
-        $params = [
-            'partner_id' => $paymentGateway->payment_app_number,
-            'timestamp' => Carbon::now()->timestamp,
-            'random' => Str::random(14),
-            'partner_order_code' => $transaction->transaction_number,
-            'amount' => $conversionAmount,
-            'notify_url' => route('transactionCallback'),
-        ];
-
-        $data = [
-            $params['partner_id'],
-            $params['timestamp'],
-            $params['random'],
-            $params['partner_order_code'],
-            $params['amount'],
-            'channel_code' => $transaction->payment_account_type,
-            'address' => $transaction->payment_account_no,
-            $paymentGateway->payment_app_key,
-        ];
-
-        $params['sign'] = md5(implode(':', $data));
-
-        $url = $paymentGateway->payment_url . '/gateway/usdt/transfer.do';
-        return Http::post($url, $params);
-    }
-
-    protected function processGatewayA($transaction, $paymentGateway, $conversionAmount)
-    {
-        $params = [
-            'partner_id' => $paymentGateway->payment_app_number,
-            'timestamp' => Carbon::now()->timestamp,
-            'random' => Str::random(14),
-            'partner_order_code' => $transaction->transaction_number,
-            'amount' => $conversionAmount,
-            'notify_url' => route('transactionCallback'),
-            'payee_bank_code' => $transaction->bank_code,
-            'payee_bank_account_type' => $transaction->payment_account_type,
-            'payee_bank_account_no' => $transaction->payment_account_no,
-            'payee_bank_account_name' => $transaction->payment_account_name,
-        ];
-
-        $data = [
-            $params['partner_id'],
-            $params['timestamp'],
-            $params['random'],
-            $params['partner_order_code'],
-            $params['amount'],
-            $params['payee_bank_code'],
-            $params['payee_bank_account_type'],
-            $params['payee_bank_account_no'],
-            $params['payee_bank_account_name'],
-            '',
-            '',
-            $paymentGateway->payment_app_key,
-        ];
-
-        $params['sign'] = md5(implode(':', $data));
-
-        $url = $paymentGateway->payment_url . '/gateway/bnb/transferATM.do';
-        return Http::post($url, $params);
-    }
-
     /**
      * @throws ConnectionException
      * @throws Exception
      */
-    protected function processGatewayB($transaction, $paymentGateway, $conversionAmount)
+    public function getPaymentUrl($payment_gateway, $transaction)
     {
-        // Login - get token
-        $accessToken = $this->getAuthToken($paymentGateway);
+        $payment_app_name = $payment_gateway->payment_app_name;
 
-        if (!$accessToken) {
-            throw new Exception("Unable to retrieve access token from Payment Hot");
+        switch ($payment_app_name) {
+            case 'payme-bank':
+                $params = [
+                    'partner_id' => $payment_gateway->payment_app_number,
+                    'timestamp' => Carbon::now()->timestamp,
+                    'random' => Str::random(14),
+                    'partner_order_code' => $transaction->transaction_number,
+                    'amount' => $transaction->conversion_amount,
+                    'payee_bank_code' => $transaction->bank_code,
+                    'payee_bank_account_type' => $transaction->payment_account_type,
+                    'payee_bank_account_no' => $transaction->payment_account_no,
+                    'payee_bank_account_name' => $transaction->payment_account_name,
+                    '',
+                    '',
+                    $payment_gateway->payment_app_key,
+                ];
+
+                $hashedCode = md5(implode(':', $params));
+                $params['sign'] = $hashedCode;
+
+                $baseUrl = $payment_gateway->payment_url . '/gateway/bnb/transferATM.do';
+
+                $payment = $this->buildAndRequestUrl($baseUrl, $params);
+                break;
+
+            case 'zpay':
+                $params = [
+                    'merchantCode'  => $payment_gateway->payment_app_number,
+                    'merchantKey' => $payment_gateway->payment_app_key,
+                    'currency' => 'VND',
+                    'amount' => $transaction->conversion_amount,
+                    'bankName' => $transaction->conversion_amount,
+                    'accountNumber' => $transaction->payment_account_no,
+                    'accountName' => $transaction->payment_account_name,
+                    'description' => 'payout',
+                    'merchantRefNo' => $transaction->transaction_number,
+                    'callbackUrl' => route('zpay_payout_callback'),
+                    'bankType' => 'BANK_QR',
+                    'remark' => 'Deposit'
+                ];
+
+                $scaled_amount = $params['amount'] * pow(10, 2);
+
+                $rawString = "{$params['merchantCode']}&{$params['merchantKey']}&{$params['currency']}&{$params['merchantRefNo']}&{$params['callbackUrl']}&$scaled_amount";
+
+                $signature = strtoupper(hash('sha256', $rawString));
+
+                $params['signature'] = $signature;
+
+                $response = Http::asForm()
+                    ->post("$payment_gateway->payment_url/createPayoutV2", $params);
+
+                $responseData = $response->json();
+
+                if (isset($responseData['status']) && $responseData['status'] == 200) {
+                    // success → get the URL from data
+                    $responseData['code'] = $responseData['status'];
+                    $payment = $responseData;
+
+                    if ($payment) {
+                        break;
+                    }
+                }
+
+                Log::info('ZPay response status: ' . $responseData['status']);
+                Log::info('ZPay response message: ' . $responseData['message']);
+
+                $transaction->update([
+                    'status' => 'failed',
+                    'approved_at' => now()
+                ]);
+
+                $errorMsg = $responseData['message']
+                    ?? 'Unknown gateway error';
+
+                throw new Exception($errorMsg);
+
+            default:
+                $params = [
+                    'partner_id' => $payment_gateway->payment_app_number,
+                    'timestamp' => Carbon::now()->timestamp,
+                    'random' => Str::random(14),
+                    'partner_order_code' => $transaction->transaction_number,
+                    'channel_code' => $transaction->payment_account_type,
+                    'address' => $transaction->payment_account_no,
+                    'amount' => $transaction->conversion_amount,
+                    'notify_url' => route('transactionCallback'),
+                    '',
+                    '',
+                    $payment_gateway->payment_app_key,
+                ];
+
+                $hashedCode = md5(implode(':', $params));
+                $params['sign'] = $hashedCode;
+
+                $baseUrl = $payment_gateway->payment_url . '/gateway/usdt/transfer.do';
+
+                $payment = $this->buildAndRequestUrl($baseUrl, $params);
+                break;
         }
 
-        // Get Banks
-        $bank_headers = [
-            'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
-            'p-tenant'      => $this->tenant,
-            'Authorization' => 'Bearer ' . $accessToken,
-        ];
-
-        $privateKeyPath = storage_path('app/keys/private.pem');
-
-        $bank_signature = $this->createSignature($bank_headers, [], $privateKeyPath);
-        $bank_headers['p-signature'] = $bank_signature;
-        $bank_headers['Content-Type'] = 'application/json';
-
-        $response = Http::withHeaders($bank_headers)->get("$paymentGateway->payout_url/bank-gateway-service/mch/api/v1.0/bank");
-        $responseData = $response->json();
-
-        Log::info('Banks', $responseData);
-        // End Get banks
-
-        // Implore Transfer - get verified key
-        $verifiedKey = $this->getVerifiedKey($paymentGateway, $accessToken);
-
-        $params = [
-            'audit' => (integer) str_pad(mt_rand(0, 9999999999999999), 16, '0', STR_PAD_LEFT),
-            'amount' => $conversionAmount,
-            'bankCode' => (string) $transaction->bank_bin_code,
-            'bankId' => $transaction->bank_code,
-            'bankRefName' => $transaction->payment_account_name,
-            'bankRefNumber' => $transaction->payment_account_no,
-            'content' => "Withdrawal $transaction->transaction_number",
-        ];
-
-        $transaction->txn_hash = $params['audit'];
-        $transaction->save();
-
-        $url = $paymentGateway->payout_url . '/merchant-transaction-service/api/v2.0/transfer_247';
-
-        $headers = [
-            'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
-            'p-tenant'      => $this->tenant,
-            'Authorization' => 'Bearer ' . $accessToken,
-            'verification' => $verifiedKey,
-        ];
-
-        $privateKeyPath = storage_path('app/keys/private.pem');
-
-        $signature = $this->createSignature($headers, $params, $privateKeyPath);
-        $headers['p-signature'] = $signature;
-        $headers['Content-Type'] = 'application/json';
-
-        Log::info("Transfer sign: $signature");
-        // Build curl command
-        $curlCommand = "curl --location '{$url}' \\\n";
-        foreach ($headers as $key => $value) {
-            $curlCommand .= "  --header '{$key}: {$value}' \\\n";
-        }
-        $curlCommand .= "  --data '" . json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "'";
-
-        Log::info("Outgoing HTTP request (as curl):\n" . $curlCommand);
-
-        return Http::withHeaders($headers)
-            ->withBody(json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))
-            ->post($url);
+        return $payment;
     }
 
     /**
      * @throws ConnectionException
-     * @throws Exception
      */
-    protected function getAuthToken($paymentGateway)
+    private function buildAndRequestUrl($baseUrl, $params)
     {
-        $loginUrl = $paymentGateway->payout_url . '/auth-service/api/v1.0/user/login';
-
-        $hash_password = hash('sha256', $paymentGateway->username . $paymentGateway->password);
-
-        $headers = [
-            'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
-            'p-tenant'      => $this->tenant,
-        ];
-
-        $params = [
-            'username' => $paymentGateway->username,
-            'password' => base64_encode($hash_password),
-        ];
-
-        $privateKeyPath = storage_path('app/keys/private.pem');
-
-        $signature = $this->createSignature($headers, $params, $privateKeyPath);
-
-        // Then attach signature to your headers
-        $headers['p-signature'] = $signature;
-
-        $response = Http::withHeaders($headers)->post($loginUrl, $params);
-        $responseData = $response->json();
-
-        if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
-            return $responseData['data']['accessToken'];
-        }
-
-        Log::error('Failed to get access token', ['response' => $responseData]);
-        return null;
-    }
-
-    /**
-     * @throws ConnectionException
-     * @throws Exception
-     */
-    protected function getVerifiedKey($paymentGateway, $accessToken)
-    {
-        $implore_url = $paymentGateway->payout_url . '/auth-service/api/v1.0/implore-auth';
-
-        $headers = [
-            'p-request-id'  => (string) Str::uuid(),
-            'p-request-time'=> now('Asia/Ho_Chi_Minh')->format('YmdHis'),
-            'p-tenant'      => $this->tenant,
-            'Authorization' => 'Bearer ' . $accessToken,
-        ];
-
-        $params = [
-            'authValue' => base64_encode(hash('sha256', $paymentGateway->username . $paymentGateway->passcode)),
-            'phone' => $paymentGateway->username,
-            'api' => '/merchant-transaction-service/api/v2.0/transfer_247',
-            'authMode' => 'PASSCODE',
-        ];
-
-        $privateKeyPath = storage_path('app/keys/private.pem');
-
-        $signature = $this->createSignature($headers, $params, $privateKeyPath);
-
-        // Then attach signature to your headers
-        $headers['p-signature'] = $signature;
-        $headers['Content-Type'] = 'application/json';
-
-        $jsonBody = json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        $response = Http::withHeaders($headers)
-            ->withBody($jsonBody)
-            ->post($implore_url);
-
-        $responseData = $response->json();
-
-        if (isset($responseData['code']) && $responseData['code'] === 'SUCCESS') {
-            return $responseData['data']['verifiedKey'];
-        }
-
-        Log::error('Failed to get verified key', ['response' => $responseData]);
-        return null;
-    }
-
-    /**
-     * @throws Exception
-     */
-    protected function createSignature(array $headers, array $body, $privateKeyPath)
-    {
-        // Step 1: Filter relevant headers
-        $filteredHeaders = collect($headers)->filter(function ($value, $key) {
-            return $key === 'Authorization'
-                || $key === 'verification'
-                || Str::startsWith($key, 'p-');
-        });
-
-        // Step 2: Sort alphabetically by key
-        $sortedHeaders = $filteredHeaders->sortKeys();
-
-        // Concatenate header values
-        $headerString = $sortedHeaders->implode(''); // no delimiter, plain concatenation
-
-        // Encode body as clean JSON string
-        $bodyString = !empty($body)
-            ? json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-            : null;
-
-        // Final string to sign (no spaces, no newlines)
-        $stringToSign = $headerString . $bodyString;
-
-        // Log the exact string you will hash
-        Log::info("String to hash: $stringToSign");
-
-        // Step 3: Sign the string with RSA private key (SHA256withRSA)
-        $privateKey = file_get_contents($privateKeyPath);
-
-        if (!$privateKey) {
-            throw new Exception('Private key file not found or unreadable.');
-        }
-
-        $signature = '';
-        $success = openssl_sign($stringToSign, $signature, $privateKey, OPENSSL_ALGO_SHA256);
-
-        if (!$success) {
-            throw new Exception('Failed to generate RSA signature.');
-        }
-
-        // Return base64-encoded signature
-        return base64_encode($signature);
-    }
-
-    protected function handleResponse($response, $paymentGateway)
-    {
-        $responseData = $response->json();
-
-        $code = $responseData['code'] ?? null;
-
-        $isSuccess = match ($paymentGateway->payment_app_name) {
-            'payme-bank' => $code == 200,
-            'payment-hot' => $code == 'SUCCESS',
-            default   => false,
-        };
-
-        Log::info('Transfer response check:', $responseData);
-
-        return [
-            'success' => $isSuccess,
-            'message' => $responseData['msg'] ?? 'Payment gateway error',
-        ];
+        $response = Http::post($baseUrl, $params);
+        return $response->json();
     }
 }
