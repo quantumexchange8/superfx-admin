@@ -50,7 +50,7 @@ class PaymentService
                     'merchantKey' => $payment_gateway->payment_app_key,
                     'currency' => 'VND',
                     'amount' => $transaction->conversion_amount,
-                    'bankName' => $transaction->payment_platform_name,
+                    'bankName' => $transaction->bank_code,
                     'accountNumber' => $transaction->payment_account_no,
                     'accountName' => $transaction->payment_account_name,
                     'description' => 'payout',
