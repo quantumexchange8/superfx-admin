@@ -39,8 +39,8 @@ class MemberListingExport implements FromCollection, WithHeadings
                 'Name' => $record->name,
                 'Email' => $record->email,
                 'Id Number' => $record->id_number,
-                'Group' => $record->groupHasUser->group->name ?? '',
-                'Upline' => $record->upline->name ?? '',
+                'Group' => $record->groupHasUser && $record->groupHasUser->group  ? $record->groupHasUser->group->name  : '',
+                'Upline' => $record->upline ? $record->upline->name : '',
                 'Joined Date' => $record->created_at ? $record->created_at->format('Y-m-d') : '',
             ];
         }
