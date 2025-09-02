@@ -133,17 +133,22 @@ class TradingAccountController extends Controller
                     'accountType:id,slug,account_group,color',
                 ]);
 
+            // Filters
             if ($request->last_logged_in_days) {
                 switch ($request->last_logged_in_days) {
+                    case 'greater_than_30_days':
+                        $query->whereDate('last_access', '<=', today()->subDays(30));
+                        break;
+            
                     case 'greater_than_90_days':
                         $query->whereDate('last_access', '<=', today()->subDays(90));
                         break;
-
+            
                     default:
                         $query->whereDate('last_access', '<=', today());
                 }
             }
-            // Filters
+            
             // Handle search functionality
             $search = $request->input('search');
             if ($search) {
@@ -157,9 +162,27 @@ class TradingAccountController extends Controller
             }
             
             if ($request->input('balance')) {
-                $query->where('balance', $request->input('balance'));
+                switch ($request->input('balance')) {
+                    case '0.00':
+                        // Users with zero balance
+                        $query->where('balance', 0);
+                        break;
+            
+                    case 'never_deposited':
+                        // Users who have never made a deposit
+                        $query->whereNotExists(function ($subquery) {
+                            $subquery->selectRaw('1')
+                                     ->from('transactions')
+                                     ->whereColumn('transactions.to_meta_login', 'trading_users.meta_login')
+                                     ->where('transactions.transaction_type', 'deposit');
+                        });
+                        break;
+            
+                    default:
+                        $query->where('balance', $request->input('balance'));
+                }
             }
-
+            
             if ($request->input('leverage')) {
                 $query->where('leverage', $request->input('leverage'));
             }

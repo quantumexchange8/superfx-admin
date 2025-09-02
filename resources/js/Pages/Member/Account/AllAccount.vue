@@ -430,12 +430,26 @@ watchEffect(() => {
 
     <OverlayPanel ref="op">
         <div class="flex flex-col gap-8 w-60 py-5 px-4">
-            <!-- Filter Last logged in-->
+            <!-- Filter Last logged in -->
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_last_logged_in') }}
                 </div>
                 <div class="flex flex-col gap-1 self-stretch">
+                    <!-- Greater than 30 days -->
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                            <RadioButton
+                                v-model="filters['last_logged_in_days']"
+                                inputId="greater_than_30_days"
+                                value="greater_than_30_days"
+                                class="w-4 h-4"
+                            />
+                        </div>
+                        <label for="greater_than_30_days">{{ $t('public.greater_than_30_days') }}</label>
+                    </div>
+
+                    <!-- Greater than 90 days -->
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
@@ -456,6 +470,7 @@ watchEffect(() => {
                     {{ $t('public.filter_balance') }}
                 </div>
                 <div class="flex flex-col gap-1 self-stretch">
+                    <!-- Zero Balance -->
                     <div class="flex items-center gap-2 text-sm text-gray-950">
                         <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
@@ -466,6 +481,19 @@ watchEffect(() => {
                             />
                         </div>
                         <label for="zero_balance">{{ $t('public.zero_balance') }}</label>
+                    </div>
+
+                    <!-- without deposit -->
+                    <div class="flex items-center gap-2 text-sm text-gray-950">
+                        <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                            <RadioButton
+                                v-model="filters['balance']"
+                                inputId="never_deposited"
+                                value="never_deposited"
+                                class="w-4 h-4"
+                            />
+                        </div>
+                        <label for="never_deposited">{{ $t('public.never_deposited') }}</label>
                     </div>
                 </div>
             </div>
