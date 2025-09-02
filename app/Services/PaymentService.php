@@ -49,10 +49,11 @@ class PaymentService
                     'merchantCode'  => $payment_gateway->payment_app_number,
                     'merchantKey' => $payment_gateway->payment_app_key,
                     'currency' => 'VND',
-                    'amount' => $transaction->conversion_amount,
+                    'amount' => number_format($transaction->conversion_amount, 2, '.', ''),
                     'bankName' => $transaction->bank_code,
                     'accountNumber' => $transaction->payment_account_no,
                     'accountName' => $transaction->payment_account_name,
+                    'description' => 'payout',
                     'merchantRefNo' => $transaction->transaction_number,
                     'callbackUrl' => route('zpay_payout_callback'),
                 ];
@@ -68,8 +69,10 @@ class PaymentService
                 $url = "$payment_gateway->payment_url/createPayoutV2";
 
                 // Log request details (like a curl command)
-                Log::info("ZPay Request URL: {$url}");
-                Log::info("ZPay Request Params: " . json_encode($params, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+                Log::info('Withdraw request', [
+                    'url'    => $url,
+                    'params' => $params,
+                ]);
 
                 // Send request
                 $response = Http::asForm()->post($url, $params);
