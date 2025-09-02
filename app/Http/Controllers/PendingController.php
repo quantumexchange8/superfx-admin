@@ -117,12 +117,16 @@ class PendingController extends Controller
                 'type' => 'success'
             ]);
         } else {
-            $environment = App::environment() == 'production' ? 'production' : 'local';
+            if ($transaction->payment_gateway) {
+                $payment_gateway = $transaction->payment_gateway;
+            } else {
+                $environment = App::environment() == 'production' ? 'production' : 'local';
 
-            $payment_gateway = PaymentGateway::where([
-                ['platform', $transaction->payment_platform],
-                ['environment', $environment],
-            ])->first();
+                $payment_gateway = PaymentGateway::where([
+                    ['platform', $transaction->payment_platform],
+                    ['environment', $environment],
+                ])->first();
+            }
 
             $conversion_rate = null;
             $conversion_amount = $transaction->transaction_amount;
@@ -164,6 +168,16 @@ class PendingController extends Controller
                 ]);
             } catch (Exception $e) {
                 Log::error('Withdraw error: ' . $e->getMessage());
+
+                $transaction->update([
+                    'status' => 'failed',
+                    'approved_at' => now()
+                ]);
+
+                $this->handleTransactionUpdate($transaction);
+
+                $user = User::find($transaction->user_id);
+                Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
 
                 return redirect()->back()->with('toast', [
                     'title' => $e->getMessage(),
