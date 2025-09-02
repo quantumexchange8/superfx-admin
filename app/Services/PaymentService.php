@@ -53,7 +53,6 @@ class PaymentService
                     'bankName' => $transaction->bank_code,
                     'accountNumber' => $transaction->payment_account_no,
                     'accountName' => $transaction->payment_account_name,
-                    'description' => 'payout',
                     'merchantRefNo' => $transaction->transaction_number,
                     'callbackUrl' => route('zpay_payout_callback'),
                 ];
@@ -66,8 +65,17 @@ class PaymentService
 
                 $params['signature'] = $signature;
 
-                $response = Http::asForm()
-                    ->post("$payment_gateway->payment_url/createPayoutV2", $params);
+                $url = "$payment_gateway->payment_url/createPayoutV2";
+
+                // Log request details (like a curl command)
+                Log::info("ZPay Request URL: {$url}");
+                Log::info("ZPay Request Params: " . json_encode($params, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+
+                // Send request
+                $response = Http::asForm()->post($url, $params);
+
+                // Log full raw response
+                Log::info("ZPay Raw Response: " . $response->body());
 
                 $responseData = $response->json();
 
