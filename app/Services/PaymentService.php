@@ -56,8 +56,6 @@ class PaymentService
                     'description' => 'payout',
                     'merchantRefNo' => $transaction->transaction_number,
                     'callbackUrl' => route('zpay_payout_callback'),
-                    'bankType' => 'BANK_QR',
-                    'remark' => 'Deposit'
                 ];
 
                 $scaled_amount = $params['amount'] * pow(10, 2);
@@ -85,11 +83,6 @@ class PaymentService
 
                 Log::info('ZPay response status: ' . $responseData['status']);
                 Log::info('ZPay response message: ' . $responseData['message']);
-
-                $transaction->update([
-                    'status' => 'failed',
-                    'approved_at' => now()
-                ]);
 
                 $errorMsg = $responseData['message']
                     ?? 'Unknown gateway error';
