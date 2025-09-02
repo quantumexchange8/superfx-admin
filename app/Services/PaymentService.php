@@ -66,7 +66,7 @@ class PaymentService
 
                 $params['signature'] = $signature;
 
-                $url = "$payment_gateway->payment_url/createPayoutV2";
+                $url = $payment_gateway->payment_url . '/createPayoutV2';
 
                 // Log request details (like a curl command)
                 Log::info('Withdraw request', [
