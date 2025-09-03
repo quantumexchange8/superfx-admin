@@ -146,6 +146,9 @@ class PaymentService
 
                 $responseData = $response->json();
 
+                Log::info('PSP Pay response code: ' . $responseData['code']);
+                Log::info('PSP Pay response msg: ' . $responseData['msg']);
+
                 if (isset($responseData['code']) && $responseData['code'] == "0000") {
                     $responseData['code'] = 200;
                     // success → get the URL from data
@@ -155,9 +158,6 @@ class PaymentService
                         break;
                     }
                 }
-
-                Log::info('PSP Pay response code: ' . $responseData['code']);
-                Log::info('PSP Pay response msg: ' . $responseData['msg']);
 
                 $transaction->update([
                     'status' => 'failed',
