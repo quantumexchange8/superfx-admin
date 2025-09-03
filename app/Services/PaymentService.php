@@ -15,7 +15,7 @@ class PaymentService
      * @throws ConnectionException
      * @throws Exception
      */
-    public function getPaymentUrl($payment_gateway, $transaction)
+    public function proceedPayout($payment_gateway, $transaction)
     {
         $payment_app_name = $payment_gateway->payment_app_name;
 
@@ -73,6 +73,10 @@ class PaymentService
                     'url'    => $url,
                     'params' => $params,
                 ]);
+
+                if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                    throw new Exception("Invalid URL: " . $url);
+                }
 
                 // Send request
                 $response = Http::asForm()->post($url, $params);

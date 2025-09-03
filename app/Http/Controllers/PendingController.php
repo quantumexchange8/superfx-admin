@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\PaymentService;
 use Exception;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use App\Models\Wallet;
 use App\Models\AssetRevoke;
@@ -33,58 +34,88 @@ class PendingController extends Controller
 
     public function getPendingWithdrawalData(Request $request)
     {
-        $pendingWithdrawals = Transaction::with([
-            'user:id,email,name',
-            'payment_account:id,payment_account_name,account_no',
-        ])
-            ->where('transaction_type', 'withdrawal')
-            ->where('status', 'processing')
-            ->whereNot('category', 'bonus_wallet')
-            ->latest()
-            ->get()
-            ->map(function ($transaction) {
-                // Check if from_meta_login exists and fetch the latest balance
+        if ($request->has('lazyEvent')) {
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
+
+            $query = Transaction::with([
+                'user:id,email,name',
+                'user.media',
+                'payment_account:id,payment_account_name,account_no',
+                'fromMetaLogin:id,meta_login,balance'
+            ])
+                ->where('transaction_type', 'withdrawal')
+                ->where('status', 'processing')
+                ->whereNot('category', 'bonus_wallet');
+
+            if ($data['filters']['global']['value']) {
+                $keyword = $data['filters']['global']['value'];
+
+                $query->where(function ($q) use ($keyword) {
+                    $q->whereHas('user', function ($query) use ($keyword) {
+                        $query->where(function ($q) use ($keyword) {
+                            $q->where('name', 'like', '%' . $keyword . '%')
+                                ->orWhere('email', 'like', '%' . $keyword . '%');
+                        });
+                    })->orWhere('transaction_number', 'like', '%' . $keyword . '%')
+                        ->orWhere('from_meta_login', 'like', '%' . $keyword . '%');
+                });
+            }
+
+            //sort field/order
+            if ($data['sortField'] && $data['sortOrder']) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+                $query->orderBy($data['sortField'], $order);
+            } else {
+                $query->orderByDesc('created_at');
+            }
+
+            //            if ($request->has('exportStatus')) {
+            //                return Excel::download(new InvestmentExport($query, $status), now() . '-investment-report.xlsx');
+            //            }
+
+            $pendingWithdrawals = $query->paginate($data['rows']);
+
+            $pendingWithdrawals->getCollection()->transform(function ($transaction) {
                 if ($transaction->from_meta_login) {
                     (new MetaFourService())->getUserInfo($transaction->from_meta_login);
-
-                    // After calling getUserInfo, fetch the latest balance
-                    $balance = $transaction->from_meta_login ? $transaction->fromMetaLogin->balance : 0;
+                    $transaction->balance = $transaction->fromMetaLogin->balance ?? 0;
                 } else {
-                    // Fallback to using the wallet balance if from_meta_login is not available
-                    $balance = $transaction->from_wallet ? $transaction->from_wallet->balance : 0;
+                    $transaction->balance = $transaction->from_wallet->balance ?? 0;
                 }
 
-                return [
-                    'id' => $transaction->id,
-                    'created_at' => $transaction->created_at,
-                    'user_name' => $transaction->user->name,
-                    'user_email' => $transaction->user->email,
-                    'from' => $transaction->from_meta_login ? $transaction->from_meta_login : 'rebate_wallet',
-                    'balance' => $balance, // Get balance after ensuring it's updated
-                    'amount' => $transaction->amount,
-                    'transaction_charges' => $transaction->transaction_charges,
-                    'transaction_amount' => $transaction->transaction_amount,
-                    'wallet_name' => $transaction->payment_account?->payment_account_name,
-                    'wallet_address' => $transaction->payment_account?->account_no,
-                    'payment_account_name' => $transaction->payment_account_name,
-                    'payment_platform' => $transaction->payment_platform,
-                    'payment_platform_name' => $transaction->payment_platform_name,
-                    'payment_account_no' => $transaction->payment_account_no,
-                    'payment_account_type' => $transaction->payment_account_type,
-                    'bank_code' => $transaction->bank_code,
-                ];
+                return $transaction;
             });
 
-        $totalAmount = $pendingWithdrawals->sum('transaction_amount');
+            $totalAmount = (clone $query)
+                ->sum('transaction_amount');
 
-        return response()->json([
-            'pendingWithdrawals' => $pendingWithdrawals,
-            'totalAmount' => $totalAmount,
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $pendingWithdrawals,
+                'totalAmount' => $totalAmount,
+            ]);
+        }
+
+        return response()->json(['success' => false, 'data' => []]);
     }
 
     public function withdrawalApproval(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'action' => ['required'],
+            'remarks' => ['nullable'],
+        ])->setAttributeNames([
+            'action' => trans('public.action'),
+            'remarks' => trans('public.remarks'),
+        ]);
+        $validator->validate();
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
         $action = $request->action;
 
         $status = $action == 'approve' ? 'pending' : 'rejected';
@@ -151,20 +182,24 @@ class PendingController extends Controller
 
             try {
                 // POST to payment gateway by diff methods
-                $responseData = (new PaymentService())->getPaymentUrl($payment_gateway, $transaction);
+                $responseData = (new PaymentService())->proceedPayout($payment_gateway, $transaction);
                 Log::debug('Approve Withdraw Response: ', $responseData);
 
                 if ($responseData['code'] == 200) {
-                    return redirect()->back()->with('toast', [
-                        'title' => trans('public.toast_approve_withdrawal_request'),
-                        'type' => 'success',
+
+                    return response()->json([
+                        'success'       => true,
+                        'toast_title'   => trans('public.successful'),
+                        'toast_message' => trans('public.toast_approve_withdrawal_request'),
+                        'toast_type'    => 'success'
                     ]);
                 }
 
-                // Handle error scenario if "code" is not present in the response
-                return redirect()->back()->with('toast', [
-                    'title' => $responseData['msg'] ?? 'Payment gateway error',
-                    'type' => 'error',
+                return response()->json([
+                    'success'       => false,
+                    'toast_title'   => trans('public.gateway_error'),
+                    'toast_message' => trans('public.please_try_again_later'),
+                    'toast_type'    => 'error'
                 ]);
             } catch (Exception $e) {
                 Log::error('Withdraw error: ' . $e->getMessage());
@@ -179,10 +214,12 @@ class PendingController extends Controller
                 $user = User::find($transaction->user_id);
                 Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
 
-                return redirect()->back()->with('toast', [
-                    'title' => $e->getMessage(),
-                    'type' => 'error',
-                ]);
+                return response()->json([
+                    'success'       => false,
+                    'toast_title'   => trans('public.gateway_error'),
+                    'toast_message' => $e->getMessage(),
+                    'toast_type'    => 'error',
+                ], 400);
             }
         }
     }

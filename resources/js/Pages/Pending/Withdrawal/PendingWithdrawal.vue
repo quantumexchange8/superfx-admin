@@ -6,10 +6,9 @@ import InputText from "primevue/inputtext";
 import Column from "primevue/column";
 import Button from "@/Components/Button.vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
-import {ref, watchEffect} from "vue";
-import {wTrans} from "laravel-vue-i18n";
+import {onMounted, ref, watch, watchEffect} from "vue";
 import {FilterMatchMode} from "primevue/api";
-import {useForm, usePage} from "@inertiajs/vue3";
+import {usePage} from "@inertiajs/vue3";
 import dayjs from 'dayjs'
 import {transactionFormat} from "@/Composables/index.js";
 import ColumnGroup from 'primevue/columngroup';
@@ -19,41 +18,90 @@ import InputLabel from "@/Components/InputLabel.vue";
 import Chip from "primevue/chip";
 import Textarea from "primevue/textarea";
 import Empty from "@/Components/Empty.vue";
+import toast from "@/Composables/toast.js";
+import debounce from "lodash/debounce.js";
 
-const loading = ref(false);
-const dt = ref();
-const pendingWithdrawals = ref();
-const paginator_caption = wTrans('public.paginator_caption');
-const {formatAmount, formatDateTime} = transactionFormat();
+const isLoading = ref(false);
+const dt = ref(null);
+const pendingWithdrawals = ref([]);
+const totalRecords = ref(0);
+const first = ref(0);
 const totalAmount = ref();
-const filteredValueCount = ref(0);
+const {formatAmount, formatDateTime} = transactionFormat();
 
-const getResults = async () => {
-    loading.value = true;
+const filters = ref({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
 
+const lazyParams = ref({});
+
+const loadLazyData = (event) => {
+    isLoading.value = true;
+
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+    lazyParams.value.filters = filters.value;
     try {
-        const response = await axios.get('/pending/getPendingWithdrawalData');
-        pendingWithdrawals.value = response.data.pendingWithdrawals;
-        totalAmount.value = response.data.totalAmount;
-    } catch (error) {
-        console.error('Error changing locale:', error);
-    } finally {
-        loading.value = false;
+        setTimeout(async () => {
+            const params = {
+                page: JSON.stringify(event?.page + 1),
+                sortField: event?.sortField,
+                sortOrder: event?.sortOrder,
+                include: [],
+                lazyEvent: JSON.stringify(lazyParams.value)
+            };
+
+            const url = route('pending.getPendingWithdrawalData', params);
+            const response = await fetch(url);
+            const results = await response.json();
+
+            pendingWithdrawals.value = results?.data?.data;
+            totalRecords.value = results?.data?.total;
+            totalAmount.value = results?.totalAmount;
+
+            isLoading.value = false;
+        }, 100);
+    }  catch (e) {
+        pendingWithdrawals.value = [];
+        totalRecords.value = 0;
+        isLoading.value = false;
     }
 };
 
-getResults();
+const onPage = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
+const onSort = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
+const onFilter = (event) => {
+    lazyParams.value.filters = filters.value ;
+    loadLazyData(event);
+};
+
+onMounted(() => {
+    lazyParams.value = {
+        first: dt.value.first,
+        rows: dt.value.rows,
+        sortField: null,
+        sortOrder: null,
+        filters: filters.value
+    };
+
+    loadLazyData();
+});
+
+watch(
+    filters.value['global'],
+    debounce(() => {
+        loadLazyData();
+    }, 300)
+);
 
 const exportCSV = () => {
     dt.value.exportCSV();
 };
-
-const filters = ref({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    user_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    user_email: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    from: { value: null, matchMode: FilterMatchMode.CONTAINS },
-});
 
 const clearFilterGlobal = () => {
     filters.value['global'].value = null;
@@ -98,31 +146,62 @@ const handleChipClick = (label) => {
     form.remarks = label;
 };
 
-const form = useForm({
+const form = ref({
     id: '',
     action: '',
     remarks: '',
 })
 
-const submit = (transaction) => {
-    if (form.remarks === '') {
-        form.remarks = approvalAction.value === 'approve' ? 'Withdrawal approved ' : 'Withdrawal rejected. Please submit again.'
+const formProcessing = ref(false);
+
+const submitForm = async (transaction) => {
+    formProcessing.value = true;
+    form.errors = {};
+
+    if (form.value.remarks === '') {
+        form.value.remarks = approvalAction.value === 'approve' ? 'Withdrawal approved ' : 'Withdrawal rejected. Please submit again.'
     }
 
-    form.id = transaction.id;
-    form.action = approvalAction.value;
+    form.value.id = transaction.id;
+    form.value.action = approvalAction.value;
 
-    form.post(route('pending.withdrawalApproval'), {
-        onSuccess: () => {
+    try {
+        const response = await axios.post(route('pending.withdrawalApproval'), form.value);
+
+        closeDialog();
+
+        // Remove current id
+        pendingWithdrawals.value = pendingWithdrawals.value.filter(
+            (t) => t.id !== transaction.id
+        );
+
+        toast.add({
+            title: response.data.toast_title,
+            message: response.data.toast_message,
+            type: response.data.toast_type,
+        });
+
+    } catch (error) {
+        if (error.response?.status === 422) {
+            form.value.errors = error.response.data.errors;
+        } else {
             closeDialog();
-            form.reset();
-        },
-    });
-};
 
-const handleFilter = (e) => {
-    filteredValueCount.value = e.filteredValue.length;
-};
+            form.value = {
+                action: '',
+                remarks: null,
+            }
+
+            toast.add({
+                title: error.response.data.toast_title,
+                message: error.response.data.toast_message,
+                type: error.response.data.toast_type,
+            });
+        }
+    } finally {
+        formProcessing.value = false;
+    }
+}
 </script>
 
 <template>
@@ -131,18 +210,24 @@ const handleFilter = (e) => {
         <DataTable
             v-model:filters="filters"
             :value="pendingWithdrawals"
-            :paginator="pendingWithdrawals?.length > 0 && filteredValueCount > 0"
-            removableSort
-            :rows="10"
             :rowsPerPageOptions="[10, 20, 50, 100]"
+            lazy
+            :paginator="pendingWithdrawals?.length > 0"
+            removableSort
             paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
-            :currentPageReportTemplate="paginator_caption"
-            :globalFilterFields="['user_name', 'user_email', 'from']"
+            :currentPageReportTemplate="$t('public.paginator_caption')"
+            :first="first"
+            :rows="10"
             ref="dt"
-            :loading="loading"
+            dataKey="id"
+            :totalRecords="totalRecords"
+            :loading="isLoading"
+            @page="onPage($event)"
+            @sort="onSort($event)"
+            @filter="onFilter($event)"
             selectionMode="single"
             @row-click="rowClicked($event.data)"
-            @filter="handleFilter"
+            :globalFilterFields="['user.name', 'user.email', 'transaction_number', 'from_meta_login']"
         >
             <template #header>
                 <div class="flex flex-col md:flex-row gap-3 md:justify-between items-center self-stretch md:pb-6">
@@ -175,8 +260,13 @@ const handleFilter = (e) => {
                     <span class="text-sm text-gray-700">{{ $t('public.loading_transactions_caption') }}</span>
                 </div>
             </template>
-            <template v-if="pendingWithdrawals?.length > 0 && filteredValueCount > 0">
-                <Column field="created_at" sortable style="width: 25%" headerClass="hidden md:table-cell">
+            <template v-if="pendingWithdrawals?.length > 0">
+                <Column
+                    field="created_at"
+                    sortable
+                    style="width: 25%"
+                    headerClass="hidden md:table-cell"
+                >
                     <template #header>
                         <span class="hidden md:block">{{ $t('public.requested_date') }}</span>
                     </template>
@@ -184,12 +274,21 @@ const handleFilter = (e) => {
                         {{ dayjs(slotProps.data.created_at).format('YYYY/MM/DD HH:mm:ss') }}
                     </template>
                 </Column>
-                <Column field="name" sortable :header="$t('public.member')" style="width: 25%" headerClass="hidden md:table-cell">
+
+                <Column
+                    field="name"
+                    :header="$t('public.member')"
+                    style="width: 25%"
+                    headerClass="hidden md:table-cell"
+                >
                     <template #body="slotProps">
                         <div class="flex items-center gap-3">
                             <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
-                                <div v-if="slotProps.data.user_profile_photo">
-                                    <img :src="slotProps.data.user_profile_photo" alt="Profile Photo" />
+                                <div v-if="slotProps.data.user.media.some(m => m.collection_name === 'profile_photo')">
+                                    <img
+                                        :src="slotProps.data.user.media.find(m => m.collection_name === 'profile_photo').original_url"
+                                        alt="profile"
+                                    />
                                 </div>
                                 <div v-else>
                                     <DefaultProfilePhoto />
@@ -197,21 +296,26 @@ const handleFilter = (e) => {
                             </div>
                             <div class="flex flex-col items-start">
                                 <div class="font-medium">
-                                    {{ slotProps.data.user_name }}
+                                    {{ slotProps.data.user.name }}
                                 </div>
                                 <div class="text-gray-500 text-xs">
-                                    {{ slotProps.data.user_email }}
+                                    {{ slotProps.data.user.email }}
                                 </div>
                             </div>
                         </div>
                     </template>
                 </Column>
-                <Column field="from" style="width: 25%" headerClass="hidden md:table-cell">
+
+                <Column
+                    field="from"
+                    style="width: 25%"
+                    headerClass="hidden md:table-cell"
+                >
                     <template #header>
                         <span class="hidden md:block items-center justify-center w-full">{{ $t('public.from') }}</span>
                     </template>
                     <template #body="slotProps">
-                        {{ slotProps.data.from === 'rebate_wallet' ? $t(`public.${slotProps.data.from}`) : slotProps.data.from }}
+                        {{ slotProps.data.from_meta_login ? slotProps.data.from_meta_login?.meta_login :$t('public.rebate_wallet') }}
                     </template>
                 </Column>
                 <Column field="amount" header="" sortable style="width: 25%" headerClass="hidden md:table-cell">
@@ -279,16 +383,19 @@ const handleFilter = (e) => {
                 <div class="flex flex-col-reverse md:flex-row md:items-center gap-3 self-stretch w-full">
                     <div class="flex items-center gap-3 self-stretch w-full">
                         <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
-                            <div v-if="pendingData.user_profile_photo">
-                                <img :src="pendingData.user_profile_photo" alt="Profile Photo" />
+                            <div v-if="pendingData.user.media.some(m => m.collection_name === 'profile_photo')">
+                                <img
+                                    :src="pendingData.user.media.find(m => m.collection_name === 'profile_photo').original_url"
+                                    alt="profile"
+                                />
                             </div>
                             <div v-else>
                                 <DefaultProfilePhoto />
                             </div>
                         </div>
                         <div class="flex flex-col items-start w-full">
-                            <span class="text-gray-950 text-sm font-medium">{{ pendingData.user_name }}</span>
-                            <span class="text-gray-500 text-xs">{{ pendingData.user_email }}</span>
+                            <span class="text-gray-950 text-sm font-medium">{{ pendingData.user.name }}</span>
+                            <span class="text-gray-500 text-xs">{{ pendingData.user.email }}</span>
                         </div>
                     </div>
                     <div class="min-w-[180px] text-gray-950 font-semibold text-xl md:text-right">
@@ -318,7 +425,7 @@ const handleFilter = (e) => {
                             {{ $t('public.from') }}
                         </div>
                         <div class="text-gray-950 text-sm font-medium">
-                            {{ pendingData.from === 'rebate_wallet' ? $t(`public.${pendingData.from}`) : pendingData.from }}
+                            {{ pendingData.from_meta_login ? pendingData.from_meta_login?.meta_login : $t('public.rebate_wallet') }}
                         </div>
                     </div>
                     <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
@@ -337,7 +444,7 @@ const handleFilter = (e) => {
                             {{ $t('public.wallet_name') }}
                         </div>
                         <div class="text-gray-950 text-sm font-medium">
-                            {{ pendingData.wallet_name }}
+                            {{ pendingData.payment_account_name }}
                         </div>
                     </div>
                     <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
@@ -345,7 +452,7 @@ const handleFilter = (e) => {
                             {{ $t('public.receiving_address') }}
                         </div>
                         <div class="text-gray-950 text-sm break-words font-medium">
-                            {{ pendingData.wallet_address }}
+                            {{ pendingData.payment_account_no }}
                         </div>
                     </div>
                 </div>
@@ -355,7 +462,7 @@ const handleFilter = (e) => {
                             {{ $t('public.bank_name') }}
                         </div>
                         <div class="text-gray-950 text-sm font-medium">
-                            {{ pendingData.wallet_name }}
+                            {{ pendingData.payment_platform_name }}
                             <span class="text-xs text-gray-500">{{ ` (${pendingData.bank_code})` }}</span>
                         </div>
                     </div>
@@ -408,16 +515,19 @@ const handleFilter = (e) => {
                 <div class="flex flex-col-reverse md:flex-row md:items-center gap-3 py-4 self-stretch w-full">
                     <div class="flex items-center gap-3 self-stretch w-full">
                         <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
-                            <div v-if="pendingData.user_profile_photo">
-                                <img :src="pendingData.user_profile_photo" alt="Profile Photo" />
+                            <div v-if="pendingData.user.media.some(m => m.collection_name === 'profile_photo')">
+                                <img
+                                    :src="pendingData.user.media.find(m => m.collection_name === 'profile_photo').original_url"
+                                    alt="profile"
+                                />
                             </div>
                             <div v-else>
                                 <DefaultProfilePhoto />
                             </div>
                         </div>
                         <div class="flex flex-col items-start w-full">
-                            <span class="text-gray-950 text-sm font-medium">{{ pendingData.user_name }}</span>
-                            <span class="text-gray-500 text-xs">{{ pendingData.user_email }}</span>
+                            <span class="text-gray-950 text-sm font-medium">{{ pendingData.user.name }}</span>
+                            <span class="text-gray-500 text-xs">{{ pendingData.user.email }}</span>
                         </div>
                     </div>
                     <div class="min-w-[180px] text-gray-950 font-semibold text-xl md:text-right">
@@ -445,7 +555,7 @@ const handleFilter = (e) => {
                         class="flex flex-1 self-stretch"
                         v-model="form.remarks"
                         :placeholder="approvalAction === 'approve' ? 'Withdrawal approved' : 'Withdrawal rejected. Please submit again.'"
-                        :invalid="!!form.errors.remarks"
+                        :invalid="!!form?.errors?.remarks"
                         rows="5"
                         cols="30"
                     />
@@ -458,20 +568,20 @@ const handleFilter = (e) => {
                     variant="gray-tonal"
                     class="w-full md:w-fit"
                     @click="closeDialog"
-                    :disabled="form.processing"
+                    :disabled="formProcessing"
                 >
                     {{ $t('public.cancel') }}
                 </Button>
                 <Button
                     variant="primary-flat"
                     class="w-full md:w-fit"
-                    @click="submit(pendingData)"
-                    :disabled="form.processing"
+                    @click="submitForm(pendingData)"
+                    :disabled="formProcessing"
                 >
-                    <div v-if="form.processing" class="animate-spin">
+                    <div v-if="formProcessing" class="animate-spin">
                         <IconLoader size="20" stroke-width="1.5" />
                     </div>
-                    {{ form.processing ? $t('public.processing') : $t('public.confirm') }}
+                    {{ formProcessing ? $t('public.processing') : $t('public.confirm') }}
                 </Button>
             </div>
         </template>
