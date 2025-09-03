@@ -147,6 +147,7 @@ class PaymentService
                 $responseData = $response->json();
 
                 if (isset($responseData['code']) && $responseData['code'] == "0000") {
+                    $responseData['code'] = 200;
                     // success → get the URL from data
                     $payment = $responseData;
 
