@@ -29,7 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'member/uploadKyc',
             'transaction_callback',
-            'zpay_payout_callback'
+            'zpay_payout_callback',
+            'psp_payout_callback',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -15,8 +15,8 @@
     background: conic-gradient(
         from 90deg at 50% 50%,
         rgba(255, 255, 255, 0),
-        rgba(126, 130, 190, 0.5),
-        #2970FF
+        rgba(169, 241, 202, 0.5),
+        #3ECF8E
     );
     border-radius: 56px;
     /* previous code */
@@ -41,7 +41,7 @@
     transform: translateY(-50%);
     height: 4px;
     width: 4px;
-    background: #2970FF;
+    background: #3ECF8E;
     border-radius: 4px;
 }
 @keyframes rotate {

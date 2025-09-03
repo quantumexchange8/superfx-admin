@@ -525,6 +525,85 @@ class PendingController extends Controller
         }
     }
 
+    /**
+     * @throws Exception
+     */
+    public function psp_payout_callback(Request $request)
+    {
+        $dataArray = $request->all();
+
+        Log::debug("PSP Callback Response: ", $dataArray);
+
+        // Extract the signature
+        $signature = $dataArray['sign'] ?? null;
+
+        if (!$signature) {
+            throw new Exception('Missing signature in callback');
+        }
+
+        unset($dataArray['sign']);
+
+        $filtered = array_filter($dataArray, fn($v) => $v !== null && $v !== '');
+        ksort($filtered);
+
+        $stringA = urldecode(http_build_query($filtered));
+
+        $publicKeyPath = storage_path('app/keys/psp_public.pem');
+        $publicKey = file_get_contents($publicKeyPath);
+
+        $isValid = openssl_verify($stringA, base64_decode($signature), $publicKey);
+
+        if ($isValid !== 1) {
+            Log::error('Signature verification failed', ['stringA' => $stringA, 'signature' => $signature]);
+            return response()
+                ->json([
+                    'success' => false,
+                    'message' => 'Signature verification failed.',
+                ]);
+        }
+
+        $transaction = Transaction::firstWhere('transaction_number', $dataArray['seqId']);
+
+        $status = $dataArray['stat'] == '0000' ? 'successful' : 'failed';
+
+        $transaction->update([
+            'transaction_amount' => $transaction->amount,
+            'status' => $status,
+            'comment' => $dataArray['tradeNo'] ?? null,
+            'approved_at' => now()
+        ]);
+
+        $user = User::find($transaction->user_id);
+
+        if ($transaction->status == 'successful') {
+            if ($transaction->from_meta_login) {
+                $data = (new MetaFourService())->getUser($transaction->from_meta_login);
+
+                Mail::to($user->email)->send(new WithdrawalApprovalMail(
+                        $user,
+                        $transaction->from_meta_login,
+                        $data['group'],
+                        $transaction->transaction_amount,
+                        $transaction->payment_account_no,
+                        $transaction->payment_platform)
+                );
+            } else {
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform));
+            }
+
+            return response("SUCCESS", 200)
+                ->header('Content-Type', 'text/plain');
+        } else {
+            // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
+            $this->handleTransactionUpdate($transaction);
+
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+
+            return response("SIGNATURE VERIFICATION FAILED", 404)
+                ->header('Content-Type', 'text/plain');
+        }
+    }
+
     private function handleTransactionUpdate($transaction): void
     {
         // Wallet handling logic here

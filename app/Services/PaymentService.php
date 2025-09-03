@@ -104,6 +104,75 @@ class PaymentService
 
                 throw new Exception($errorMsg);
 
+            case 'pay-superfin':
+                $params = [
+                    'version'  => "2.0",
+                    'merId'  => $payment_gateway->payment_app_number,
+                    'seqId' => $transaction->transaction_number,
+                    'amount' => (string) $transaction->conversion_amount,
+                    'notifyUrl' => route('psp_payout_callback'),
+                    'receiveName' => $transaction->payment_account_name,
+                    'cardNo' => $transaction->payment_account_no,
+                    'bankName' => $transaction->bank_code,
+                ];
+
+                // Remove null/empty values
+                $filtered = array_filter($params, fn($v) => $v !== null && $v !== '');
+
+                // Sort by key (ASCII order)
+                ksort($filtered);
+
+                $stringA = urldecode(http_build_query($filtered));
+
+                $privateKeyPath = storage_path('app/keys/psp_private.pem');
+                $privateKey = file_get_contents($privateKeyPath);
+
+                if (!$privateKey) {
+                    throw new Exception('Private key file not found or unreadable.');
+                }
+
+                $signature = null;
+                $success = openssl_sign($stringA, $signature, $privateKey);
+
+                if (!$success) {
+                    throw new Exception('Failed to generate RSA signature.');
+                }
+
+                // Encode signature (usually Base64 for transmission)
+                $params['sign'] = base64_encode($signature);
+
+                $response = Http::asForm()
+                    ->post("$payment_gateway->payment_url/ttpaywd", $params);
+
+                $responseData = $response->json();
+
+                if (isset($responseData['code']) && $responseData['code'] == "0000") {
+                    // success → get the URL from data
+                    $payment_url = $responseData['payResult'] ?? null;
+
+                    if ($payment_url) {
+                        break;
+                    }
+
+                    // code == 0 but url missing → throw exception
+                    throw new Exception('Missing checkout URL in gateway response: ' . json_encode($responseData));
+                }
+
+                Log::info('PSP Pay response code: ' . $responseData['code']);
+                Log::info('PSP Pay response msg: ' . $responseData['msg']);
+
+                $transaction->update([
+                    'status' => 'failed',
+                    'approved_at' => now()
+                ]);
+
+                // error case → throw exception with message
+                $errorMsg = $responseData['msg']
+                    ?? $responseData['message']
+                    ?? 'Unknown gateway error';
+
+                throw new Exception($errorMsg);
+
             default:
                 $params = [
                     'partner_id' => $payment_gateway->payment_app_number,
