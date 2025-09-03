@@ -488,7 +488,6 @@ class PendingController extends Controller
         }
 
         $transaction->update([
-            'transaction_amount' => $transaction->amount,
             'status' => $status,
             'comment' => $dataArray['amount'] ?? null,
         ]);
@@ -567,7 +566,6 @@ class PendingController extends Controller
         $status = $dataArray['stat'] == '0000' ? 'successful' : 'failed';
 
         $transaction->update([
-            'transaction_amount' => $transaction->amount,
             'status' => $status,
             'comment' => $dataArray['amount'] ?? null,
         ]);
