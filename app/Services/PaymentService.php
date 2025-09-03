@@ -148,14 +148,11 @@ class PaymentService
 
                 if (isset($responseData['code']) && $responseData['code'] == "0000") {
                     // success → get the URL from data
-                    $payment_url = $responseData['payResult'] ?? null;
+                    $payment = $responseData;
 
-                    if ($payment_url) {
+                    if ($payment) {
                         break;
                     }
-
-                    // code == 0 but url missing → throw exception
-                    throw new Exception('Missing checkout URL in gateway response: ' . json_encode($responseData));
                 }
 
                 Log::info('PSP Pay response code: ' . $responseData['code']);
