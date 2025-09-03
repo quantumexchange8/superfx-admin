@@ -569,8 +569,7 @@ class PendingController extends Controller
         $transaction->update([
             'transaction_amount' => $transaction->amount,
             'status' => $status,
-            'comment' => $dataArray['tradeNo'] ?? null,
-            'approved_at' => now()
+            'comment' => $dataArray['amount'] ?? null,
         ]);
 
         $user = User::find($transaction->user_id);
