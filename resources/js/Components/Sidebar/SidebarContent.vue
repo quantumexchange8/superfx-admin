@@ -3,8 +3,7 @@ import PerfectScrollbar from '@/Components/PerfectScrollbar.vue'
 import SidebarLink from '@/Components/Sidebar/SidebarLink.vue'
 import SidebarCollapsible from '@/Components/Sidebar/SidebarCollapsible.vue'
 import SidebarCollapsibleItem from '@/Components/Sidebar/SidebarCollapsibleItem.vue'
-import {onMounted, ref, watchEffect} from "vue";
-import {usePage} from "@inertiajs/vue3";
+import {onBeforeUnmount, onMounted, ref} from "vue";
 import {
     IconLayoutDashboard,
     IconComponents,
@@ -16,11 +15,10 @@ import {
     IconFileAnalytics,
     IconId,
     IconIdBadge2,
-    IconCoinMonero,
     IconBusinessplan,
     IconClockDollar,
-    IconAward
 } from '@tabler/icons-vue';
+import { emitter } from '@/Composables/useEventBus';
 
 const pendingWithdrawals = ref(0);
 const pendingPammAllocate = ref(0);
@@ -41,12 +39,11 @@ const getPendingCounts = async () => {
 
 onMounted(() => {
     getPendingCounts();
-})
+    emitter.on('refresh:pendingCounts', getPendingCounts);
+});
 
-watchEffect(() => {
-    if (usePage().props.toast !== null) {
-        getPendingCounts();
-    }
+onBeforeUnmount(() => {
+    emitter.off('refresh:pendingCounts', getPendingCounts);
 });
 </script>
 

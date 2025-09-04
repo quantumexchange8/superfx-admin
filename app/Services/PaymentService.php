@@ -31,9 +31,9 @@ class PaymentService
                     'payee_bank_account_type' => $transaction->payment_account_type,
                     'payee_bank_account_no' => $transaction->payment_account_no,
                     'payee_bank_account_name' => $transaction->payment_account_name,
-                    'notify_url' => route('transactionCallback'),
-                    'message' => '',
-                    'extra_data' => $payment_gateway->payment_app_key,
+                    '',
+                    '',
+                    $payment_gateway->payment_app_key,
                 ];
 
                 $hashedCode = md5(implode(':', $params));
@@ -181,8 +181,9 @@ class PaymentService
                     'address' => $transaction->payment_account_no,
                     'amount' => $transaction->conversion_amount,
                     'notify_url' => route('transactionCallback'),
-                    'memo' => '',
-                    'extra_data' => $payment_gateway->payment_app_key,
+                    '',
+                    '',
+                    $payment_gateway->payment_app_key,
                 ];
 
                 $hashedCode = md5(implode(':', $params));

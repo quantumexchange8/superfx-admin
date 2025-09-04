@@ -29,6 +29,7 @@
         "dayjs": "^1.11.12",
         "laravel-vue-i18n": "^2.7.7",
         "lodash": "^4.17.21",
+        "mitt": "^3.0.1",
         "perfect-scrollbar": "^1.5.5",
         "primevue": "^3.53.0",
         "vue3-autocounter": "^1.0.6"

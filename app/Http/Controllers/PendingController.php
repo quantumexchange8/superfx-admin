@@ -142,9 +142,11 @@ class PendingController extends Controller
             $user = User::find($transaction->user_id);
             Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
 
-            return redirect()->back()->with('toast', [
-                'title' => trans('public.toast_reject_withdrawal_request'),
-                'type' => 'success'
+            return response()->json([
+                'success'       => true,
+                'toast_title'   => trans('public.successful'),
+                'toast_message' => trans('public.toast_reject_withdrawal_request'),
+                'toast_type'    => 'success'
             ]);
         } else {
             if ($transaction->payment_gateway) {
@@ -205,7 +207,8 @@ class PendingController extends Controller
 
                 $transaction->update([
                     'status' => 'failed',
-                    'approved_at' => now()
+                    'approved_at' => now(),
+                    'remarks' => $e->getMessage(),
                 ]);
 
                 $this->handleTransactionUpdate($transaction);

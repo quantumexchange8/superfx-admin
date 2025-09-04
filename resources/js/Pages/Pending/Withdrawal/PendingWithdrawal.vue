@@ -20,6 +20,7 @@ import Textarea from "primevue/textarea";
 import Empty from "@/Components/Empty.vue";
 import toast from "@/Composables/toast.js";
 import debounce from "lodash/debounce.js";
+import {emitter} from "@/Composables/useEventBus.js";
 
 const isLoading = ref(false);
 const dt = ref(null);
@@ -170,10 +171,19 @@ const submitForm = async (transaction) => {
 
         closeDialog();
 
+        form.value = {
+            action: '',
+            remarks: null,
+        }
+
         // Remove current id
         pendingWithdrawals.value = pendingWithdrawals.value.filter(
             (t) => t.id !== transaction.id
         );
+
+        totalAmount.value = Number(totalAmount.value) - Number(transaction.transaction_amount);
+
+        emitter.emit('refresh:pendingCounts');
 
         toast.add({
             title: response.data.toast_title,

@@ -80,9 +80,9 @@ watchEffect(() => {
 
             <!-- Wallet -->
             <div class="w-full xl:w-[438px] h-[200px] self-stretch relative">
-                <div class="flex flex-col justify-center items-start px-6 py-5 gap-5 rounded-2xl bg-logo relative z-0 h-[200px]">
+                <div class="flex flex-col justify-center items-start px-6 py-5 gap-5 rounded-2xl bg-primary-600 relative z-0 h-[200px]">
                     <div class="flex justify-between items-start self-stretch">
-                        <div class="w-10 h-10 p-2.5 flex justify-center items-center rounded-lg bg-[#FAFAFF] text-logo">
+                        <div class="w-10 h-10 p-2.5 flex justify-center items-center rounded-lg bg-[#FAFAFF] text-primary-600">
                             <IconCoins size="20" stroke-width="1.25" />
                         </div>
                         <WalletAdjustment type="rebate" :rebateWallet="rebateWallet" />

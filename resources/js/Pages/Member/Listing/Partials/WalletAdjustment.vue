@@ -85,7 +85,7 @@ const handleChipClick = (label) => {
     >
         <form>
             <div class="flex flex-col gap-5">
-                <div class="flex flex-col justify-center items-center px-8 py-4 gap-2 self-stretch bg-logo">
+                <div class="flex flex-col justify-center items-center px-8 py-4 gap-2 self-stretch bg-primary-600">
                     <div class="text-gray-100 text-center text-xs font-medium">{{ $t('public.rebate_balance') }}</div>
                     <div class="text-white text-center text-xl font-semibold">$ {{ formatAmount(rebateWallet.balance) }}</div>
                 </div>
