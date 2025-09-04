@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Models\CurrencyConversionRate;
 use App\Services\RunningNumberService;
 use App\Services\ChangeTraderBalanceType;
+use Throwable;
 
 class PendingController extends Controller
 {
@@ -76,7 +77,11 @@ class PendingController extends Controller
 
             $pendingWithdrawals->getCollection()->transform(function ($transaction) {
                 if ($transaction->from_meta_login) {
-                    (new MetaFourService())->getUserInfo($transaction->from_meta_login);
+                    try {
+                        (new MetaFourService())->getUserInfo($transaction->from_meta_login);
+                    } catch (Throwable $e) {
+                        Log::error($e->getMessage());
+                    }
                     $transaction->balance = $transaction->fromMetaLogin->balance ?? 0;
                 } else {
                     $transaction->balance = $transaction->from_wallet->balance ?? 0;
