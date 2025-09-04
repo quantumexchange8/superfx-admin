@@ -2,18 +2,18 @@
 
 namespace App\Services;
 
+use App\Services\Data\UpdateAccountBalance;
 use Carbon\Carbon;
 use App\Models\Setting;
 use App\Models\TradingUser;
 use App\Models\User as UserModel;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Services\Data\CreateTradingUser;
 use App\Services\Data\UpdateTradingUser;
 use App\Services\Data\CreateTradingAccount;
 use App\Services\Data\UpdateTradingAccount;
 use Illuminate\Http\Client\ConnectionException;
+use Throwable;
 
 class MetaFourService {
     private string $port = "8443";
@@ -36,6 +36,9 @@ class MetaFourService {
         $this->token = hash('sha256', $token2);
     }
 
+    /**
+     * @throws ConnectionException
+     */
     public function getUser($meta_login)
     {
         $payload = [
@@ -57,15 +60,45 @@ class MetaFourService {
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
-            ->withBody($jsonPayload, 'application/json')
-            ->get($url . "/getuser");
+            ->withBody($jsonPayload)
+            ->post($url . "/getuser");
 
         return $accountResponse->json();
     }
 
+    /**
+     * @throws ConnectionException
+     * @throws Throwable
+     */
+    public function getAccountEquity($meta_login)
+    {
+        $payload = [
+            'meta_login' => $meta_login,
+        ];
+
+        $jsonPayload = json_encode($payload);
+
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload)
+            ->post($this->baseURL . "/getequity");
+
+        $data = $accountResponse->json();
+        (new UpdateAccountBalance())->execute($meta_login, $data);
+
+        return $data;
+    }
+
+    /**
+     * @throws ConnectionException
+     * @throws Throwable
+     */
     public function getUserInfo($meta_login): void
     {
         $data = $this->getUser($meta_login);
+        $this->getAccountEquity($meta_login);
 
         if ($data) {
             (new UpdateTradingUser)->execute($meta_login, $data);
@@ -108,51 +141,51 @@ class MetaFourService {
     {
         // Fetch the expiration date from the Setting model
         $setting = Setting::where('slug', 'credit_in_expired_date')->first();
-    
+
         // Check if the setting exists
         if (!$setting) {
             // Handle the error if the setting is not found
             throw new \Exception("Expiration date setting not found.");
         }
-    
+
         // Assuming $setting->value is a string like "90", representing the number of days
         $expirationDate = Carbon::now()->addDays(value: (int) $setting->value)->toDateString();
-    
+
         $payload = [
             'meta_login' => $meta_login,
             'amount' => (float) $amount,
             'comment' => $comment,
             'type' => $type,
         ];
-    
+
         // Add expiration date for credit type only
         if ($type === 'credit') {
             $payload['expiration_date'] = $expirationDate;  // Use the fetched expiration date
         } else {
             $payload['expiration_date'] = '';  // Empty expiration date for balance transactions
         }
-    
+
         $jsonPayload = json_encode($payload);
-    
+
         $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
-    
+
         if ($tradingUser && $tradingUser->category === 'live') {
             $url = $this->baseURL;
         } else {
             $url = $this->demoURL;
         }
-    
+
         $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->post($url . "/transaction");
-    
+
         // Return the JSON response from the API
         return $accountResponse->json();
     }
-    
+
     public function updateLeverage($meta_login, $leverage)
     {
         $payload = [

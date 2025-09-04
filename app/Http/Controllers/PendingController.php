@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Models\CurrencyConversionRate;
 use App\Services\RunningNumberService;
 use App\Services\ChangeTraderBalanceType;
+use Throwable;
 
 class PendingController extends Controller
 {
@@ -45,7 +46,11 @@ class PendingController extends Controller
             ->map(function ($transaction) {
                 // Check if from_meta_login exists and fetch the latest balance
                 if ($transaction->from_meta_login) {
-                    (new MetaFourService())->getUserInfo($transaction->from_meta_login);
+                    try {
+                        (new MetaFourService())->getUserInfo($transaction->from_meta_login);
+                    } catch (Throwable $e) {
+                        Log::error($e->getMessage());
+                    }
 
                     // After calling getUserInfo, fetch the latest balance
                     $balance = $transaction->from_meta_login ? $transaction->fromMetaLogin->balance : 0;
