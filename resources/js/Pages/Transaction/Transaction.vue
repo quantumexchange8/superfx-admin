@@ -20,6 +20,7 @@ const totalTransactionAmount = ref(999);
 const maxAmount = ref(999);
 const counterDuration = ref(10);
 const months = ref([]);
+const paymentGateways = ref([]);
 
 const getTransactionMonths = async () => {
     try {
@@ -30,7 +31,19 @@ const getTransactionMonths = async () => {
     }
 };
 
+
+const getPaymentGateways = async () => {
+    try {
+        const response = await axios.get('/get_payment_gateways');
+        paymentGateways.value = response.data.paymentGateways;
+
+    } catch (error) {
+        console.error('Error fetching selectedCountry:', error);
+    }
+};
+
 onMounted(() => {
+    getPaymentGateways();
     getTransactionMonths();
     // Extract the type from the URL directly
     const queryString = window.location.search;
@@ -200,7 +213,7 @@ const handleUpdateTotals = (data) => {
                 </div>
             </div>
             <div class="flex flex-col items-center py-6 px-4 gap-5 self-stretch rounded-2xl border border-gray-200 bg-white shadow-table md:py-6 md:gap-6">
-                <component :is="tabs[activeIndex]?.component" :selectedMonths="selectedMonths" :selectedType="selectedType" @update-totals="handleUpdateTotals" />
+                <component :is="tabs[activeIndex]?.component" :selectedMonths="selectedMonths" :selectedType="selectedType" :paymentGateways="paymentGateways" @update-totals="handleUpdateTotals" />
             </div>
         </div>
     </AuthenticatedLayout>

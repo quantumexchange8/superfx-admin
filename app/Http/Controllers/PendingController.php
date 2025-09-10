@@ -29,7 +29,9 @@ class PendingController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Pending/Pending');
+        return Inertia::render('Pending/Pending', [
+            'paymentGateways' => (new GeneralController())->get_payment_gateways(true),
+        ]);
     }
 
     public function getPendingWithdrawalData(Request $request)
@@ -41,7 +43,8 @@ class PendingController extends Controller
                 'user:id,email,name',
                 'user.media',
                 'payment_account:id,payment_account_name,account_no',
-                'fromMetaLogin:id,meta_login,balance'
+                'fromMetaLogin:id,meta_login,balance',
+                'payment_gateway:id,name'
             ])
                 ->where('transaction_type', 'withdrawal')
                 ->where('status', 'processing')
@@ -59,6 +62,10 @@ class PendingController extends Controller
                     })->orWhere('transaction_number', 'like', '%' . $keyword . '%')
                         ->orWhere('from_meta_login', 'like', '%' . $keyword . '%');
                 });
+            }
+
+            if ($data['filters']['payment_gateway_id']['value']) {
+                $query->where('payment_gateway_id', $data['filters']['payment_gateway_id']['value']);
             }
 
             //sort field/order

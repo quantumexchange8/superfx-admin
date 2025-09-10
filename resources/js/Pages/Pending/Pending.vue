@@ -5,6 +5,10 @@ import TabPanel from 'primevue/tabpanel';
 import {h, ref, watch} from "vue";
 import PendingWithdrawal from "@/Pages/Pending/Withdrawal/PendingWithdrawal.vue";
 
+const props = defineProps({
+    paymentGateways: Array,
+});
+
 const tabs = ref([
     {
         title: 'withdrawal_pending',
@@ -38,7 +42,7 @@ const updateType = (event) => {
             @tab-change="updateType"
         >
             <TabPanel v-for="(tab, index) in tabs" :key="index" :header="$t(`public.${tab.title}`)">
-                <component :is="tab.component" v-if="activeIndex === index" />
+                <component :is="tab.component" v-if="activeIndex === index" :paymentGateways="props.paymentGateways" />
             </TabPanel>
         </TabView>
     </AuthenticatedLayout>

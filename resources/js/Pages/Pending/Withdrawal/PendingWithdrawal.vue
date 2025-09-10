@@ -1,26 +1,33 @@
 <script setup>
-import {IconCircleXFilled, IconSearch, IconLoader} from "@tabler/icons-vue";
+import { IconCircleXFilled, IconSearch, IconLoader, IconAdjustments, IconX } from "@tabler/icons-vue";
 import Loader from "@/Components/Loader.vue";
 import DataTable from "primevue/datatable";
 import InputText from "primevue/inputtext";
 import Column from "primevue/column";
 import Button from "@/Components/Button.vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
-import {onMounted, ref, watch, watchEffect} from "vue";
-import {FilterMatchMode} from "primevue/api";
-import {usePage} from "@inertiajs/vue3";
+import { onMounted, ref, watch, watchEffect } from "vue";
+import { FilterMatchMode } from "primevue/api";
+import { usePage } from "@inertiajs/vue3";
 import dayjs from 'dayjs'
-import {transactionFormat} from "@/Composables/index.js";
+import { transactionFormat } from "@/Composables/index.js";
 import ColumnGroup from 'primevue/columngroup';
 import Row from 'primevue/row';
 import Dialog from "primevue/dialog";
 import InputLabel from "@/Components/InputLabel.vue";
 import Chip from "primevue/chip";
 import Textarea from "primevue/textarea";
+import OverlayPanel from 'primevue/overlaypanel';
+import Badge from '@/Components/Badge.vue';
+import Dropdown from 'primevue/dropdown';
 import Empty from "@/Components/Empty.vue";
 import toast from "@/Composables/toast.js";
 import debounce from "lodash/debounce.js";
-import {emitter} from "@/Composables/useEventBus.js";
+import { emitter } from "@/Composables/useEventBus.js";
+
+const props = defineProps({
+    paymentGateways: Array,
+});
 
 const isLoading = ref(false);
 const dt = ref(null);
@@ -32,6 +39,7 @@ const {formatAmount, formatDateTime} = transactionFormat();
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
 const lazyParams = ref({});
@@ -93,12 +101,9 @@ onMounted(() => {
     loadLazyData();
 });
 
-watch(
-    filters.value['global'],
-    debounce(() => {
-        loadLazyData();
-    }, 300)
-);
+watch( filters, debounce(() => {
+    loadLazyData();
+}, 300), { deep: true });
 
 const exportCSV = () => {
     dt.value.exportCSV();
@@ -106,6 +111,19 @@ const exportCSV = () => {
 
 const clearFilterGlobal = () => {
     filters.value['global'].value = null;
+}
+
+const clearFilter = () => {
+    filters.value = {
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
+    };
+};
+
+const op = ref();
+const filterCount = ref(0);
+const toggle = (event) => {
+    op.value.toggle(event);
 }
 
 watchEffect(() => {
@@ -240,7 +258,7 @@ const submitForm = async (transaction) => {
             :globalFilterFields="['user.name', 'user.email', 'transaction_number', 'from_meta_login']"
         >
             <template #header>
-                <div class="flex flex-col md:flex-row gap-3 md:justify-between items-center self-stretch md:pb-6">
+                <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
                     <div class="relative w-full md:w-60">
                         <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                             <IconSearch size="20" stroke-width="1.25" />
@@ -254,13 +272,31 @@ const submitForm = async (transaction) => {
                             <IconCircleXFilled size="16" />
                         </div>
                     </div>
-                    <Button
-                        variant="primary-outlined"
-                        @click="exportCSV($event)"
-                        class="w-full md:w-auto"
-                    >
-                        {{ $t('public.export') }}
-                    </Button>
+                    <div class="w-full grid grid-cols-2 gap-3">
+                        <Button
+                            variant="gray-outlined"
+                            @click="toggle"
+                            size="sm"
+                            class="flex gap-3 items-center justify-center py-3 w-full md:w-[130px]"
+                        >
+                            <IconAdjustments size="20" color="#0C111D" stroke-width="1.25" />
+                            <div class="text-sm text-gray-950 font-medium">
+                                {{ $t('public.filter') }}
+                            </div>
+                            <Badge class="w-5 h-5 text-xs text-white" variant="numberbadge">
+                                {{ filterCount }}
+                            </Badge>
+                        </Button>
+                        <div class="w-full flex justify-end">
+                            <Button
+                                variant="primary-outlined"
+                                @click="exportCSV($event)"
+                                class="w-full md:w-auto"
+                            >
+                                {{ $t('public.export') }}
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </template>
             <template #empty><Empty :title="$t('public.empty_pending_request_title')" :message="$t('public.empty_pending_request_message')" /></template>
@@ -271,12 +307,7 @@ const submitForm = async (transaction) => {
                 </div>
             </template>
             <template v-if="pendingWithdrawals?.length > 0">
-                <Column
-                    field="created_at"
-                    sortable
-                    style="width: 25%"
-                    headerClass="hidden md:table-cell"
-                >
+                <Column field="created_at" sortable headerClass="hidden md:table-cell">
                     <template #header>
                         <span class="hidden md:block">{{ $t('public.requested_date') }}</span>
                     </template>
@@ -285,12 +316,7 @@ const submitForm = async (transaction) => {
                     </template>
                 </Column>
 
-                <Column
-                    field="name"
-                    :header="$t('public.member')"
-                    style="width: 25%"
-                    headerClass="hidden md:table-cell"
-                >
+                <Column field="name" :header="$t('public.member')" headerClass="hidden md:table-cell">
                     <template #body="slotProps">
                         <div class="flex items-center gap-3">
                             <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
@@ -316,11 +342,7 @@ const submitForm = async (transaction) => {
                     </template>
                 </Column>
 
-                <Column
-                    field="from"
-                    style="width: 25%"
-                    headerClass="hidden md:table-cell"
-                >
+                <Column field="from" headerClass="hidden md:table-cell" >
                     <template #header>
                         <span class="hidden md:block items-center justify-center w-full">{{ $t('public.from') }}</span>
                     </template>
@@ -328,7 +350,15 @@ const submitForm = async (transaction) => {
                         {{ slotProps.data.from_meta_login ? slotProps.data.from_meta_login?.meta_login :$t('public.rebate_wallet') }}
                     </template>
                 </Column>
-                <Column field="amount" header="" sortable style="width: 25%" headerClass="hidden md:table-cell">
+                <Column field="payment_platform" headerClass="hidden md:table-cell" >
+                    <template #header>
+                        <span class="hidden md:block items-center justify-center w-full">{{ $t('public.platform') }}</span>
+                    </template>
+                    <template #body="slotProps">
+                        {{ slotProps.data?.payment_gateway_id ? slotProps.data?.payment_gateway?.name : '-' }}
+                    </template>
+                </Column>
+                <Column field="amount" header="" sortable headerClass="hidden md:table-cell">
                     <template #header>
                         <span class="hidden md:block items-center justify-center">{{ $t('public.amount') }} ($)</span>
                     </template>
@@ -338,7 +368,7 @@ const submitForm = async (transaction) => {
                 </Column>
                 <ColumnGroup type="footer">
                     <Row>
-                        <Column class="hidden md:table-cell" :footer="$t('public.total') + ' ($) :'" :colspan="3" footerStyle="text-align:right" />
+                        <Column class="hidden md:table-cell" :footer="$t('public.total') + ' ($) :'" :colspan="4" footerStyle="text-align:right" />
                         <Column class="hidden md:table-cell" :footer="formatAmount(totalAmount ? totalAmount : 0)" />
                         <Column class="md:hidden" footerStyle="text-align:right">
                             <template #footer>
@@ -379,6 +409,36 @@ const submitForm = async (transaction) => {
             </template>
         </DataTable>
     </div>
+
+    <OverlayPanel ref="op">
+        <div class="flex flex-col gap-8 w-60 py-5 px-4">
+            <!-- Filter Payment Platform-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_payment_platform') }}
+                </div>
+                <Dropdown
+                    v-model="filters['payment_gateway_id'].value"
+                    :options="paymentGateways"
+                    optionLabel="name"
+                    optionValue="id"
+                    :placeholder="$t('public.select_payment_platform')"
+                    class="w-full text-sm"
+                />
+            </div>
+
+            <div class="flex w-full">
+                <Button
+                    type="button"
+                    variant="primary-outlined"
+                    class="flex justify-center w-full"
+                    @click="clearFilter()"
+                >
+                    {{ $t('public.clear_all') }}
+                </Button>
+            </div>
+        </div>
+    </OverlayPanel>
 
     <Dialog
         v-model:visible="visible"

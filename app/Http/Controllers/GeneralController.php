@@ -477,7 +477,7 @@ class GeneralController extends Controller
         ]);
     }
 
-    public function get_payment_gateways()
+    public function get_payment_gateways($returnAsArray = false)
     {
         $payments = PaymentGateway::where([
             'status' => 'active',
@@ -490,6 +490,10 @@ class GeneralController extends Controller
                 'status'
             ])->get();
 
+            if ($returnAsArray) {
+                return $payments;
+            }
+    
         return response()->json([
             'paymentGateways' => $payments,
         ]);

@@ -1,6 +1,7 @@
 <script setup>
 import InputText from 'primevue/inputtext';
 import RadioButton from 'primevue/radiobutton';
+import Dropdown from 'primevue/dropdown';
 import Button from '@/Components/Button.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import { ref, onMounted, watch, watchEffect, computed } from "vue";
@@ -28,6 +29,7 @@ const {locale} = useLangObserver();
 const props = defineProps({
   selectedMonths: Array,
   selectedType: String,
+  paymentGateways: Array,
   copyToClipboard: Function,
 });
 
@@ -88,7 +90,7 @@ const filters = ref({
     transaction_amount: { value: [minFilterAmount.value, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
     category: { value: null, matchMode: FilterMatchMode.EQUALS },
     status: { value: null, matchMode: FilterMatchMode.EQUALS },
-    payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
+    payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
 // overlay panel
@@ -123,7 +125,7 @@ const recalculateTotals = () => {
             (!filters.value.transaction_amount?.value[0] || !filters.value.transaction_amount?.value[1] || (transaction.transaction_amount >= filters.value.transaction_amount.value[0] && transaction.transaction_amount <= filters.value.transaction_amount.value[1])) &&
             (!filters.value.category?.value || transaction.category === filters.value.category.value) &&
             (!filters.value.status?.value || transaction.status === filters.value.status.value) &&
-            (!filters.value.payment_platform?.value || transaction.payment_platform === filters.value.payment_platform.value)
+            (!filters.value.payment_gateway_id?.value || transaction.payment_gateway_id === filters.value.payment_gateway_id.value)
         );
     });
     totalTransaction.value = filtered.length;
@@ -158,7 +160,7 @@ const clearFilter = () => {
         transaction_amount: { value: [null, null], matchMode: FilterMatchMode.BETWEEN },
         category: { value: null, matchMode: FilterMatchMode.EQUALS },
         status: { value: null, matchMode: FilterMatchMode.EQUALS },
-        payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
+        payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
     };
 };
 
@@ -495,20 +497,18 @@ const isJson = (str) => {
             </div>
 
             <!-- Filter Payment Platform-->
-            <div class="flex flex-col gap-2 items-center self-stretch">
-                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+            <div class="flex flex-col gap-2 items-start self-stretch">
+                <div class="text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_payment_platform') }}
                 </div>
-                <div  class="flex flex-col gap-1 self-stretch">
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['payment_platform'].value" inputId="bank" value="bank" class="w-4 h-4" />
-                        <label for="bank">{{ $t('public.bank') }}</label>
-                    </div>
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['payment_platform'].value" inputId="crypto" value="crypto" class="w-4 h-4" />
-                        <label for="crypto">{{ $t('public.crypto') }}</label>
-                    </div>
-                </div>
+                <Dropdown
+                    v-model="filters['payment_gateway_id'].value"
+                    :options="props.paymentGateways"
+                    optionLabel="name"
+                    optionValue="id"
+                    :placeholder="$t('public.select_payment_platform')"
+                    class="w-full text-sm"
+                />
             </div>
 
             <div class="flex w-full">
