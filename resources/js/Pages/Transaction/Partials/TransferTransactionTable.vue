@@ -23,6 +23,7 @@ const { formatDateTime, formatAmount } = transactionFormat();
 const props = defineProps({
   selectedMonths: Array,
   selectedType: String,
+  paymentGateways: Array,
 });
 
 watch(() => props.selectedMonths, () => {

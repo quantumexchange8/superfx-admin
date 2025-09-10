@@ -20,6 +20,7 @@ const { formatDate, formatDateTime, formatAmount } = transactionFormat();
 const props = defineProps({
   selectedMonths: Array,
   selectedType: String,
+  paymentGateways: Array,
 });
 
 const exportStatus = ref(false);
