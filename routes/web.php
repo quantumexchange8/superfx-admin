@@ -14,6 +14,7 @@ use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\NetworkController;
 use App\Http\Controllers\PendingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\BillboardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AccountTypeController;
@@ -281,6 +282,18 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::post('/update/{id}', [AccountTypeController::class, 'updateAccountType'])->name('accountType.update');
 
         Route::patch('/updateStatus/{id}', [AccountTypeController::class, 'updateStatus'])->name('accountType.updateStatus');
+    });
+
+    /**
+     * ==============================
+     *         Settings
+     * ==============================
+     */
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingsController::class, 'index'])->name('settings');
+        Route::get('/get', [SettingsController::class, 'getSiteSettings'])->name('settings.getSiteSettings');
+
+        Route::patch('/updateStatus/{id}', [SettingsController::class, 'updateSiteSettingsStatus'])->name('settings.updateSiteSettingsStatus');
     });
 
     /**
