@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Button from '@/Components/Button.vue';
 import { IconRefresh } from '@tabler/icons-vue';
 import DataTable from 'primevue/datatable';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import Column from 'primevue/column';
 import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
@@ -67,6 +67,14 @@ onMounted(() => {
     };
     loadLazyData();
 });
+
+watch(() => usePage().props.toast, (toast) => {
+    if (toast !== null) {
+        first.value = 0;
+        loadLazyData();
+    }
+});
+
 </script>
 
 <template>
