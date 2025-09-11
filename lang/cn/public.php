@@ -666,6 +666,7 @@ return [
     "requested_on" => "申请于",
     "approval_on" => "批准于",
     "filter_payment_platform" => "按支付平台筛选",
+    "select_payment_platform" => "选择支付平台",
     "min_deposit" => "最低存款",
     "total_volume" => "总交易量",
     "total_rebate" => "总返佣",

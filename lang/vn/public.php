@@ -666,6 +666,7 @@ return [
     "requested_on" => "Yêu cầu vào ngày",
     "approval_on" => "Phê duyệt vào ngày",
     "filter_payment_platform" => "Lọc theo nền tảng thanh toán",
+    "select_payment_platform" => "Chọn nền tảng thanh toán",
     "min_deposit" => "Số tiền gửi tối thiểu",
     "total_volume" => "Tổng khối lượng giao dịch",
     "total_rebate" => "Tổng hoa hồng",

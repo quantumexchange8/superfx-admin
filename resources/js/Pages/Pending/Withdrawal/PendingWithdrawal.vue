@@ -508,43 +508,58 @@ const submitForm = async (transaction) => {
                     </div>
                 </div>
 
-                <div v-if="pendingData.payment_platform === 'crypto' || !pendingData.payment_platform" class="flex flex-col gap-3 items-start w-full pt-4">
+                <div v-if="pendingData" class="flex flex-col gap-3 items-start w-full pt-4">
+                    <!-- Common: Payment Platform -->
                     <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
                         <div class="w-[140px] text-gray-500 text-xs font-medium">
-                            {{ $t('public.wallet_name') }}
+                            {{ $t('public.platform') }}
                         </div>
                         <div class="text-gray-950 text-sm font-medium">
-                            {{ pendingData.payment_account_name }}
+                            {{ pendingData?.payment_gateway?.name ?? '-' }}
                         </div>
                     </div>
-                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
-                        <div class="min-w-[140px] text-gray-500 text-xs font-medium">
-                            {{ $t('public.receiving_address') }}
+
+                    <!-- Crypto extra fields -->
+                    <template v-if="pendingData.payment_platform === 'crypto' || !pendingData.payment_platform">
+                        <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                            <div class="w-[140px] text-gray-500 text-xs font-medium">
+                                {{ $t('public.wallet_name') }}
+                            </div>
+                            <div class="text-gray-950 text-sm font-medium">
+                                {{ pendingData.payment_account_name }}
+                            </div>
                         </div>
-                        <div class="text-gray-950 text-sm break-words font-medium">
-                            {{ pendingData.payment_account_no }}
+                        <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                            <div class="min-w-[140px] text-gray-500 text-xs font-medium">
+                                {{ $t('public.receiving_address') }}
+                            </div>
+                            <div class="text-gray-950 text-sm break-words font-medium">
+                                {{ pendingData.payment_account_no }}
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div v-if="pendingData.payment_platform === 'bank'" class="flex flex-col gap-3 items-start w-full pt-4">
-                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
-                        <div class="w-[140px] text-gray-500 text-xs font-medium">
-                            {{ $t('public.bank_name') }}
+                    </template>
+
+                    <!-- Bank extra fields -->
+                    <template v-else-if="pendingData.payment_platform === 'bank'">
+                        <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                            <div class="w-[140px] text-gray-500 text-xs font-medium">
+                                {{ $t('public.bank_name') }}
+                            </div>
+                            <div class="text-gray-950 text-sm font-medium">
+                                {{ pendingData.payment_platform_name }}
+                                <span class="text-xs text-gray-500">{{ ` (${pendingData.bank_code})` }}</span>
+                            </div>
                         </div>
-                        <div class="text-gray-950 text-sm font-medium">
-                            {{ pendingData.payment_platform_name }}
-                            <span class="text-xs text-gray-500">{{ ` (${pendingData.bank_code})` }}</span>
+                        <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                            <div class="min-w-[140px] text-gray-500 text-xs font-medium">
+                                {{ pendingData.payment_account_type === 'card' ? $t('public.card_name') : $t('public.account_name') }}
+                            </div>
+                            <div class="text-gray-950 text-sm break-words font-medium">
+                                {{ pendingData.payment_account_name }}
+                                <span class="text-xs text-gray-500">{{ ` (${pendingData.payment_account_no})` }}</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
-                        <div class="min-w-[140px] text-gray-500 text-xs font-medium">
-                            {{ pendingData.payment_account_type === 'card' ? $t('public.card_name') : $t('public.account_name') }}
-                        </div>
-                        <div class="text-gray-950 text-sm break-words font-medium">
-                            {{ pendingData.payment_account_name }}
-                            <span class="text-xs text-gray-500">{{ ` (${pendingData.payment_account_no})` }}</span>
-                        </div>
-                    </div>
+                    </template>
                 </div>
             </div>
             <div class="flex justify-end items-center pt-5 gap-4 self-stretch sm:pt-7">
