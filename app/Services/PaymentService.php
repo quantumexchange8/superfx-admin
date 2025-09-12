@@ -31,7 +31,6 @@ class PaymentService
                     'payee_bank_account_type' => $transaction->payment_account_type,
                     'payee_bank_account_no' => $transaction->payment_account_no,
                     'payee_bank_account_name' => $transaction->payment_account_name,
-                    'notify_url' => route('transaction_callback'),
                     '',
                     '',
                     $payment_gateway->payment_app_key,
@@ -39,6 +38,7 @@ class PaymentService
 
                 $hashedCode = md5(implode(':', $params));
                 $params['sign'] = $hashedCode;
+                $params['notify_url'] = route('transaction_callback');
 
                 $baseUrl = $payment_gateway->payment_url . '/gateway/bnb/transferATM.do';
 
