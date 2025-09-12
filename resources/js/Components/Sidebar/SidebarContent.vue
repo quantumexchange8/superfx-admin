@@ -13,6 +13,7 @@ import {
     IconFileReport,
     IconFileTime,
     IconFileAnalytics,
+    IconSettings,
     IconId,
     IconIdBadge2,
     IconBusinessplan,
@@ -224,6 +225,17 @@ onBeforeUnmount(() => {
                 <IconId :size="20" stroke-width="1.25" />
             </template>
         </SidebarLink>
+
+        <!-- Settings -->
+       <SidebarLink
+           :title="$t('public.settings')"
+           :href="route('settings')"
+           :active="route().current('settings')"
+       >
+           <template #icon>
+               <IconSettings :size="20" stroke-width="1.25" />
+           </template>
+       </SidebarLink>
 
         <!-- Components -->
 <!--        <SidebarCollapsible-->

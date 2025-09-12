@@ -738,4 +738,14 @@ return [
     "verify_email_desc" => "Xác nhận để xác minh địa chỉ email của người dùng này.",
     "referrer_name" => "Tên người giới thiệu",
     "referrer_email" => "Email người giới thiệu",
+    "settings" => "Cài đặt",
+    "no_settings_header" => "Chưa có cài đặt",
+    "no_settings_caption" => "Hiện tại dường như chưa có bản ghi cài đặt nào. Khi cài đặt được tạo, bạn sẽ thấy chúng ở đây!",
+    "loading_settings" => "Đang tải dữ liệu cài đặt, vui lòng chờ.",
+    "deactivate_setting_header" => "Hủy kích hoạt cài đặt",
+    "deactivate_setting_message" => "Bạn có chắc chắn muốn hủy kích hoạt cài đặt này không? Điều này sẽ ẩn cài đặt.",
+    "activate_setting_header" => "Kích hoạt cài đặt",
+    "activate_setting_message" => "Bạn có chắc chắn muốn kích hoạt cài đặt này không? Điều này sẽ hiển thị cài đặt cho người dùng.",
+    "toast_setting_activated" => "Cài đặt đã được kích hoạt.",
+    "toast_setting_deactivated" => "Cài đặt đã bị hủy kích hoạt."
 ];
