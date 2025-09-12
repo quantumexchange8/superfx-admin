@@ -338,7 +338,7 @@ class PendingController extends Controller
         ]);
     }
 
-    public function transactionCallback(Request $request)
+    public function transaction_callback(Request $request)
     {
         $rawBody = $request->getContent();
 

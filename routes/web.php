@@ -33,7 +33,7 @@ Route::get('/', function () {
     return redirect(route('login'));
 });
 
-Route::post('transaction_callback', [PendingController::class, 'transactionCallback'])->name('transactionCallback');
+Route::post('transaction_callback', [PendingController::class, 'transaction_callback'])->name('transaction_callback');
 Route::post('zpay_payout_callback', [PendingController::class, 'zpay_payout_callback'])->name('zpay_payout_callback');
 Route::post('psp_payout_callback', [PendingController::class, 'psp_payout_callback'])->name('psp_payout_callback');
 
