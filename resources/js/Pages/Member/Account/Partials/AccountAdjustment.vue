@@ -4,33 +4,41 @@ import {transactionFormat} from "@/Composables/index.js";
 import RadioButton from "primevue/radiobutton";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
-import {useForm} from "@inertiajs/vue3";
 import InputNumber from "primevue/inputnumber";
 import Textarea from "primevue/textarea";
 import Chip from "primevue/chip";
 import Button from "@/Components/Button.vue";
-import {IconAlertCircle} from "@tabler/icons-vue"
+import toast from "@/Composables/toast.js";
 
 const props = defineProps({
     account: Object,
     dialogType: String,
 })
 
-const currentAmount = ref(null);
+const isLoading = ref(false);
+const data = ref([]);
 const {formatAmount} = transactionFormat();
-const emit = defineEmits(['update:visible'])
+const emit = defineEmits(['update:visible', 'updated:account']);
+
 const getTradingAccountData = async () => {
+    isLoading.value = true;
     try {
-        const response = await axios.get(`/member/getTradingAccountData?meta_login=${props.account.meta_login}`);
-        currentAmount.value = response.data.currentAmount;
+        const response = await axios.get(route('member.getFreshTradingAccountData', {
+            meta_login: props.account.meta_login,
+            account_type_id: props.account.account_type.id
+        }));
+        data.value = response.data.data;
+        emit('updated:account', data.value);
     } catch (error) {
         console.error('Error update account:', error);
+    } finally {
+        isLoading.value = false;
     }
 }
 
 onMounted(getTradingAccountData);
 
-const form = useForm({
+const form = ref({
     meta_login: props.account.meta_login,
     action: '',
     amount: 0,
@@ -88,17 +96,43 @@ const closeDialog = () => {
     emit('update:visible', false);
 }
 
-const submitForm = () => {
-    if (form.remarks === '') {
-        form.remarks = placeholderText.value;
+const formProcessing = ref(false);
+
+const submitForm = async () => {
+    formProcessing.value = true;
+    form.errors = {};
+
+    if (form.value.remarks === '') {
+        form.value.remarks = placeholderText.value;
     }
 
-    form.post(route('member.accountAdjustment'), {
-        onSuccess: () => {
+    try {
+        const response = await axios.post(route('member.accountAdjustment'), form.value);
+
+        closeDialog();
+
+        emit('updated:account', response.data.account);
+
+        toast.add({
+            type: 'success',
+            title: response.data.title,
+            message: response.data.message,
+        });
+    } catch (error) {
+        if (error.response?.status === 422) {
+            form.value.errors = error.response.data.errors;
+        } else {
             closeDialog();
-            form.reset();
-        },
-    });
+
+            const message = error.response?.data?.message || error.message || 'Something went wrong.';
+            toast.add({
+                type: 'error',
+                title: message,
+            });
+        }
+    } finally {
+        formProcessing.value = false;
+    }
 }
 </script>
 
@@ -109,12 +143,12 @@ const submitForm = () => {
                 <div class="text-gray-500 text-center text-xs font-medium">
                     #{{ account.meta_login }} - {{ dialogType === 'account_balance' ? $t('public.available_account_balance') : $t('public.available_account_credit') }}
                 </div>
-                <div v-if="currentAmount === null" class="animate-pulse">
-                    <div class="h-3 bg-gray-400 rounded-full w-28 my-1"></div>
+                <div v-if="isLoading" class="text-gray-950 text-center text-xl font-semibold">
+                    {{ $t('public.loading') }}..
                 </div>
                 <div v-else class="text-gray-950 text-center text-xl font-semibold">
-                    <span v-if="dialogType === 'account_balance'">$ {{ formatAmount(currentAmount['account_balance']) }}</span>
-                    <span v-else>$ {{ formatAmount(currentAmount[dialogType]) }}</span>
+                    <span v-if="dialogType === 'account_balance'">{{ formatAmount(data.balance) }}</span>
+                    <span v-else-if="dialogType === 'account_credit'">{{ formatAmount(data.credit) }}</span>
                 </div>
             </div>
 
@@ -139,7 +173,7 @@ const submitForm = () => {
                         <label :for="action.value">{{ $t(`public.${action.label}`) }}</label>
                     </div>
                 </div>
-                <InputError :message="form.errors.action" />
+                <InputError :message="form?.errors?.action?.[0]" />
             </div>
 
             <!-- amount -->
@@ -156,9 +190,9 @@ const submitForm = () => {
                     :minFractionDigits="2"
                     fluid
                     autofocus
-                    :invalid="!!form.errors.amount"
+                    :invalid="!!form?.errors?.amount"
                 />
-                <InputError :message="form.errors.amount" />
+                <InputError :message="form?.errors?.amount?.[0]" />
             </div>
 
             <!-- remarks -->
@@ -183,27 +217,29 @@ const submitForm = () => {
                     class="flex flex-1 self-stretch"
                     v-model="form.remarks"
                     :placeholder="placeholderText"
-                    :invalid="!!form.errors.remarks"
+                    :invalid="!!form?.errors?.remarks"
                     rows="5"
                     cols="30"
                 />
-                <InputError :message="form.errors.remarks" />
+                <InputError :message="form?.errors?.remarks?.[0]" />
             </div>
         </div>
 
         <div class="flex justify-end items-center pt-10 md:pt-7 gap-3 md:gap-4 self-stretch">
             <Button
+                type="button"
                 variant="gray-tonal"
                 class="flex flex-1 md:flex-none md:w-[120px]"
-                :disabled="form.processing"
+                :disabled="formProcessing"
                 @click.prevent="closeDialog"
             >
                 {{ $t('public.cancel') }}
             </Button>
             <Button
+                type="submit"
                 variant="primary-flat"
                 class="flex flex-1 md:flex-none md:w-[120px]"
-                :disabled="form.processing || currentAmount === null"
+                :disabled="formProcessing || isLoading"
                 @click.prevent="submitForm"
             >
                 {{ $t('public.confirm') }}

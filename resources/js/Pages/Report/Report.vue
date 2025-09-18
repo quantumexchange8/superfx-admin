@@ -18,7 +18,7 @@ const props = defineProps({
 });
 
 const tabs = ref([
-    { title: wTrans('public.rebate'), component: h(RebateHistory), type: 'rebate' },
+    { title: wTrans('public.details'), component: h(RebateHistory), type: 'rebate' },
     { title: wTrans('public.summary'), component: h(RebateReport), type: 'summary' },
     // { title: wTrans('public.group_transaction'), component: h(GroupTransaction), type: 'group_transaction' },
 ]);
@@ -44,7 +44,7 @@ const groups = ref(['dollar', 'cent']);
 </script>
 
 <template>
-    <AuthenticatedLayout :title="$t('public.report')">
+    <AuthenticatedLayout :title="$t('public.rebate')">
         <div class="flex flex-col items-center gap-5 self-stretch">
             <div class="flex flex-col md:flex-row gap-5 items-center self-stretch justify-between">
                 <TabView class="flex flex-col" :activeIndex="activeIndex" @tab-change="updateType">

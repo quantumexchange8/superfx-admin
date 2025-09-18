@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -12,7 +13,9 @@ class AccountType extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'member_display_name',
+        'trading_platform_id',
         'category',
         'account_group',
         'minimum_deposit',
@@ -26,6 +29,8 @@ class AccountType extends Model
         'descriptions',
         'color',
         'edited_by',
+        'status',
+        'balance_multiplier',
     ];
 
     // Relations
@@ -39,4 +44,8 @@ class AccountType extends Model
         return $this->hasMany(MarkupProfileToAccountType::class, 'account_type_id', 'id');
     }
 
+    public function trading_platform(): BelongsTo
+    {
+        return $this->belongsTo(TradingPlatform::class, 'trading_platform_id', 'id');
+    }
 }

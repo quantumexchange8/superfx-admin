@@ -1,25 +1,55 @@
 <script setup>
-import { IconAdjustmentsHorizontal } from "@tabler/icons-vue";
-import Button from "@/Components/Button.vue";
-import { computed, h, ref, watch } from "vue";
-import TieredMenu from "primevue/tieredmenu";
+import { ref, watch } from "vue";
 import InputSwitch from "primevue/inputswitch";
-import { router } from "@inertiajs/vue3";
 import { useConfirm } from "primevue/useconfirm";
 import { trans } from "laravel-vue-i18n";
+import toast from "@/Composables/toast.js";
 
 const props = defineProps({
-    setting: Object,
-    loading: Boolean,
+    tradingPlatform: Object,
 });
 
-const checked = ref(props.setting.status === 'active');
+const checked = ref(props.tradingPlatform.status === 'active');
 
-watch(() => props.setting.status, (newStatus) => {
+watch(() => props.tradingPlatform.status, (newStatus) => {
     checked.value = newStatus === 'active';
 });
 
 const confirm = useConfirm();
+
+const submitForm = async () => {
+    const originalChecked = checked.value;
+
+    checked.value = !originalChecked;
+
+    const newStatus = checked.value ? 'active' : 'inactive';
+
+    try {
+        const response = await axios.patch(
+            route('system.updateTradingPlatform', props.tradingPlatform.id),
+            { status: newStatus }
+        );
+
+        props.tradingPlatform.status = newStatus;
+
+        toast.add({
+            title: response.data.toast_title,
+            type: response.data.type,
+        });
+    } catch (error) {
+        checked.value = originalChecked;
+        props.tradingPlatform.status = originalChecked ? 'active' : 'inactive';
+
+        const errData = error?.response?.data;
+
+        toast.add({
+            title: errData?.toast_title || trans('public.update_failed'),
+            type: 'error',
+        });
+
+        console.error('Update failed:', error);
+    }
+};
 
 const requireConfirmation = (action_type) => {
     const messages = {
@@ -30,9 +60,7 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.deactivate'),
             action: () => {
-                router.patch(route('system.updateSiteSettingsStatus', props.setting.id));
-
-                checked.value = !checked.value;
+                submitForm();
             }
         },
         activate_setting: {
@@ -42,9 +70,7 @@ const requireConfirmation = (action_type) => {
             cancelButton: trans('public.cancel'),
             acceptButton: trans('public.confirm'),
             action: () => {
-                router.patch(route('system.updateSiteSettingsStatus', props.setting.id));
-
-                checked.value = !checked.value;
+                submitForm();
             }
         },
     };
@@ -63,7 +89,7 @@ const requireConfirmation = (action_type) => {
 };
 
 const handleSiteSettingStatus = () => {
-    if (props.setting.status === 'active') {
+    if (props.tradingPlatform.status === 'active') {
         requireConfirmation('deactivate_setting')
     } else {
         requireConfirmation('activate_setting')
@@ -79,11 +105,5 @@ const handleSiteSettingStatus = () => {
             @click="handleSiteSettingStatus"
             :disabled="props.loading"
         />
-        <!-- <AccountTypeSetting
-            :accountType="props.accountType"
-            :leverages="props.leverages"
-            :users="props.users"
-            :loading="props.loading"
-        /> -->
     </div>
 </template>

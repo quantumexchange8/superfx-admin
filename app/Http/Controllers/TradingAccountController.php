@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountType;
+use App\Models\TradingPlatform;
+use App\Services\MetaFiveService;
 use Carbon\Carbon;
 use App\Models\User;
 use Inertia\Inertia;
@@ -26,6 +29,8 @@ use App\Services\Data\UpdateTradingAccount;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\ChangeTradingAccountPasswordNotification;
+use PhpOffice\PhpSpreadsheet\Exception;
+use Throwable;
 
 class TradingAccountController extends Controller
 {
@@ -36,89 +41,137 @@ class TradingAccountController extends Controller
         return Inertia::render('Member/Account/AccountListing', [
             'last_refresh_datetime' => $last_refresh_datetime?->last_ran_at,
             'leverages' => (new GeneralController())->getLeverages(true),
-            'accountTypes' => (new GeneralController())->getAllAccountTypes(true),
+            'tradingPlatforms' => TradingPlatform::where('status', 'active')->get()->toArray(),
             'uplines' => (new GeneralController())->getUplines(true),
         ]);
     }
 
+    /**
+     * @throws Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
     public function getAccountListingData(Request $request)
     {
-        if ($request->account_listing == 'all') {
-            $accountQuery = TradingUser::with([
-                'user:id,name,email',
-                'trading_account:id,meta_login,equity'
-            ]);
+        if ($request->has('lazyEvent')) {
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
 
-            if ($request->last_logged_in_days) {
-                switch ($request->last_logged_in_days) {
+            $type = $data['filters']['type']['value'];
+
+            if ($type == 'all_accounts') {
+                $query = TradingUser::query()
+                    ->with([
+                        'users:id,name,email,upline_id',
+                        'users.media',
+                        'trading_account:id,meta_login,equity,balance',
+                        'accountType:id,slug,account_group,color',
+                    ]);
+            } else {
+                $query = TradingUser::onlyTrashed()
+                ->withTrashed([
+                    'users:id,name,email,upline_id',
+                    'users.media',
+                    'trading_account:id,user_id,meta_login,balance',
+                    'accountType:id,slug,account_group,color',
+                ]);
+            }
+
+            if ($data['filters']['global']['value']) {
+                $keyword = $data['filters']['global']['value'];
+
+                $query->where(function ($query) use ($keyword) {
+                    $query->whereHas('users', function ($query) use ($keyword) {
+                        $query->where('name', 'like', '%' . $keyword . '%')
+                            ->orWhere('email', 'like', '%' . $keyword . '%');
+                    })
+                        ->orWhere('meta_login', 'like', '%' . $keyword . '%');
+                });
+            }
+
+            if ($data['filters']['last_logged_in_days']['value']) {
+                switch ($data['filters']['last_logged_in_days']['value']) {
+                    case 'greater_than_30_days':
+                        $query->whereDate('last_access', '<=', today()->subDays(30));
+                        break;
+
                     case 'greater_than_90_days':
-                        $accountQuery->whereDate('last_access', '<=', today()->subDays(90));
+                        $query->whereDate('last_access', '<=', today()->subDays(90));
                         break;
 
                     default:
-                        $accountQuery->whereDate('last_access', '<=', today());
+                        $query->whereDate('last_access', '<=', today());
                 }
             }
 
-            $accounts = $accountQuery
-                ->orderByDesc('last_access')
-                ->get()
-                ->map(function ($account) {
-                    return [
-                        'id' => $account->id,
-                        'meta_login' => $account->meta_login,
-                        'user_name' => $account->user->name,
-                        'user_email' => $account->user->email,
-                        'user_profile_photo' => $account->user->getFirstMediaUrl('profile_photo'),
-                        'balance' => $account->balance,
-                        'equity' => $account->trading_account->equity,
-                        'credit' => $account->credit,
-                        'leverage' => $account->leverage,
-                        'last_login' => $account->last_access,
-                        'last_login_days' => Carbon::parse($account->last_access)->diffInDays(today()),
-                    ];
-                });
-        } else {
-            $startDate = $request->query('startDate');
-            $endDate = $request->query('endDate');
+            if ($data['filters']['balance_type']['value']) {
+                switch ($data['filters']['balance_type']['value']) {
+                    case '0.00':
+                        // Users with zero balance
+                        $query->where('balance', 0);
+                        break;
 
-            $accountQuery = TradingUser::onlyTrashed()
-                ->with([
-                    'user:id,name,email',
-                    'trading_account:id,user_id,meta_login'
-                ])->withTrashed(['user:id,name,email', 'trading_account:id,user_id,meta_login']);
+                    case 'never_deposited':
+                        // Users who have never made a deposit
+                        $query->whereNotExists(function ($subquery) {
+                            $subquery->selectRaw('1')
+                                ->from('transactions')
+                                ->whereColumn('transactions.to_meta_login', 'trading_users.meta_login')
+                                ->where('transactions.transaction_type', 'deposit');
+                        });
+                        break;
 
-            if ($startDate && $endDate) {
-                $start_date = Carbon::createFromFormat('Y/m/d', $startDate)->startOfDay();
-                $end_date = Carbon::createFromFormat('Y/m/d', $endDate)->endOfDay();
-
-                $accountQuery->whereBetween('deleted_at', [$start_date, $end_date]);
+                    default:
+                        $query->where('balance', $request->input('balance'));
+                }
             }
 
-            $accounts = $accountQuery
-                ->orderByDesc('deleted_at')
-                ->get()
-                ->map(function ($account) {
-                    return [
-                        'id' => $account->id,
-                        'meta_login' => $account->meta_login,
-                        'user_name' => optional($account->user)->name,
-                        'user_email' => optional($account->user)->email,
-                        'user_profile_photo' => optional($account->user)->getFirstMediaUrl('profile_photo'),
-                        'balance' => $account->balance,
-                        'equity' => 0,
-                        'credit' => $account->credit,
-                        'leverage' => $account->leverage,
-                        'deleted_at' => $account->deleted_at,
-                        'last_login' => $account->last_access,
-                        'last_login_days' => Carbon::parse($account->last_access)->diffInDays(today()),
-                    ];
+            if (!empty($data['filters']['platform']['value'])) {
+                $query->whereHas('accountType', function ($query) use ($data) {
+                    $query->whereHas('trading_platform', function ($query) use ($data) {
+                        $query->where('slug', $data['filters']['platform']['value']);
+                    });
                 });
+            }
+
+            if (!empty($data['filters']['account_type']['value'])) {
+                $query->where('account_type_id', $data['filters']['account_type']['value']);
+            }
+
+            if (!empty($data['filters']['upline']['value'])) {
+                $query->whereHas('users', function ($q) use ($data) {
+                    $selected_referrers = User::find($data['filters']['upline']['value']['value']);
+
+                    $userIds = $selected_referrers->getChildrenIds();
+                    $userIds[] = $data['filters']['upline']['value']['value'];
+
+                    $q->whereIn('upline_id', $userIds);
+                });
+            }
+
+            if (!empty($data['filters']['leverage']['value'])) {
+                $query->where('leverage', $data['filters']['leverage']['value']);
+            }
+
+            //sort field/order
+            if ($data['sortField'] && $data['sortOrder']) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+                $query->orderBy($data['sortField'], $order);
+            } else {
+                $query->orderByDesc('created_at');
+            }
+
+            if ($request->has('exportStatus')) {
+                return Excel::download(new AccountListingExport($query), now() . '-accounts.xlsx');
+            }
+
+            $accounts = $query->paginate($data['rows']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $accounts,
+            ]);
         }
 
-        return response()->json([
-            'accounts' => $accounts
-        ]);
+        return response()->json(['success' => false, 'data' => []]);
     }
 
     public function getAccountListingPaginate(Request $request)
@@ -139,16 +192,16 @@ class TradingAccountController extends Controller
                     case 'greater_than_30_days':
                         $query->whereDate('last_access', '<=', today()->subDays(30));
                         break;
-            
+
                     case 'greater_than_90_days':
                         $query->whereDate('last_access', '<=', today()->subDays(90));
                         break;
-            
+
                     default:
                         $query->whereDate('last_access', '<=', today());
                 }
             }
-            
+
             // Handle search functionality
             $search = $request->input('search');
             if ($search) {
@@ -160,14 +213,14 @@ class TradingAccountController extends Controller
                     ->orWhere('meta_login', 'like', '%' . $search . '%');
                 });
             }
-            
+
             if ($request->input('balance')) {
                 switch ($request->input('balance')) {
                     case '0.00':
                         // Users with zero balance
                         $query->where('balance', 0);
                         break;
-            
+
                     case 'never_deposited':
                         // Users who have never made a deposit
                         $query->whereNotExists(function ($subquery) {
@@ -177,12 +230,12 @@ class TradingAccountController extends Controller
                                      ->where('transactions.transaction_type', 'deposit');
                         });
                         break;
-            
+
                     default:
                         $query->where('balance', $request->input('balance'));
                 }
             }
-            
+
             if ($request->input('leverage')) {
                 $query->where('leverage', $request->input('leverage'));
             }
@@ -194,12 +247,12 @@ class TradingAccountController extends Controller
 
             if ($request->input('upline_id')) {
                 $uplineId = $request->input('upline_id');
-            
+
                 // Get upline and their children IDs
                 $upline = User::find($uplineId);
                 $childrenIds = $upline ? $upline->getChildrenIds() : [];
                 $childrenIds[] = $uplineId;
-            
+
                 // Filter only active users where upline_id is in the list or user is the upline
                 $query->whereHas('users', function ($q) use ($childrenIds, $uplineId) {
                     $q->where(function ($query) use ($childrenIds, $uplineId) {
@@ -208,12 +261,12 @@ class TradingAccountController extends Controller
                       });
                 });
             }
-            
+
             // Handle sorting
             $sortField = $request->input('sortField', 'meta_login'); // Default to 'meta_login'
             $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
             $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
-    
+
             // Handle pagination
             $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
             $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
@@ -238,7 +291,7 @@ class TradingAccountController extends Controller
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
             ])
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
-            
+
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
                 $account->upline_id = optional($account->users)->upline_id;
@@ -249,13 +302,13 @@ class TradingAccountController extends Controller
                 $account->account_type = optional($account->accountType)->slug;
                 $account->account_type_color = optional($account->accountType)->color;
                 $account->account_group = optional($account->accountType)->account_group;
-            
+
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);
                 unset($account->accountType);
             }
-                            
+
             // After the status update, return the re-fetched paginated data
             return response()->json([
                 'success' => true,
@@ -265,11 +318,11 @@ class TradingAccountController extends Controller
             // Handle inactive accounts or other types
             $query = TradingUser::onlyTrashed() // Only consider soft-deleted trading users
                 ->withTrashed([
-                    'user:id,name,email,upline_id', 
+                    'user:id,name,email,upline_id',
                     'trading_account:id,user_id,meta_login',
                     'accountType:id,slug,account_group,color',
                 ]); // Include soft-deleted related users, trading accounts and account type
-        
+
             // Filters
             // Handle search functionality
             $search = $request->input('search');
@@ -285,12 +338,12 @@ class TradingAccountController extends Controller
 
             // if ($request->input('upline_id')) {
             //     $uplineId = $request->input('upline_id');
-            
+
             //     // Get upline and their children IDs
             //     $upline = User::withTrashed()->find($uplineId);
             //     $childrenIds = $upline ? $upline->getChildrenIds() : [];
             //     $childrenIds[] = $uplineId;
-            
+
             //     // Filter only deleted users that match the upline logic
             //     $query->whereHas('users', function ($q) use ($childrenIds, $uplineId) {
             //         $q->onlyTrashed()->where(function ($query) use ($childrenIds, $uplineId) {
@@ -299,16 +352,16 @@ class TradingAccountController extends Controller
             //         });
             //     });
             // }
-                        
+
             // Handle sorting
             $sortField = $request->input('sortField', 'deleted_at'); // Default to 'created_at'
             $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
             $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
-    
+
             // Handle pagination
             $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
             $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
-    
+
             // // Export logic
             // if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
             //     $accounts = $query->clone();
@@ -327,7 +380,7 @@ class TradingAccountController extends Controller
                 DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
             ])
             ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
-            
+
             // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
             foreach ($accounts as $account) {
                 $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
@@ -337,7 +390,7 @@ class TradingAccountController extends Controller
                 $account->account_type = optional($account->accountType)->slug;
                 $account->account_type_color = optional($account->accountType)->color;
                 $account->account_group = optional($account->accountType)->account_group;
-            
+
                 // Remove unnecessary nested data (users and trading_account)
                 unset($account->users);
                 unset($account->trading_account);
@@ -356,37 +409,72 @@ class TradingAccountController extends Controller
         try {
             // Fetch and update user info using MetaFourService
             (new MetaFourService)->getUserInfo((int) $request->meta_login);
-    
+
             // Retrieve the updated account data
             $account = TradingAccount::where('meta_login', $request->meta_login)->first();
-    
+
             if (!$account) {
                 return response()->json([
                     'message' => 'Account not found.',
                 ], 404);
             }
-    
+
             return response()->json([
                 'currentAmount' => [
                     'account_balance' => $account->balance,
                     'account_credit' => $account->credit,
                 ],
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Log any errors during the process
             Log::error("Error updating account {$request->meta_login}: {$e->getMessage()}");
-    
+
             return response()->json([
                 'message' => 'An error occurred while fetching account data.',
             ], 500);
         }
     }
-    
+
+    public function getFreshTradingAccountData(Request $request)
+    {
+        try {
+            $account_type = AccountType::with('trading_platform')->find($request->account_type_id);
+
+            if ($account_type->trading_platform->slug == 'mt4' ) {
+                $service = new MetaFourService();
+            } else {
+                $service = new MetaFiveService();
+            }
+
+            $service->getUserInfo($request->meta_login);
+
+            $account = TradingUser::with([
+                    'users:id,name,email,upline_id',
+                    'users.media',
+                    'trading_account:id,user_id,meta_login,balance',
+                    'accountType:id,slug,account_group,color',
+                ])
+                ->withTrashed()
+                ->where('meta_login', $request->meta_login)
+                ->first();
+
+            return response()->json([
+                'data' => $account
+            ]);
+        } catch (Throwable $e) {
+            Log::error("Error updating account $request->meta_login: {$e->getMessage()}");
+
+            return response()->json([
+                'message' => 'An error occurred while fetching account data.',
+            ], 500);
+        }
+    }
+
     public function accountAdjustment(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'action' => ['required'],
-            'amount' => ['required', 'numeric', 'gt:1'],
+            'amount' => ['required', 'numeric', 'gt:0'],
             'remarks' => ['nullable'],
         ])->setAttributeNames([
             'action' => trans('public.action'),
@@ -395,29 +483,31 @@ class TradingAccountController extends Controller
         ]);
         $validator->validate();
 
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
         try {
             // Fetch and update user info using MetaFourService
             (new MetaFourService)->getUserInfo((int) $request->meta_login);
-    
+
             // Retrieve the updated account data
             $account = TradingAccount::where('meta_login', $request->meta_login)->first();
-    
+
             if (!$account) {
-                return back()
-                    ->with('toast', [
-                        'title' => 'No Account Found',
-                        'type' => 'error'
-                    ]);
+                return response()->json([
+                    'message' => trans('public.no_account_found')
+                ], 400);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Log any errors during the process
             Log::error("Error updating account {$request->meta_login}: {$e->getMessage()}");
-    
-            return back()
-                    ->with('toast', [
-                        'title' => 'No Account Found',
-                        'type' => 'error'
-                    ]);
+
+            return response()->json([
+                'message' => trans('public.no_account_found')
+            ], 400);
         }
 
         $trading_account = TradingAccount::where('meta_login', $request->meta_login)->first();
@@ -466,7 +556,13 @@ class TradingAccountController extends Controller
         }
 
         try {
-            $trade = (new MetaFourService())->createTrade($trading_account->meta_login, $amount, $transaction->remarks, $changeType);
+            $trading_platform = TradingPlatform::find($trading_account->accountType->trading_platform_id);
+
+            if ($trading_platform->slug == 'mt4') {
+                $trade = (new MetaFourService())->createTrade($trading_account->meta_login, $amount, $transaction->remarks, $changeType);
+            } else {
+                $trade = (new MetaFiveService())->createDeal($trading_account->meta_login, $amount, $transaction->remarks, $changeType);
+            }
 
             $transaction->update([
                 'ticket' => $trade['ticket'],
@@ -475,7 +571,7 @@ class TradingAccountController extends Controller
             ]);
 
             $trading_user = TradingUser::where('meta_login', $request->meta_login)->first();
-            
+
             // Check if expiration_date exists and update the comment
             if (isset($trade['expiration_date'])) {
                 $expiration_date = $trade['expiration_date'];
@@ -484,11 +580,24 @@ class TradingAccountController extends Controller
                 ]);
             }
 
-            return redirect()->back()->with('toast', [
-                'title' => $type == 'account_balance' ? trans('public.toast_balance_adjustment_success') : trans('public.toast_credit_adjustment_success'),
-                'type' => 'success'
+            $account = TradingUser::with([
+                'users:id,name,email,upline_id',
+                'users.media',
+                'trading_account:id,user_id,meta_login,balance',
+                'accountType:id,slug,account_group,color',
+            ])
+                ->withTrashed()
+                ->where('meta_login', $request->meta_login)
+                ->first();
+
+            return response()->json([
+                'title' => trans('public.successful'),
+                'message' => $type == 'account_balance'
+                    ? trans('public.toast_balance_adjustment_success')
+                    : trans('public.toast_credit_adjustment_success'),
+                'account' => $account,
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Update transaction status to failed on error
             $transaction->update([
                 'approved_at' => now(),
@@ -505,11 +614,9 @@ class TradingAccountController extends Controller
                     ->update(['acc_status' => 'inactive']);
             }
 
-            return back()
-                ->with('toast', [
-                    'title' => 'Adjustment failed',
-                    'type' => 'error'
-                ]);
+            return response()->json([
+                'message' => trans('public.toast_adjustment_error')
+            ], 400);
         }
     }
 
@@ -531,7 +638,7 @@ class TradingAccountController extends Controller
                 'title' => trans('public.toast_change_leverage_success'),
                 'type' => 'success'
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Log the main error
             Log::error('Error creating trade: ' . $e->getMessage());
 
@@ -561,7 +668,7 @@ class TradingAccountController extends Controller
                 'title' => trans('public.toast_change_account_type_success'),
                 'type' => 'success'
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Log the main error
             Log::error('Error creating trade: ' . $e->getMessage());
 
@@ -589,7 +696,7 @@ class TradingAccountController extends Controller
         $meta_login = $request->meta_login;
         $master_password = $request->master_password;
         $investor_password = $request->investor_password;
-        
+
         // Try to update passwords and send notification
         try {
             if ($master_password || $investor_password) {
@@ -612,7 +719,7 @@ class TradingAccountController extends Controller
                 'type' => 'success',
             ]);
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Log the error
             Log::error('Error updating trading account password: ' . $e->getMessage());
 

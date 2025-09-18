@@ -28,7 +28,7 @@ const Tag = external ? 'a' : Link
         :class="[
             'text-sm rounded-lg hover:cursor-pointer hover:bg-primary-50 mt-1',
             {
-                'bg-primary-100': active,
+                'bg-primary-50': active,
                 'hover:bg-gray-100 focus:bg-gray-100': !active,
             }
         ]"

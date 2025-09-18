@@ -13,7 +13,7 @@ import dayjs from "dayjs";
 defineProps({
     last_refresh_datetime: [String, Number],
     leverages: Array,
-    accountTypes: Array,
+    tradingPlatforms: Array,
     uplines: Array,
 });
 
@@ -83,12 +83,13 @@ const refreshAll = () => {
                         :header="$t(`public.${tab.title}`)"
                     >
                         <!-- Pass `loadResults` prop only once after first render -->
-                        <component 
-                            :is="tab.component" 
-                            v-if="activeIndex === index" 
+                        <component
+                            :is="tab.component"
+                            v-if="activeIndex === index"
                             :leverages=leverages
-                            :accountTypes=accountTypes
+                            :tradingPlatforms=tradingPlatforms
                             :uplines=uplines
+                            :type=tab.type
                         />
                     </TabPanel>
                 </TabView>

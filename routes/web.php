@@ -50,6 +50,8 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/getAccountGroups', [GeneralController::class, 'getAccountGroups'])->name('getAccountGroups');
     Route::get('/getAllAccountGroups', [GeneralController::class, 'getAllAccountGroups'])->name('getAllAccountGroups');
     Route::get('/get_payment_gateways', [GeneralController::class, 'get_payment_gateways'])->name('get_payment_gateways');
+    Route::get('/getPlatformAccountTypes', [GeneralController::class, 'getPlatformAccountTypes'])->name('getPlatformAccountTypes');
+    Route::get('/getAccountTypeByPlatform', [GeneralController::class, 'getAccountTypeByPlatform'])->name('getAccountTypeByPlatform');
 
     /**
      * ==============================
@@ -122,6 +124,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         Route::get('/getAccountListingData', [TradingAccountController::class, 'getAccountListingData'])->name('member.getAccountListingData');
         Route::get('/getAccountListingPaginate', [TradingAccountController::class, 'getAccountListingPaginate'])->name('member.getAccountListingPaginate');
         Route::get('/getTradingAccountData', [TradingAccountController::class, 'getTradingAccountData'])->name('member.getTradingAccountData');
+        Route::get('/getFreshTradingAccountData', [TradingAccountController::class, 'getFreshTradingAccountData'])->name('member.getFreshTradingAccountData');
 
         Route::post('/accountAdjustment', [TradingAccountController::class, 'accountAdjustment'])->name('member.accountAdjustment');
         Route::post('/updateLeverage', [TradingAccountController::class, 'updateLeverage'])->name('member.updateLeverage');
@@ -244,7 +247,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
      * ==============================
      */
     Route::prefix('report')->group(function () {
-        Route::get('/', [ReportController::class, 'index'])->name('report');
+        Route::get('/rebate', [ReportController::class, 'index'])->name('report');
         Route::get('/getRebateSummary', [ReportController::class, 'getRebateSummary'])->name('report.getRebateSummary');
         Route::get('/getRebateListing', [ReportController::class, 'getRebateListing'])->name('report.getRebateListing');
         // Route::get('/getGroupTransaction', [ReportController::class, 'getGroupTransaction'])->name('report.getGroupTransaction');
@@ -276,24 +279,29 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::prefix('account_type')->group(function () {
         Route::get('/', [AccountTypeController::class, 'show'])->name('accountType');
         Route::get('/getAccountTypes', [AccountTypeController::class, 'getAccountTypes'])->name('accountType.getAccountTypes');
-        Route::get('/syncAccountTypes', [AccountTypeController::class, 'syncAccountTypes'])->name('accountType.syncAccountTypes');
         Route::get('/getAccountTypeUsers', [AccountTypeController::class, 'getAccountTypeUsers'])->name('accountType.getAccountTypeUsers');
 
         Route::post('/update/{id}', [AccountTypeController::class, 'updateAccountType'])->name('accountType.update');
+        Route::post('/syncAccountTypes', [AccountTypeController::class, 'syncAccountTypes'])->name('accountType.syncAccountTypes');
 
         Route::patch('/updateStatus/{id}', [AccountTypeController::class, 'updateStatus'])->name('accountType.updateStatus');
     });
 
     /**
      * ==============================
-     *         Settings
+     *           System
      * ==============================
      */
-    Route::prefix('settings')->group(function () {
-        Route::get('/', [SettingsController::class, 'index'])->name('settings');
-        Route::get('/get', [SettingsController::class, 'getSiteSettings'])->name('settings.getSiteSettings');
+    Route::prefix('system')->group(function () {
+        // Site setting
+        Route::get('/', [SettingsController::class, 'index'])->name('system');
+        Route::get('/getSiteSettings', [SettingsController::class, 'getSiteSettings'])->name('system.getSiteSettings');
 
-        Route::patch('/updateStatus/{id}', [SettingsController::class, 'updateSiteSettingsStatus'])->name('settings.updateSiteSettingsStatus');
+        Route::patch('/updateStatus/{id}', [SettingsController::class, 'updateSiteSettingsStatus'])->name('system.updateSiteSettingsStatus');
+
+        // Trading platform
+        Route::get('/getTradingPlatforms', [SettingsController::class, 'getTradingPlatforms'])->name('system.getTradingPlatforms');
+        Route::patch('/updateTradingPlatform/{id}', [SettingsController::class, 'updateTradingPlatform'])->name('system.updateTradingPlatform');
     });
 
     /**

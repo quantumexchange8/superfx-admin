@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\PaymentGateway;
 use App\Models\PaymentMethod;
+use App\Models\TradingPlatform;
+use App\Services\MetaFiveService;
 use Carbon\Carbon;
 use App\Models\Bank;
 use App\Models\Team;
@@ -493,9 +495,61 @@ class GeneralController extends Controller
             if ($returnAsArray) {
                 return $payments;
             }
-    
+
         return response()->json([
             'paymentGateways' => $payments,
+        ]);
+    }
+
+    public function getPlatformAccountTypes(Request $request)
+    {
+        $syncedAccountTypes = AccountType::whereHas('trading_platform', function ($query) use ($request) {
+            $query->where('slug', $request->trading_platform);
+        })
+            ->select([
+                'name', 'account_group'
+            ])
+            ->get()
+            ->toArray();
+
+        switch ($request->trading_platform) {
+            case 'mt4':
+                $fetchedGroups = [];
+                break;
+
+            case 'mt5':
+                $service = new MetaFiveService();
+                $fetchedGroups = $service->getGroups();
+
+                break;
+
+            default:
+                // Any other or missing platform → empty array
+                $fetchedGroups = [];
+                $syncedAccountTypes = [];
+                break;
+        }
+
+
+        return response()->json([
+            'fetchedGroups' => $fetchedGroups['groups'] ?? [],
+            'syncedAccountTypes' => $syncedAccountTypes,
+        ]);
+    }
+
+    public function getAccountTypeByPlatform(Request $request)
+    {
+        $accountTypes = AccountType::whereHas('trading_platform', function ($query) use ($request) {
+            $query->where('slug', $request->trading_platform);
+        })
+            ->select([
+                'id', 'name', 'account_group'
+            ])
+            ->get()
+            ->toArray();
+
+        return response()->json([
+            'accountTypes' => $accountTypes,
         ]);
     }
 }

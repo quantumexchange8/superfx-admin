@@ -1,7 +1,7 @@
 <script setup>
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
-import {ref, watch, watchEffect, onMounted} from "vue";
+import {ref, watch, onMounted, computed} from "vue";
 import {FilterMatchMode} from "primevue/api";
 import Loader from "@/Components/Loader.vue";
 import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
@@ -22,224 +22,253 @@ import {usePage} from "@inertiajs/vue3";
 import debounce from "lodash/debounce.js";
 
 const props = defineProps({
-  loadResults: Boolean,
-  leverages: Array,
-  accountTypes: Array,
-  uplines: Array,
+    loadResults: Boolean,
+    leverages: Array,
+    tradingPlatforms: Array,
+    uplines: Array,
+    type: String,
 });
 
-// overlay panel
-const op = ref();
-const exportStatus = ref(false);
+const isLoading = ref(false);
+const dt = ref(null);
 const accounts = ref([]);
-const totalRecords = ref(0);
-const leverages = ref();
-const accountTypes = ref();
-const selectedUplines = ref();
-const uplines = ref()
-const rows = ref(10);
-const page = ref(0);
-const sortField = ref(null);  
-const sortOrder = ref(null);  // (1 for ascending, -1 for descending)
-const loading = ref(false);
-const filterCount = ref(0);
-const {formatAmount} = transactionFormat();
+const { formatAmount } = transactionFormat();
 const { formatRgbaColor } = generalFormat()
-const visible = ref(false);
-
-// Watch both 'leverages' and 'accountTypes' props together
-watch(
-  () => [props.leverages, props.accountTypes, props.uplines], ([newLeverages, newAccountTypes, newUplines]) => {
-    leverages.value = newLeverages;
-    accountTypes.value = newAccountTypes;
-    uplines.value = newUplines;
-  },
-  { immediate: true } // Optionally add `immediate: true` to run the watch immediately on component mount
-);
+const totalRecords = ref(0);
+const first = ref(0);
 
 const filters = ref({
-    global: '',
-    last_logged_in_days: '',
-    balance: '',
-    leverage: '',
-    account_type: [],
-    upline_id: '',
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    type: { value: props.type, matchMode: FilterMatchMode.EQUALS },
+    platform: { value: null, matchMode: FilterMatchMode.EQUALS },
+    account_type: { value: null, matchMode: FilterMatchMode.EQUALS },
+    last_logged_in_days: { value: null, matchMode: FilterMatchMode.EQUALS },
+    upline: { value: null, matchMode: FilterMatchMode.EQUALS },
+    balance_type: { value: null, matchMode: FilterMatchMode.EQUALS },
+    leverage: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
-// Watch selected values to update filters
-watch([selectedUplines], ([newUplineId]) => {
-    if (newUplineId) {
-        filters.value['upline_id'] = newUplineId.value;
+const lazyParams = ref({});
+
+const loadLazyData = (event) => {
+    isLoading.value = true;
+
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+    lazyParams.value.filters = filters.value;
+    try {
+        setTimeout(async () => {
+            const params = {
+                page: JSON.stringify(event?.page + 1),
+                sortField: event?.sortField,
+                sortOrder: event?.sortOrder,
+                include: [],
+                lazyEvent: JSON.stringify(lazyParams.value)
+            };
+
+            const url = route('member.getAccountListingData', params);
+            const response = await fetch(url);
+            const results = await response.json();
+
+            accounts.value = results?.data?.data;
+            totalRecords.value = results?.data?.total;
+
+            isLoading.value = false;
+        }, 100);
+    }  catch (e) {
+        accounts.value = [];
+        totalRecords.value = 0;
+        isLoading.value = false;
     }
+};
+
+onMounted(() => {
+    lazyParams.value = {
+        first: dt.value.first,
+        rows: dt.value.rows,
+        sortField: null,
+        sortOrder: null,
+        filters: filters.value
+    };
+
+    loadLazyData();
 });
+
+// Get account types
+const accountTypes = ref([])
+const loadingAccountTypes = ref(false);
+
+const getAccountTypeByPlatform = async () => {
+    loadingAccountTypes.value = true;
+
+    try {
+        const response = await axios.get(
+            `/getAccountTypeByPlatform?trading_platform=${filters.value['platform'].value}`
+        );
+
+        // All groups from API
+        accountTypes.value = response.data.accountTypes;
+
+    } catch (error) {
+        console.error('Error getting account types:', error);
+    } finally {
+        loadingAccountTypes.value = false;
+    }
+};
+
+watch(filters.value['platform'], () => {
+    getAccountTypeByPlatform()
+})
+
+watch(
+    filters.value['global'],
+    debounce(() => {
+        loadLazyData();
+    }, 300)
+);
+
+watch([filters.value['type'], filters.value['platform'], filters.value['account_type'], filters.value['last_logged_in_days'], filters.value['upline'], filters.value['balance_type'], filters.value['leverage']], () => {
+    loadLazyData()
+});
+
+const onPage = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
+const onSort = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
+const onFilter = (event) => {
+    lazyParams.value.filters = filters.value ;
+    loadLazyData(event);
+};
+
+const filterCount = computed(() => {
+    return Object.entries(filters.value)
+        .filter(([key, filter]) =>
+            key !== 'global' &&
+            filter?.value !== null &&
+            filter?.value !== '' &&
+            filter?.value !== undefined
+        ).length;
+});
+
+const clearAll = () => {
+    filters.value['global'].value = null;
+    filters.value['start_date'].value = null;
+    filters.value['end_date'].value = null;
+    filters.value['group_id'].value = null;
+    filters.value['platform'].value = null;
+    filters.value['account_type'].value = null;
+
+    selectedDate.value = [];
+};
 
 const clearFilterGlobal = () => {
-    filters.value.global = '';
+    filters.value['global'].value = null;
 }
 
-const clearFilter = () => {
-    op.value.toggle(false);
-
-    filters.value = {
-        global: '',
-        last_logged_in_days: '',
-        balance: '',
-        leverage: '',
-        account_type: [],
-        upline_id: '',
-    };
-    selectedUplines.value = null;
-};
-
-// Watch for changes on the entire 'filters' object and debounce the API call
-watch(filters, debounce(() => {
-    // Count active filters, excluding null, undefined, empty strings, and empty arrays
-    filterCount.value = Object.values(filters.value).filter(filter => {
-        if (Array.isArray(filter)) {
-            return filter.length > 0;  // Check if the array is not empty
-        }
-        return filter !== null && filter !== '';  // Check if the value is not null or an empty string
-    }).length;
-
-    page.value = 0; // Reset to first page when filters change
-    getResults(); // Call getResults function to fetch the data
-}, 1000), { deep: true });
-
-// Function to construct the URL with necessary query parameters
-const constructUrl = (exportStatus = false) => {
-    let url = `/member/getAccountListingPaginate?type=all&rows=${rows.value}&page=${page.value}`;
-
-    // Add filters if present
-    if (filters.value.global) {
-        url += `&search=${filters.value.global}`;
-    }
-
-    if (filters.value.last_logged_in_days) {
-        url += `&last_logged_in_days=${filters.value.last_logged_in_days}`;
-    }
-
-    if (filters.value.balance) {
-        url += `&balance=${filters.value.balance}`;
-    }
-
-    if (filters.value.leverage) {
-        url += `&leverage=${filters.value.leverage.value}`;
-    }
-
-    if (filters.value.account_type?.length) {
-        url += `&account_type=${filters.value.account_type.map(item => item.value).join(',')}`;
-    }
-
-    if (filters.value.upline_id) {
-        url += `&upline_id=${filters.value.upline_id}`;
-    }
-
-    if (sortField.value && sortOrder.value !== null) {
-        url += `&sortField=${sortField.value}&sortOrder=${sortOrder.value}`;
-    }
-
-    // Add exportStatus if export is required
-    if (exportStatus) {
-        url += `&exportStatus=true`;
-    }
-
-    return url;
-};
-
-// Optimized getResults function
-const getResults = async () => {
-    loading.value = true;
-
-    try {
-        // Construct the URL dynamically
-        const url = constructUrl();
-
-        // Make the API request
-        const response = await axios.get(url);
-        
-        // Update the data and total records with the response
-        accounts.value = response?.data?.data?.data;
-        totalRecords.value = response?.data?.data?.total;
-    } catch (error) {
-        console.error('Error fetching data:', error);
-    } finally {
-        loading.value = false;
-    }
-};
-
-// Optimized exportAccount function
-const exportAccount = async () => {
-    exportStatus.value = true;
-
-    try {
-        // Construct the URL dynamically with exportStatus for export
-        const url = constructUrl(exportStatus.value); // Pass true to include exportStatus
-
-        // Send the request to trigger the export
-        window.location.href = url;  // This will trigger the download directly
-    } catch (e) {
-        console.error('Error occurred during export:', e);  // Log the error if any
-    } finally {
-        loading.value = false;  // Reset loading state
-        exportStatus.value = false;  // Reset export status
-    }
-};
-
-const onPage = async (event) => {
-    rows.value = event.rows;
-    page.value = event.page;
-
-    getResults();
-};
-
-const onSort = (event) => {
-    sortField.value = event.sortField;
-    sortOrder.value = event.sortOrder;  // Store ascending or descending order
-
-    getResults();
-};
-
-// If the prop is passed initially as true, run getResults
-onMounted(() => {
-    getResults();
-});
-
+const op = ref();
 const toggle = (event) => {
     op.value.toggle(event);
 }
 
-const data = ref({});
+const data = ref([]);
+const visible = ref(false);
+
 const openDialog = (rowData) => {
     visible.value = true;
     data.value = rowData;
+
+    getTradingAccountData();
 }
 
-watchEffect(() => {
-    if (usePage().props.toast !== null) {
-        getResults();
+// Get latest acc data
+
+const loadingAccount = ref(false);
+
+const getTradingAccountData = async () => {
+    loadingAccount.value = true;
+    try {
+        const response = await axios.get(route('member.getFreshTradingAccountData', {
+            meta_login: data.value.meta_login,
+            account_type_id: data.value.account_type.id
+        }));
+        data.value = response.data.data;
+        updateAccount(data.value)
+    } catch (error) {
+        console.error('Error fetching trade acc:', error);
+    } finally {
+        loadingAccount.value = false;
     }
-});
+};
+
+const updateAccount = (updatedAccount) => {
+    const index = accounts.value.findIndex(acc => acc.id === updatedAccount.id);
+
+    if (index !== -1) {
+        accounts.value[index] = updatedAccount;
+    }
+};
+
+const getProfilePhoto = (user) => {
+    // Find first media in 'profile_photo' collection
+    const mediaItem = user.media?.find(m => m.collection_name === 'profile_photo');
+    return mediaItem?.original_url || null;
+};
+
+const exportStatus = ref(false);
+
+const exportReport = () => {
+    exportStatus.value = true;
+    isLoading.value = true;
+
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+
+    const params = {
+        page: JSON.stringify(event?.page + 1),
+        sortField: event?.sortField,
+        sortOrder: event?.sortOrder,
+        include: [],
+        lazyEvent: JSON.stringify(lazyParams.value),
+        exportStatus: true,
+    };
+
+    const url = route('member.getAccountListingData', params);
+
+    try {
+        window.location.href = url;
+    } catch (e) {
+        console.error('Error occurred during export:', e);
+    } finally {
+        isLoading.value = false;
+        exportStatus.value = false;
+    }
+};
 </script>
 
 <template>
     <DataTable
         :value="accounts"
-        :paginator="accounts?.length > 0"
-        lazy
-        removableSort
-        :rows="rows"
         :rowsPerPageOptions="[10, 20, 50, 100]"
-        tableStyle="md:min-width: 50rem"
+        lazy
+        :paginator="accounts?.length > 0"
+        removableSort
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
         :currentPageReportTemplate="$t('public.paginator_caption')"
+        :first="first"
+        :rows="10"
+        v-model:filters="filters"
         ref="dt"
         dataKey="id"
-        selectionMode="single"
-        @row-click="(event) => openDialog(event.data)"
         :totalRecords="totalRecords"
-        :loading="loading"
+        :loading="isLoading"
         @page="onPage($event)"
         @sort="onSort($event)"
+        @filter="onFilter($event)"
+        selectionMode="single"
+        @row-click="(event) => openDialog(event.data)"
+        :globalFilterFields="['first_name', 'last_name', 'email', 'username', 'meta_login']"
     >
         <template #header>
             <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
@@ -247,9 +276,9 @@ watchEffect(() => {
                     <div class="absolute top-2/4 -mt-[9px] left-4 text-gray-400">
                         <IconSearch size="20" stroke-width="1.25" />
                     </div>
-                    <InputText v-model="filters['global']" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
+                    <InputText v-model="filters['global'].value" :placeholder="$t('public.keyword_search')" class="font-normal pl-12 w-full md:w-60" />
                     <div
-                        v-if="filters['global'] !== null && filters['global'] !== ''"
+                        v-if="filters['global'].value !== null"
                         class="absolute top-2/4 -mt-2 right-4 text-gray-300 hover:text-gray-400 select-none cursor-pointer"
                         @click="clearFilterGlobal"
                     >
@@ -274,7 +303,7 @@ watchEffect(() => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="exportAccount"
+                            @click="exportReport"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}
@@ -296,26 +325,29 @@ watchEffect(() => {
             <Column
                 field="last_access"
                 sortable
-                class="hidden md:table-cell w-[15%] max-w-0"
+                class="hidden md:table-cell w-[15%]"
             >
                 <template #header>
                     <span class="hidden md:block truncate">{{ $t('public.last_logged_in') }}</span>
                 </template>
-                <template #body="slotProps">
-                    {{ dayjs(slotProps.data?.last_login).format('YYYY/MM/DD HH:mm:ss') }}
+                <template #body="{data}">
+                    {{ dayjs(data.last_access).format('YYYY-MM-DD') }}
+                    <div class="text-xs text-gray-500">
+                        {{ dayjs(data.last_access).format('HH:mm:ss') }}
+                    </div>
                 </template>
             </Column>
             <Column
                 field="name"
                 sortable
                 :header="$t('public.name')"
-                class="hidden md:table-cell w-[25%] max-w-0"
+                class="hidden md:table-cell"
             >
-                <template #body="slotProps">
+                <template #body="{data}">
                     <div class="flex items-center gap-3 max-w-full">
                         <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
-                            <template v-if="slotProps.data?.user_profile_photo">
-                                <img :src="slotProps.data?.user_profile_photo" alt="profile_photo">
+                            <template v-if="getProfilePhoto(data.users)">
+                                <img :src="getProfilePhoto(data.users)" alt="profile_photo" class="w-7 h-7 object-cover">
                             </template>
                             <template v-else>
                                 <DefaultProfilePhoto />
@@ -323,10 +355,10 @@ watchEffect(() => {
                         </div>
                         <div class="grid grid-cols-1 items-start max-w-full">
                             <div class="font-medium max-w-full truncate">
-                                {{ slotProps.data?.user_name }}
+                                {{ data.users.name }}
                             </div>
                             <div class="text-gray-500 text-xs max-w-full truncate">
-                                {{ slotProps.data?.user_email }}
+                                {{ data.users.email }}
                             </div>
                         </div>
                     </div>
@@ -335,7 +367,7 @@ watchEffect(() => {
             <Column
                 field="meta_login"
                 sortable
-                class="hidden md:table-cell w-[10%] max-w-0"
+                class="hidden md:table-cell"
             >
                 <template #header>
                     <span class="hidden md:block truncate">{{ $t('public.account') }}</span>
@@ -347,7 +379,7 @@ watchEffect(() => {
             <Column
                 field="balance"
                 sortable
-                class="hidden md:table-cell w-[10%] max-w-0"
+                class="hidden md:table-cell"
             >
                 <template #header>
                     <span class="hidden md:block truncate">{{ $t('public.balance') }} ($)</span>
@@ -359,7 +391,7 @@ watchEffect(() => {
             <Column
                 field="credit"
                 sortable
-                class="hidden md:table-cell w-[10%] max-w-0"
+                class="hidden md:table-cell"
             >
                 <template #header>
                     <span class="hidden md:block truncate">{{ $t('public.credit') }} ($)</span>
@@ -371,7 +403,7 @@ watchEffect(() => {
             <Column
                 field="leverage"
                 sortable
-                class="hidden md:table-cell w-[10%] max-w-0"
+                class="hidden md:table-cell"
             >
                 <template #header>
                     <span class="hidden md:block truncate">{{ $t('public.leverage') }}</span>
@@ -382,20 +414,20 @@ watchEffect(() => {
             </Column>
             <Column
                 field="account_type"
-                class="hidden md:table-cell w-[10%] max-w-0"
+                class="hidden md:table-cell"
             >
                 <template #header>
                     <span class="hidden md:block truncate">{{ $t('public.account_type') }}</span>
                 </template>
                 <template #body="slotProps">
                     <div
-                        class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
+                        class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded w-fit"
                         :style="{
-                            backgroundColor: formatRgbaColor(slotProps.data?.account_type_color, 0.15),
-                            color: `#${slotProps.data?.account_type_color}`,
+                            backgroundColor: formatRgbaColor(slotProps.data?.account_type.color, 0.15),
+                            color: `#${slotProps.data?.account_type.color}`,
                         }"
                     >
-                        {{ $t('public.' + slotProps.data?.account_type) }}
+                        {{ $t('public.' + slotProps.data?.account_type.slug) }}
                     </div>
                 </template>
             </Column>
@@ -407,6 +439,7 @@ watchEffect(() => {
                 <template #body="slotProps">
                     <AccountTableActions
                         :account="slotProps.data"
+                        @updated:account="updateAccount"
                     />
                 </template>
             </Column>
@@ -416,11 +449,12 @@ watchEffect(() => {
                         <div class="flex flex-col items-start w-full">
                             <span class="text-sm text-gray-950 font-semibold">{{ slotProps.data?.meta_login }}</span>
                             <div class="text-xs">
-                                <span class="text-gray-500">{{ $t('public.last_logged_in') }}</span> <span class="text-gray-700 font-medium"> {{ dayjs(slotProps.data?.last_login).format('YYYY/MM/DD HH:mm:ss') }}</span>
+                                <span class="text-gray-500">{{ $t('public.last_logged_in') }}</span> <span class="text-gray-700 font-medium"> {{ dayjs(slotProps.data?.last_access).format('YYYY/MM/DD HH:mm:ss') }}</span>
                             </div>
                         </div>
                         <AccountTableActions
                             :account="slotProps.data"
+                            @updated:account="updateAccount"
                         />
                     </div>
                 </template>
@@ -429,18 +463,18 @@ watchEffect(() => {
     </DataTable>
 
     <OverlayPanel ref="op">
-        <div class="flex flex-col gap-8 w-60 py-5 px-4">
+        <div class="flex flex-col gap-5 w-60 py-5 px-4">
             <!-- Filter Last logged in -->
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_last_logged_in') }}
                 </div>
-                <div class="flex flex-col gap-1 self-stretch">
+                <div class="flex flex-col self-stretch">
                     <!-- Greater than 30 days -->
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
-                                v-model="filters['last_logged_in_days']"
+                                v-model="filters['last_logged_in_days'].value"
                                 inputId="greater_than_30_days"
                                 value="greater_than_30_days"
                                 class="w-4 h-4"
@@ -451,9 +485,9 @@ watchEffect(() => {
 
                     <!-- Greater than 90 days -->
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
-                                v-model="filters['last_logged_in_days']"
+                                v-model="filters['last_logged_in_days'].value"
                                 inputId="greater_than_90_days"
                                 value="greater_than_90_days"
                                 class="w-4 h-4"
@@ -469,12 +503,12 @@ watchEffect(() => {
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_balance') }}
                 </div>
-                <div class="flex flex-col gap-1 self-stretch">
+                <div class="flex flex-col self-stretch">
                     <!-- Zero Balance -->
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
-                                v-model="filters['balance']"
+                                v-model="filters['balance_type'].value"
                                 inputId="zero_balance"
                                 value="0.00"
                                 class="w-4 h-4"
@@ -485,9 +519,9 @@ watchEffect(() => {
 
                     <!-- without deposit -->
                     <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
-                                v-model="filters['balance']"
+                                v-model="filters['balance_type'].value"
                                 inputId="never_deposited"
                                 value="never_deposited"
                                 class="w-4 h-4"
@@ -498,13 +532,74 @@ watchEffect(() => {
                 </div>
             </div>
 
+            <!-- Filter platform -->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_platform') }}
+                </div>
+                <div class="flex flex-col self-stretch">
+                    <!-- Zero Balance -->
+                    <div
+                        v-for="platform in tradingPlatforms"
+                        class="flex items-center gap-2 text-sm text-gray-950"
+                    >
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                            <RadioButton
+                                v-model="filters['platform'].value"
+                                :inputId="platform.slug"
+                                :value="platform.slug"
+                                class="w-4 h-4"
+                            />
+                        </div>
+                        <label :for="platform.slug" class="uppercase">{{ platform.slug }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter account_type-->
+            <div v-if="filters['platform'].value !== null" class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_account_type') }}
+                </div>
+                <MultiSelect
+                    v-model="filters['account_type'].value"
+                    :options="accountTypes"
+                    :placeholder="$t('public.account_type_placeholder')"
+                    filter
+                    :filterFields="['name']"
+                    :maxSelectedLabels="1"
+                    :selectedItemsLabel="`${filters['account_type']?.length} ${$t('public.account_types_selected')}`"
+                    class="w-full font-normal"
+                    :disabled="filters['platform'].value === null"
+                    :loading="loadingAccountTypes"
+                >
+                    <template #option="{ option }">
+                        <div class="flex items-center gap-2">
+                            <span>{{ option.name }}</span>
+                        </div>
+                    </template>
+
+                    <template #value>
+                        <div v-if="filters['account_type']?.length === 1">
+                            <span>{{ filters['account_type'][0].name }}</span>
+                        </div>
+                        <span v-else-if="filters['account_type']?.length > 1">
+                            {{ filters['account_type']?.length }} {{ $t('public.account_types_selected') }}
+                        </span>
+                        <span v-else class="text-gray-400">
+                            {{ $t('public.account_type_placeholder') }}
+                        </span>
+                    </template>
+                </MultiSelect>
+            </div>
+
             <!-- Filter Leverage-->
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_leverage') }}
                 </div>
                 <Dropdown
-                    v-model="filters['leverage']"
+                    v-model="filters['leverage'].value"
                     :options="leverages"
                     filter
                     :filterFields="['name']"
@@ -529,48 +624,13 @@ watchEffect(() => {
                 </Dropdown>
             </div>
 
-            <!-- Filter account_type-->
-            <div class="flex flex-col gap-2 items-center self-stretch">
-                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
-                    {{ $t('public.filter_account_type') }}
-                </div>
-                <MultiSelect
-                    v-model="filters['account_type']"
-                    :options="accountTypes"
-                    :placeholder="$t('public.account_type_placeholder')"
-                    filter
-                    :filterFields="['name']"
-                    :maxSelectedLabels="1"
-                    :selectedItemsLabel="`${filters['account_type']?.length} ${$t('public.account_types_selected')}`"
-                    class="w-full font-normal"
-                >
-                    <template #option="{ option }">
-                        <div class="flex items-center gap-2">
-                            <span>{{ option.name }}</span>
-                        </div>
-                    </template>
-
-                    <template #value>
-                        <div v-if="filters['account_type']?.length === 1">
-                            <span>{{ filters['account_type'][0].name }}</span>
-                        </div>
-                        <span v-else-if="filters['account_type']?.length > 1">
-                            {{ filters['account_type']?.length }} {{ $t('public.account_types_selected') }}
-                        </span>
-                        <span v-else class="text-gray-400">
-                            {{ $t('public.account_type_placeholder') }}
-                        </span>
-                    </template>
-                </MultiSelect>
-            </div>
-
             <!-- Filter Upline-->
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_upline') }}
                 </div>
                 <Dropdown
-                    v-model="selectedUplines"
+                    v-model="filters['upline'].value"
                     :options="uplines"
                     filter
                     :filterFields="['name', 'email', 'id_number']"
@@ -578,6 +638,7 @@ watchEffect(() => {
                     :placeholder="$t('public.filter_upline')"
                     class="w-full"
                     scroll-height="236px"
+                    :virtualScrollerOptions="{ itemSize: 56 }"
                 >
                 <template #option="{option}">
                         <div class="flex flex-col">
@@ -585,12 +646,12 @@ watchEffect(() => {
                             <span class="text-xs text-gray-400 max-w-52 truncate">{{ option.email }}</span>
                         </div>
                     </template>
-                    <template #value>
-                        <div v-if="selectedUplines">
-                            <span>{{ selectedUplines.name }}</span>
+                    <template #value="{value, placeholder}">
+                        <div v-if="value">
+                            <span>{{ value.name }}</span>
                         </div>
                         <span v-else class="text-gray-400">
-                            {{ $t('public.filter_upline') }}
+                            {{ placeholder }}
                         </span>
                     </template>
                 </Dropdown>
@@ -601,7 +662,7 @@ watchEffect(() => {
                     type="button"
                     variant="primary-outlined"
                     class="flex justify-center w-full"
-                    @click="clearFilter()"
+                    @click="clearAll"
                 >
                     {{ $t('public.clear_all') }}
                 </Button>
@@ -618,16 +679,16 @@ watchEffect(() => {
         <div class="flex flex-col justify-center items-start pb-4 gap-3 self-stretch border-b border-gray-200 md:flex-row md:pt-4 md:justify-between">
             <div class="flex items-center gap-3 self-stretch">
                 <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
-                    <div v-if="data?.user_profile_photo">
-                        <img :src="data?.user_profile_photo" alt="Profile Photo" />
-                    </div>
-                    <div v-else>
+                    <template v-if="getProfilePhoto(data.users)">
+                        <img :src="getProfilePhoto(data.users)" alt="profile_photo" class="w-7 h-7 object-cover">
+                    </template>
+                    <template v-else>
                         <DefaultProfilePhoto />
-                    </div>
+                    </template>
                 </div>
                 <div class="flex flex-col items-start flex-grow">
-                    <span class="self-stretch overflow-hidden text-gray-950 text-ellipsis text-sm font-medium">{{ data?.user_name }}</span>
-                    <span class="self-stretch overflow-hidden text-gray-500 text-ellipsis text-xs">{{ data?.user_email }}</span>
+                    <span class="self-stretch overflow-hidden text-gray-950 text-ellipsis text-sm font-medium">{{ data.users.name }}</span>
+                    <span class="self-stretch overflow-hidden text-gray-500 text-ellipsis text-xs">{{ data?.users.email }}</span>
                 </div>
             </div>
         </div>
@@ -658,11 +719,11 @@ watchEffect(() => {
                 <div
                     class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
                     :style="{
-                        backgroundColor: formatRgbaColor(data?.account_type_color, 0.15),
-                        color: `#${data?.account_type_color}`,
+                        backgroundColor: formatRgbaColor(data?.account_type.color, 0.15),
+                        color: `#${data?.account_type.color}`,
                     }"
                 >
-                    {{ $t('public.' + data?.account_type) }}
+                    {{ $t(`public.${data.account_type.slug}`) }}
                 </div>
             </div>
         </div>
@@ -670,7 +731,17 @@ watchEffect(() => {
         <div class="flex flex-col items-center py-4 gap-3 self-stretch">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:min-w-[140px] text-gray-500 text-xs">{{ $t('public.last_logged_in') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data?.last_login).format('YYYY/MM/DD HH:mm:ss') }} ({{ dayjs().diff(dayjs(data?.last_login), 'day') }} {{ $t('public.days') }})</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data?.last_access).format('YYYY/MM/DD HH:mm:ss') }} ({{ dayjs().diff(dayjs(data?.last_access), 'day') }} {{ $t('public.days') }})</span>
+            </div>
+        </div>
+
+        <!-- Loading mask -->
+        <div v-if="loadingAccount" class="absolute rounded-3xl inset-0 bg-gray-200/60 flex items-center justify-center z-10">
+            <div class="flex flex-col justify-center items-center gap-5 self-stretch">
+                <Loader />
+                <span class="text-sm font-semibold text-gray-700">
+                    {{ $t('public.loading_accounts_data') }}
+                </span>
             </div>
         </div>
     </Dialog>

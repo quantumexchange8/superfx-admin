@@ -137,6 +137,10 @@ class MetaFourService {
         return $accountResponse;
     }
 
+    /**
+     * @throws Throwable
+     * @throws ConnectionException
+     */
     public function createTrade($meta_login, $amount, $comment, $type)
     {
         // Fetch the expiration date from the Setting model
@@ -181,6 +185,8 @@ class MetaFourService {
             ])
             ->withBody($jsonPayload, 'application/json')
             ->post($url . "/transaction");
+
+        $this->getUserInfo($meta_login);
 
         // Return the JSON response from the API
         return $accountResponse->json();

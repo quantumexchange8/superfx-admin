@@ -13,13 +13,14 @@ import {
     IconFileReport,
     IconFileTime,
     IconFileAnalytics,
-    IconSettings,
+    IconDeviceDesktopCog,
     IconId,
     IconIdBadge2,
     IconBusinessplan,
     IconClockDollar,
 } from '@tabler/icons-vue';
 import { emitter } from '@/Composables/useEventBus';
+import SidebarCategoryLabel from "@/Components/Sidebar/SidebarCategoryLabel.vue";
 
 const pendingWithdrawals = ref(0);
 const pendingPammAllocate = ref(0);
@@ -49,10 +50,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <PerfectScrollbar
-        tagname="nav"
-        aria-label="main"
-        class="relative flex flex-col flex-1 max-h-full gap-1 px-5 py-3 items-center"
+    <nav
+        class="relative flex flex-col flex-1 max-h-full gap-1 px-5 py-3 items-center overflow-y-auto"
     >
         <!-- Dashboard -->
         <SidebarLink
@@ -160,6 +159,10 @@ onBeforeUnmount(() => {
             </template>
         </SidebarLink> -->
 
+        <SidebarCategoryLabel
+            :title="$t('public.report')"
+        />
+
         <!-- Transaction -->
         <SidebarLink
             :title="$t('public.transaction')"
@@ -195,7 +198,7 @@ onBeforeUnmount(() => {
 
         <!-- Report -->
        <SidebarLink
-           :title="$t('public.report')"
+           :title="$t('public.rebate')"
            :href="route('report')"
            :active="route().current('report')"
        >
@@ -203,6 +206,10 @@ onBeforeUnmount(() => {
                <IconFileAnalytics :size="20" stroke-width="1.25" />
            </template>
        </SidebarLink>
+
+        <SidebarCategoryLabel
+            :title="$t('public.settings')"
+        />
 
         <!-- Markup Profile -->
         <SidebarLink
@@ -228,37 +235,14 @@ onBeforeUnmount(() => {
 
         <!-- Settings -->
        <SidebarLink
-           :title="$t('public.settings')"
-           :href="route('settings')"
-           :active="route().current('settings')"
+           :title="$t('public.system')"
+           :href="route('system')"
+           :active="route().current('system')"
        >
            <template #icon>
-               <IconSettings :size="20" stroke-width="1.25" />
+               <IconDeviceDesktopCog :size="20" stroke-width="1.25" />
            </template>
        </SidebarLink>
-
-        <!-- Components -->
-<!--        <SidebarCollapsible-->
-<!--            title="Components"-->
-<!--            :active="route().current('components.*')"-->
-<!--        >-->
-<!--            <template #icon>-->
-<!--                <IconComponents :size="20" stroke-width="1.25" />-->
-<!--            </template>-->
-
-<!--            <SidebarCollapsibleItem-->
-<!--                title="Buttons"-->
-<!--                :href="route('components.buttons')"-->
-<!--                :active="route().current('components.buttons')"-->
-<!--            />-->
-
-<!--            <SidebarCollapsibleItem-->
-<!--                title="Member Network"-->
-<!--                :href="route('member.network')"-->
-<!--                :active="route().current('member.network')"-->
-<!--            />-->
-<!--        </SidebarCollapsible>-->
-
 
         <!-- Profile -->
         <SidebarLink
@@ -271,5 +255,5 @@ onBeforeUnmount(() => {
             </template>
         </SidebarLink>
 
-    </PerfectScrollbar>
+    </nav>
 </template>

@@ -45,13 +45,13 @@ const items = ref([
             dialogType.value = 'change_leverage';
         },
     },
-    {
-        label: 'change_account_type',
-        command: () => {
-            visible.value = true;
-            dialogType.value = 'change_account_type';
-        },
-    },
+    // {
+    //     label: 'change_account_type',
+    //     command: () => {
+    //         visible.value = true;
+    //         dialogType.value = 'change_account_type';
+    //     },
+    // },
     {
         label: 'change_password',
         command: () => {
@@ -99,6 +99,12 @@ const requireConfirmation = (action_type) => {
 const deleteAccount = () => {
     requireConfirmation('delete_account')
 }
+
+const emit = defineEmits(['updated:account']);
+
+const handleAccountUpdated = (updatedAccount) => {
+    emit('updated:account', updatedAccount);
+};
 </script>
 
 <template>
@@ -109,7 +115,7 @@ const deleteAccount = () => {
             size="sm"
             icon-only
             pill
-            @click="toggle"
+            @click.stop="toggle"
             aria-haspopup="true"
             aria-controls="overlay_tmenu"
         >
@@ -149,6 +155,7 @@ const deleteAccount = () => {
                 :account="account"
                 :dialogType="dialogType"
                 @update:visible="visible = $event"
+                @updated:account="handleAccountUpdated"
             />
         </template>
         <template v-if="dialogType === 'change_leverage'">

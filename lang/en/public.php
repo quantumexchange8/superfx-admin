@@ -748,4 +748,13 @@ return [
     "activate_setting_message" => "Are you sure you want to activate this setting? This will display the setting to user.",
     "toast_setting_activated" => "Setting has been activated.",
     "toast_setting_deactivated" => "Setting has been deactivated.",
+    "system" => "System",
+    "site_setting" => "Site Setting",
+    "trading_platform" => "Trading Platform",
+    "filter_platform" => "Filter by Platform",
+    "filter_category" => "Filter by Category",
+    "select_platform" => "Select Platform",
+    "platform_not_found" => "Platform Not Found",
+    "toast_adjustment_error" => "Adjustment Failed",
+    "no_account_found" => "No Account Found",
 ];
