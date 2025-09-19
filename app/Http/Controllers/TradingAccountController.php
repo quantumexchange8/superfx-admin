@@ -63,15 +63,20 @@ class TradingAccountController extends Controller
                         'users:id,name,email,upline_id',
                         'users.media',
                         'trading_account:id,meta_login,equity,balance',
-                        'accountType:id,slug,account_group,color',
+                        'accountType:id,trading_platform_id,slug,account_group,color',
+                        'accountType.trading_platform:id,platform_name,slug',
                     ]);
             } else {
-                $query = TradingUser::onlyTrashed()
-                ->withTrashed([
-                    'users:id,name,email,upline_id',
-                    'users.media',
-                    'trading_account:id,user_id,meta_login,balance',
-                    'accountType:id,slug,account_group,color',
+                $query = TradingUser::onlyTrashed()->with([
+                    'users' => function ($q) {
+                        $q->withTrashed()->select('id','name','email','upline_id','deleted_at');
+                    },
+                    'users.media', // media probably not soft-deleted
+                    'trading_account' => function ($q) {
+                        $q->withTrashed()->select('id','user_id','meta_login','balance');
+                    },
+                    'accountType:id,trading_platform_id,slug,account_group,color',
+                    'accountType.trading_platform:id,platform_name,slug',
                 ]);
             }
 
@@ -87,7 +92,14 @@ class TradingAccountController extends Controller
                 });
             }
 
-            if ($data['filters']['last_logged_in_days']['value']) {
+            if (!empty($data['filters']['start_delete_date']['value']) && !empty($data['filters']['end_delete_date']['value'])) {
+                $start_delete_date = Carbon::parse($data['filters']['start_delete_date']['value'])->addDay()->startOfDay();
+                $end_delete_date = Carbon::parse($data['filters']['end_delete_date']['value'])->addDay()->endOfDay();
+
+                $query->whereBetween('deleted_at', [$start_delete_date, $end_delete_date]);
+            }
+
+            if (!empty($data['filters']['last_logged_in_days']['value'])) {
                 switch ($data['filters']['last_logged_in_days']['value']) {
                     case 'greater_than_30_days':
                         $query->whereDate('last_access', '<=', today()->subDays(30));
@@ -102,7 +114,7 @@ class TradingAccountController extends Controller
                 }
             }
 
-            if ($data['filters']['balance_type']['value']) {
+            if (!empty($data['filters']['balance_type']['value'])) {
                 switch ($data['filters']['balance_type']['value']) {
                     case '0.00':
                         // Users with zero balance
@@ -156,7 +168,11 @@ class TradingAccountController extends Controller
                 $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
                 $query->orderBy($data['sortField'], $order);
             } else {
-                $query->orderByDesc('created_at');
+                if ($type == 'all_accounts') {
+                    $query->orderByDesc('created_at');
+                } else {
+                    $query->orderByDesc('deleted_at');
+                }
             }
 
             if ($request->has('exportStatus')) {
@@ -172,236 +188,6 @@ class TradingAccountController extends Controller
         }
 
         return response()->json(['success' => false, 'data' => []]);
-    }
-
-    public function getAccountListingPaginate(Request $request)
-    {
-        $type = $request->type;
-
-        if ($type === 'all') {
-            $query = TradingUser::query()
-                ->with([
-                    'users:id,name,email,upline_id',
-                    'trading_account:id,meta_login,equity',
-                    'accountType:id,slug,account_group,color',
-                ]);
-
-            // Filters
-            if ($request->last_logged_in_days) {
-                switch ($request->last_logged_in_days) {
-                    case 'greater_than_30_days':
-                        $query->whereDate('last_access', '<=', today()->subDays(30));
-                        break;
-
-                    case 'greater_than_90_days':
-                        $query->whereDate('last_access', '<=', today()->subDays(90));
-                        break;
-
-                    default:
-                        $query->whereDate('last_access', '<=', today());
-                }
-            }
-
-            // Handle search functionality
-            $search = $request->input('search');
-            if ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->whereHas('users', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                              ->orWhere('email', 'like', '%' . $search . '%');
-                    })
-                    ->orWhere('meta_login', 'like', '%' . $search . '%');
-                });
-            }
-
-            if ($request->input('balance')) {
-                switch ($request->input('balance')) {
-                    case '0.00':
-                        // Users with zero balance
-                        $query->where('balance', 0);
-                        break;
-
-                    case 'never_deposited':
-                        // Users who have never made a deposit
-                        $query->whereNotExists(function ($subquery) {
-                            $subquery->selectRaw('1')
-                                     ->from('transactions')
-                                     ->whereColumn('transactions.to_meta_login', 'trading_users.meta_login')
-                                     ->where('transactions.transaction_type', 'deposit');
-                        });
-                        break;
-
-                    default:
-                        $query->where('balance', $request->input('balance'));
-                }
-            }
-
-            if ($request->input('leverage')) {
-                $query->where('leverage', $request->input('leverage'));
-            }
-
-            if ($request->input('account_type')) {
-                $accountTypes = explode(',', $request->input('account_type'));
-                $query->whereIn('account_type_id', $accountTypes);
-            }
-
-            if ($request->input('upline_id')) {
-                $uplineId = $request->input('upline_id');
-
-                // Get upline and their children IDs
-                $upline = User::find($uplineId);
-                $childrenIds = $upline ? $upline->getChildrenIds() : [];
-                $childrenIds[] = $uplineId;
-
-                // Filter only active users where upline_id is in the list or user is the upline
-                $query->whereHas('users', function ($q) use ($childrenIds, $uplineId) {
-                    $q->where(function ($query) use ($childrenIds, $uplineId) {
-                        $query->where('id', $uplineId)
-                            ->orWhereIn('upline_id', $childrenIds);
-                      });
-                });
-            }
-
-            // Handle sorting
-            $sortField = $request->input('sortField', 'meta_login'); // Default to 'meta_login'
-            $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
-            $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
-
-            // Handle pagination
-            $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
-            $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
-
-            // Export logic
-            if ($request->has('exportStatus') && $request->exportStatus == true) {
-                $accounts = $query->clone();
-                return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
-            }
-
-            // Now re-fetch the data after updating the statuses
-            $accounts = $query->select([
-                'id',
-                'user_id',
-                'meta_login',
-                'account_type_id',
-                'balance',
-                'credit',
-                'leverage',
-                'deleted_at',
-                'last_access as last_login',
-                DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
-            ])
-            ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
-
-            // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
-            foreach ($accounts as $account) {
-                $account->upline_id = optional($account->users)->upline_id;
-                $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
-                $account->user_name = optional($account->users)->name;
-                $account->user_email = optional($account->users)->email;
-                $account->equity = optional($account->trading_account)->equity ?? 0;
-                $account->account_type = optional($account->accountType)->slug;
-                $account->account_type_color = optional($account->accountType)->color;
-                $account->account_group = optional($account->accountType)->account_group;
-
-                // Remove unnecessary nested data (users and trading_account)
-                unset($account->users);
-                unset($account->trading_account);
-                unset($account->accountType);
-            }
-
-            // After the status update, return the re-fetched paginated data
-            return response()->json([
-                'success' => true,
-                'data' => $accounts,
-            ]);
-        } else {
-            // Handle inactive accounts or other types
-            $query = TradingUser::onlyTrashed() // Only consider soft-deleted trading users
-                ->withTrashed([
-                    'user:id,name,email,upline_id',
-                    'trading_account:id,user_id,meta_login',
-                    'accountType:id,slug,account_group,color',
-                ]); // Include soft-deleted related users, trading accounts and account type
-
-            // Filters
-            // Handle search functionality
-            $search = $request->input('search');
-            if ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->whereHas('users', function ($query) use ($search) {
-                        $query->where('name', 'like', '%' . $search . '%')
-                              ->orWhere('email', 'like', '%' . $search . '%');
-                    })
-                    ->orWhere('meta_login', 'like', '%' . $search . '%');
-                });
-            }
-
-            // if ($request->input('upline_id')) {
-            //     $uplineId = $request->input('upline_id');
-
-            //     // Get upline and their children IDs
-            //     $upline = User::withTrashed()->find($uplineId);
-            //     $childrenIds = $upline ? $upline->getChildrenIds() : [];
-            //     $childrenIds[] = $uplineId;
-
-            //     // Filter only deleted users that match the upline logic
-            //     $query->whereHas('users', function ($q) use ($childrenIds, $uplineId) {
-            //         $q->onlyTrashed()->where(function ($query) use ($childrenIds, $uplineId) {
-            //             $query->where('id', $uplineId)
-            //                 ->orWhereIn('upline_id', $childrenIds);
-            //         });
-            //     });
-            // }
-
-            // Handle sorting
-            $sortField = $request->input('sortField', 'deleted_at'); // Default to 'created_at'
-            $sortOrder = $request->input('sortOrder', -1); // 1 for ascending, -1 for descending
-            $query->orderBy($sortField, $sortOrder == 1 ? 'asc' : 'desc');
-
-            // Handle pagination
-            $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
-            $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
-
-            // // Export logic
-            // if ($request->has(key: 'exportStatus') && $request->exportStatus == true) {
-            //     $accounts = $query->clone();
-            //     return Excel::download(new AccountListingExport($accounts), now() . '-accounts.xlsx');
-            // }
-
-            $accounts = $query->select([
-                'id',
-                'user_id',
-                'meta_login',
-                'balance',
-                'credit',
-                'leverage',
-                'deleted_at',
-                'last_access as last_login',
-                DB::raw('DATEDIFF(CURRENT_DATE, last_access) as last_login_days'), // Raw SQL for last login days
-            ])
-            ->paginate($rowsPerPage, ['*'], 'page', $currentPage);
-
-            // After the accounts are retrieved, you can access `getFirstMediaUrl` for each user using foreach
-            foreach ($accounts as $account) {
-                $account->user_profile_photo = optional($account->users)->getFirstMediaUrl('profile_photo');
-                $account->user_name = optional($account->users)->name;
-                $account->user_email = optional($account->users)->email;
-                $account->equity = optional($account->trading_account)->equity;
-                $account->account_type = optional($account->accountType)->slug;
-                $account->account_type_color = optional($account->accountType)->color;
-                $account->account_group = optional($account->accountType)->account_group;
-
-                // Remove unnecessary nested data (users and trading_account)
-                unset($account->users);
-                unset($account->trading_account);
-                unset($account->accountType);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $accounts,
-            ]);
-        }
     }
 
     public function getTradingAccountData(Request $request)
@@ -449,11 +235,12 @@ class TradingAccountController extends Controller
             $service->getUserInfo($request->meta_login);
 
             $account = TradingUser::with([
-                    'users:id,name,email,upline_id',
-                    'users.media',
-                    'trading_account:id,user_id,meta_login,balance',
-                    'accountType:id,slug,account_group,color',
-                ])
+                'users:id,name,email,upline_id',
+                'users.media',
+                'trading_account:id,user_id,meta_login,balance',
+                'accountType:id,trading_platform_id,slug,account_group,color',
+                'accountType.trading_platform:id,platform_name,slug',
+            ])
                 ->withTrashed()
                 ->where('meta_login', $request->meta_login)
                 ->first();
@@ -584,7 +371,8 @@ class TradingAccountController extends Controller
                 'users:id,name,email,upline_id',
                 'users.media',
                 'trading_account:id,user_id,meta_login,balance',
-                'accountType:id,slug,account_group,color',
+                'accountType:id,trading_platform_id,slug,account_group,color',
+                'accountType.trading_platform:id,platform_name,slug',
             ])
                 ->withTrashed()
                 ->where('meta_login', $request->meta_login)

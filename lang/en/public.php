@@ -757,4 +757,5 @@ return [
     "platform_not_found" => "Platform Not Found",
     "toast_adjustment_error" => "Adjustment Failed",
     "no_account_found" => "No Account Found",
+    "deleted" => "Deleted",
 ];

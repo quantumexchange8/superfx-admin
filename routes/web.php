@@ -122,7 +122,6 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         // account listing
         Route::get('/account_listing', [TradingAccountController::class, 'index'])->name('member.account_listing');
         Route::get('/getAccountListingData', [TradingAccountController::class, 'getAccountListingData'])->name('member.getAccountListingData');
-        Route::get('/getAccountListingPaginate', [TradingAccountController::class, 'getAccountListingPaginate'])->name('member.getAccountListingPaginate');
         Route::get('/getTradingAccountData', [TradingAccountController::class, 'getTradingAccountData'])->name('member.getTradingAccountData');
         Route::get('/getFreshTradingAccountData', [TradingAccountController::class, 'getFreshTradingAccountData'])->name('member.getFreshTradingAccountData');
 

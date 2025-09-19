@@ -747,5 +747,15 @@ return [
     "activate_setting_header" => "Kích hoạt cài đặt",
     "activate_setting_message" => "Bạn có chắc chắn muốn kích hoạt cài đặt này không? Điều này sẽ hiển thị cài đặt cho người dùng.",
     "toast_setting_activated" => "Cài đặt đã được kích hoạt.",
-    "toast_setting_deactivated" => "Cài đặt đã bị hủy kích hoạt."
+    "toast_setting_deactivated" => "Cài đặt đã bị hủy kích hoạt.",
+    "system" => "Hệ thống",
+    "site_setting" => "Cài đặt trang web",
+    "trading_platform" => "Nền tảng giao dịch",
+    "filter_platform" => "Lọc theo nền tảng",
+    "filter_category" => "Lọc theo danh mục",
+    "select_platform" => "Chọn nền tảng",
+    "platform_not_found" => "Không tìm thấy nền tảng",
+    "toast_adjustment_error" => "Điều chỉnh thất bại",
+    "no_account_found" => "Không tìm thấy tài khoản",
+    "deleted" => "Đã xóa",
 ];

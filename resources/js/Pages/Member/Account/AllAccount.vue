@@ -18,7 +18,7 @@ import {IconAdjustments, IconCircleXFilled, IconSearch} from "@tabler/icons-vue"
 import RadioButton from "primevue/radiobutton";
 import {transactionFormat, generalFormat} from "@/Composables/index.js";
 import Dialog from "primevue/dialog";
-import {usePage} from "@inertiajs/vue3";
+import Tag from "primevue/tag";
 import debounce from "lodash/debounce.js";
 
 const props = defineProps({
@@ -147,6 +147,7 @@ const filterCount = computed(() => {
     return Object.entries(filters.value)
         .filter(([key, filter]) =>
             key !== 'global' &&
+            key !== 'type' &&
             filter?.value !== null &&
             filter?.value !== '' &&
             filter?.value !== undefined
@@ -420,14 +421,21 @@ const exportReport = () => {
                     <span class="hidden md:block truncate">{{ $t('public.account_type') }}</span>
                 </template>
                 <template #body="slotProps">
-                    <div
-                        class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded w-fit"
-                        :style="{
+                    <div class="flex gap-2 items-center">
+                        <Tag
+                            severity="secondary"
+                            class="uppercase"
+                            :value="slotProps.data.account_type.trading_platform.slug"
+                        />
+                        <div
+                            class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded w-fit"
+                            :style="{
                             backgroundColor: formatRgbaColor(slotProps.data?.account_type.color, 0.15),
                             color: `#${slotProps.data?.account_type.color}`,
                         }"
-                    >
-                        {{ $t('public.' + slotProps.data?.account_type.slug) }}
+                        >
+                            {{ $t('public.' + slotProps.data?.account_type.slug) }}
+                        </div>
                     </div>
                 </template>
             </Column>
@@ -716,14 +724,21 @@ const exportReport = () => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.account_type') }}</span>
-                <div
-                    class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
-                    :style="{
+                <div class="flex gap-2 items-center">
+                    <Tag
+                        severity="secondary"
+                        class="uppercase"
+                        :value="data.account_type.trading_platform.slug"
+                    />
+                    <div
+                        class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
+                        :style="{
                         backgroundColor: formatRgbaColor(data?.account_type.color, 0.15),
                         color: `#${data?.account_type.color}`,
                     }"
-                >
-                    {{ $t(`public.${data.account_type.slug}`) }}
+                    >
+                        {{ $t(`public.${data.account_type.slug}`) }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -731,7 +746,13 @@ const exportReport = () => {
         <div class="flex flex-col items-center py-4 gap-3 self-stretch">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:min-w-[140px] text-gray-500 text-xs">{{ $t('public.last_logged_in') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data?.last_access).format('YYYY/MM/DD HH:mm:ss') }} ({{ dayjs().diff(dayjs(data?.last_access), 'day') }} {{ $t('public.days') }})</span>
+                <div class="flex flex-col items-start">
+                    <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data?.last_access).format('YYYY/MM/DD HH:mm:ss') }}</span>
+                    <Tag
+                        :severity="dayjs().diff(dayjs(data?.last_access), 'day') === 0 ? 'secondary' : 'info'"
+                        :value="`${dayjs().diff(dayjs(data?.last_access), 'day')} ${$t('public.days')}`"
+                    />
+                </div>
             </div>
         </div>
 
