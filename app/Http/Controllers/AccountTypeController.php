@@ -170,10 +170,10 @@ class AccountTypeController extends Controller
                 }
 
                 $existing->update([
-                    'category' => $account_type['currency'] == 'usd' ? 'dollar' : 'cent',
+                    'category' => $account_type['currency'] == 'USD' ? 'dollar' : 'cent',
                     'account_group' => $account_type['name'],
                     'currency' => strtoupper($account_type['currency']),
-                    'balance_multiplier' => $account_type['currency'] == 'usd' ? 1 : 100,
+                    'balance_multiplier' => $account_type['currency'] == 'USD' ? 1 : 100,
                     'edited_by' => Auth::id(),
                 ]);
             } else {
@@ -182,13 +182,14 @@ class AccountTypeController extends Controller
                     'slug' => Str::slug($account_type['name']),
                     'member_display_name' => $account_type['name'],
                     'trading_platform_id' => $trading_platform->id,
-                    'category' => $account_type['currency'] == 'usd' ? 'dollar' : 'cent',
+                    'category' => $account_type['currency'] == 'USD' ? 'dollar' : 'cent',
                     'account_group' => $account_type['name'],
                     'minimum_deposit' => 0,
+                    'leverage' => 0,
                     'currency' => strtoupper($account_type['currency']),
                     'trade_open_duration' => '10',
                     'maximum_account_number' => 5,
-                    'balance_multiplier' => $account_type['currency'] == 'usd' ? 1 : 100,
+                    'balance_multiplier' => $account_type['currency'] == 'USD' ? 1 : 100,
                     'descriptions' => json_encode(['en' => '-', 'tw' => '-']),
                     'color' => '3ecf8e',
                     'status' => 'inactive',

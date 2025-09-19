@@ -15,20 +15,15 @@ use Illuminate\Http\Request;
 use App\Models\TradingAccount;
 use App\Jobs\UpdateAllAccountJob;
 use App\Services\MetaFourService;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AccountListingExport;
 use App\Services\RunningNumberService;
-use App\Services\Data\UpdateTradingUser;
 use App\Services\ChangeTraderBalanceType;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
-use App\Services\Data\UpdateTradingAccount;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
-use App\Notifications\ChangeTradingAccountPasswordNotification;
 use PhpOffice\PhpSpreadsheet\Exception;
 use Throwable;
 
@@ -62,7 +57,7 @@ class TradingAccountController extends Controller
                     ->with([
                         'users:id,name,email,upline_id',
                         'users.media',
-                        'trading_account:id,meta_login,equity,balance',
+                        'trading_account:id,meta_login,equity,balance,credit',
                         'accountType:id,trading_platform_id,slug,account_group,color',
                         'accountType.trading_platform:id,platform_name,slug',
                     ]);
@@ -73,7 +68,7 @@ class TradingAccountController extends Controller
                     },
                     'users.media', // media probably not soft-deleted
                     'trading_account' => function ($q) {
-                        $q->withTrashed()->select('id','user_id','meta_login','balance');
+                        $q->withTrashed()->select('id','user_id','meta_login','balance,credit');
                     },
                     'accountType:id,trading_platform_id,slug,account_group,color',
                     'accountType.trading_platform:id,platform_name,slug',
@@ -237,7 +232,7 @@ class TradingAccountController extends Controller
             $account = TradingUser::with([
                 'users:id,name,email,upline_id',
                 'users.media',
-                'trading_account:id,user_id,meta_login,balance',
+                'trading_account:id,user_id,meta_login,balance,credit',
                 'accountType:id,trading_platform_id,slug,account_group,color',
                 'accountType.trading_platform:id,platform_name,slug',
             ])

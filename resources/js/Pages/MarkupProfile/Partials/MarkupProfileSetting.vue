@@ -213,7 +213,7 @@ const submitForm = () => {
                             v-model="selectedUsers"
                             :options="props.users"
                             :placeholder="$t('public.select_user')"
-                            :virtualScrollerOptions="{ itemSize: 38 }"
+                            :virtualScrollerOptions="{ itemSize: 56 }"
                             filter
                             :filterFields="['name', 'email', 'id_number']"
                             :maxSelectedLabels="1"

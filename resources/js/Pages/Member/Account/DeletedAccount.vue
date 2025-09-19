@@ -215,7 +215,7 @@ const exportReport = () => {
                         <IconCircleXFilled size="16" />
                     </div>
                 </div>
-                <div class="grid grid-cols-2 w-full gap-3">
+                <div class="flex items-center w-full gap-3">
                     <div class="relative w-full md:w-[272px]">
                         <Calendar
                             v-model="selectedDate"
@@ -375,9 +375,14 @@ const exportReport = () => {
                         <div class="flex flex-col items-start w-full">
                             <span class="text-sm text-gray-950 font-semibold">{{ slotProps.data?.meta_login }}</span>
                             <div class="text-xs">
-                                <span class="text-gray-500">{{ $t('public.last_logged_in') }}</span> <span class="text-gray-700 font-medium"> {{ dayjs(slotProps.data?.last_access).format('YYYY/MM/DD HH:mm:ss') }}</span>
+                                <span class="text-gray-500">{{ $t('public.deleted_time') }}</span> <span class="text-gray-700 font-medium"> {{ dayjs(slotProps.data?.deleted_at).format('YYYY/MM/DD HH:mm:ss') }}</span>
                             </div>
                         </div>
+                        <Tag
+                            severity="secondary"
+                            class="uppercase"
+                            :value="slotProps.data.account_type.trading_platform.slug"
+                        />
                     </div>
                 </template>
             </Column>

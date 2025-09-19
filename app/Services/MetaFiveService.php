@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use Throwable;
 use App\Models\User as UserModel;
 use Illuminate\Support\Facades\Log;
@@ -18,11 +19,22 @@ class MetaFiveService
 {
     //private string $baseURL = "http://192.168.0.224:5000/api";
     private string $baseURL = "https://superfin-mt5.currenttech.pro/api";
+    private string $token;
+
+    public function __construct()
+    {
+        $token2 = "SuperFin-Live^" . Carbon::now('Asia/Riyadh')->toDateString() . "&SuperGlobal";
+
+        $this->token = hash('sha256', $token2);
+    }
 
     public function getConnectionStatus()
     {
         try {
             $connection = Http::acceptJson()->timeout(10)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
                 ->get($this->baseURL . "/connect_status")
                 ->json();
 
@@ -83,7 +95,6 @@ class MetaFiveService
         if (!$userData) {
             return;
         }
-        $userData['type'] = 'live';
 
         $metaAccountData = $this->getMetaAccount($meta_login);
         if (!$metaAccountData) {
@@ -130,108 +141,34 @@ class MetaFiveService
     }
 
     /**
-     * @throws ConnectionException
      * @throws Throwable
+     * @throws ConnectionException
      */
-    public function createDeal($trading_account, $name, $amount, $comment, $type, $account_type, $deal_type, $transactionNumber = null): array
+    public function createDeal($meta_login, $amount, $comment, $type, $expire_date): array
     {
-        if ($account_type->type == 'virtual') {
-            $dealResponse = [
-                'deal_Id' => null,
-                'conduct_Deal' => [
-                    'comment' => $comment
-                ]
-            ];
-
-            $currencyDigits = $trading_account->currency_digits ?? 2;
-            $multiplier = pow(10, $currencyDigits);
-
-            $newBalance = $trading_account->balance / $multiplier;
-            $newCredit  = ($trading_account->credit ?? 0) / $multiplier;
-
-            $amountDisplay = $amount;
-
-            $sign = $type ? 1 : -1;
-
-            switch ($deal_type) {
-                case MetaService::DEAL_BALANCE:
-                    $newBalance += ($sign * $amountDisplay);
-                    break;
-
-                case MetaService::DEAL_CREDIT:
-                    $newCredit += ($sign * $amountDisplay);
-                    break;
-
-                case MetaService::DEAL_BONUS:
-                    // If bonus affects balance or credit, modify as needed
-                    break;
-
-                default:
-                    throw ValidationException::withMessages(['deal_type' => trans('public.invalid_type')]);
-            }
-
-            $userData = [
-                'group'    => $account_type->account_group,
-                'name'     => $name,
-                'company'  => null,
-                'leverage' => $trading_account->margin_leverage,
-                'balance'  => $newBalance,
-                'credit'   => $newCredit,
-                'rights'   => 5,
-                'type'     => $account_type->type,
-            ];
-
-            $metaAccountData = [
-                'balance'        => $newBalance,
-                'credit'         => $newCredit,
-                'currencyDigits' => $currencyDigits,
-                'marginLeverage' => $trading_account->margin_leverage,
-                'equity'         => $newBalance,
-                'floating'       => $trading_account->floating,
-            ];
-        } else {
-            // Check connection before anything else
-            if ($this->getConnectionStatus() !== 0) {
-                return [
-                    'success' => false,
-                    'message' => trans('public.toast_connection_error'),
-                ];
-            }
-
-            $dealResponse = Http::acceptJson()->post($this->baseURL . "/conduct_deal", [
-                'login' => $trading_account->meta_login,
-                'amount' => abs($amount),
-                'imtDeal_EnDealAction' => $deal_type,
-                'comment' => $comment,
-                'deposit' => $type,
-            ]);
-
-            $dealResponse = $dealResponse->json();
-            $userData = $this->getMetaUser($trading_account->meta_login);
-            $userData['type'] = 'live';
-            $metaAccountData = $this->getMetaAccount($trading_account->meta_login);
-        }
-
-        // Deal succeeded — create transaction record here
-        if ($type) {
-            $transaction = $trading_account->depositFloat(abs($amount), [], true, $transactionNumber, $deal_type);
-        } else {
-            $transaction = $trading_account->withdrawFloat(abs($amount), [], true, $transactionNumber, $deal_type);
-        }
-
-        // Update transaction metadata
-        $transaction->update([
-            'ticket' => $dealResponse['deal_Id'] ?? null,
-            'remarks' => $dealResponse['conduct_Deal']['comment'] ?? null,
-        ]);
-
-        (new UpdateTradingUser)->execute($trading_account->meta_login, $userData);
-        (new UpdateTradingAccount)->execute($trading_account->meta_login, $metaAccountData);
-
-        return [
-            'success' => true,
-            'transaction' => $transaction,
+        $payload = [
+            'login' => $meta_login,
+            'imtDeal_EnDealAction' => $type == 'balance' ? 2 : 3,
+            'amount' => (float) $amount,
+            'expiration_date' => $expire_date,
+            'comment' => $comment,
         ];
+
+        $jsonPayload = json_encode($payload);
+
+        $dealResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload)
+            ->post($this->baseURL . "/transaction");
+
+        $dealResponse = $dealResponse->json();
+        Log::debug('mt5 deal', $dealResponse);
+
+        $this->getUserInfo($meta_login);
+
+        return $dealResponse;
     }
 
     public function disableTrade($meta_login)
@@ -319,6 +256,9 @@ class MetaFiveService
 
         try {
             $response = Http::acceptJson()
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->token,
+                ])
                 ->get($this->baseURL . "/getgroup");
 
             $groups = $response->json();

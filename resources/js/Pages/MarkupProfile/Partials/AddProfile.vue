@@ -9,6 +9,7 @@ import MultiSelect from 'primevue/multiselect';
 import { useForm } from '@inertiajs/vue3';
 import { useConfirm } from "primevue/useconfirm";
 import { trans, wTrans } from "laravel-vue-i18n";
+import Tag from "primevue/tag";
 
 // Props
 const props = defineProps({
@@ -82,7 +83,7 @@ const requireConfirmation = (action_type) => {
 
 // Submit Function
 const submitForm = () => {
-    form.account_type_ids = selectedAccountTypes.value?.length ? selectedAccountTypes.value.map(type => type.value) : [];
+    form.account_type_ids = selectedAccountTypes.value.map(item => item.id);
     form.user_ids = selectedUsers.value?.length ? selectedUsers.value.map(user => user.value) : [];
 
     requireConfirmation('create_markup_profile');
@@ -109,14 +110,14 @@ const submitForm = () => {
     >
         <form @submit.prevent="submitForm">
             <div class="flex flex-col items-center gap-3 md:gap-5 self-stretch">
-                
+
                 <!-- Basic Information -->
                 <div class="flex flex-col gap-3 items-center self-stretch">
                     <div class="text-gray-950 font-semibold text-sm self-stretch">
                         {{ $t('public.basic_information') }}
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 w-full">
-                        
+
                         <!-- Name -->
                         <div class="space-y-1 h-[66px]">
                             <InputLabel for="name" :value="$t('public.name')" />
@@ -163,8 +164,13 @@ const submitForm = () => {
                             class="w-full md:w-64 font-normal"
                         >
                             <template #option="{ option }">
-                                <div class="flex flex-col">
+                                <div class="flex gap-2 items-center">
                                     <span>{{ option.name }}</span>
+                                    <Tag
+                                        :severity="option.trading_platform.slug === 'mt4' ? 'secondary' : 'info'"
+                                        class="uppercase"
+                                        :value="option.trading_platform.slug"
+                                    />
                                 </div>
                             </template>
                             <template #value>
@@ -194,6 +200,7 @@ const submitForm = () => {
                             :maxSelectedLabels="1"
                             :selectedItemsLabel="`${selectedUsers?.length} ${$t('public.users_selected')}`"
                             class="w-full md:w-64 font-normal"
+                            :virtualScrollerOptions="{ itemSize: 56 }"
                         >
                             <template #option="{ option }">
                                 <div class="flex flex-col">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountType;
 use App\Models\User;
 use Inertia\Inertia;
 use App\Models\SymbolGroup;
@@ -19,7 +20,7 @@ class MarkupProfileController extends Controller
     public function index()
     {
         return Inertia::render('MarkupProfile/MarkupProfile', [
-            'accountTypes' => (new GeneralController())->getAllAccountTypes(true),
+            'accountTypes' => AccountType::with('trading_platform:id,platform_name,slug')->where('status', 'active')->get()->toArray(),
             'users' => (new GeneralController())->getAllUsers(true),
         ]);
     }
@@ -30,31 +31,31 @@ class MarkupProfileController extends Controller
     //             'markupProfileToAccountTypes.accountType:id,name',
     //             'userToMarkupProfiles'
     //         ])->get();
-    
+
     //     foreach ($markupProfiles as $profile) {
     //         $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
     //         $profile->total_account = $profile->userToMarkupProfiles ? $profile->userToMarkupProfiles->count() : 0;
-    
+
     //         // Remove relations if not needed
     //         unset($profile->markupProfileToAccountTypes, $profile->userToMarkupProfiles);
     //     }
-    
+
     //     return response()->json(['markupProfiles' => $markupProfiles]);
     // }
-    
+
     public function getMarkupProfiles(Request $request)
     {
         if ($request->has('lazyEvent')) {
             $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
-    
+
             $query = MarkupProfile::with([
                 'markupProfileToAccountTypes.accountType:id,name',
             ])->withCount('userToMarkupProfiles');
-        
+
             // Handle sorting
             if (!empty($data['sortField']) && isset($data['sortOrder'])) {
                 $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
-    
+
                 if ($data['sortField'] === 'total_account') {
                     $query->orderBy('user_to_markup_profiles_count', $order);
                 } else {
@@ -63,20 +64,20 @@ class MarkupProfileController extends Controller
             } else {
                 $query->orderByDesc('created_at');
             }
-        
+
             // Handle pagination
             $rowsPerPage = $data['rows'] ?? 15;
             $result = $query->paginate($rowsPerPage);
-    
+
             // Transform data
             foreach ($result->items() as $profile) {
                 $profile->account_types = $profile->markupProfileToAccountTypes ? $profile->markupProfileToAccountTypes->pluck('accountType')->filter()->values() : collect();
                 $profile->total_account = $profile->user_to_markup_profiles_count ?? 0;
-    
+
                 unset($profile->markupProfileToAccountTypes, $profile->user_to_markup_profiles_count);
             }
         }
-    
+
         return response()->json([
             'success' => true,
             'data' => $result,
@@ -100,7 +101,7 @@ class MarkupProfileController extends Controller
         ]);
 
         $validator->validate(); // Validate the request
-        
+
         // Create MarkupProfile
         $markupProfile = MarkupProfile::create([
             'name' => $request->name,
@@ -130,7 +131,7 @@ class MarkupProfileController extends Controller
                 } else {
                     $referralCode = null;
                 }
-    
+
                 UserToMarkupProfile::create([
                     'markup_profile_id' => $markupProfile->id,
                     'user_id' => $userId,
@@ -138,7 +139,7 @@ class MarkupProfileController extends Controller
                 ]);
             }
         }
-        
+
         return back()->with('toast', [
             'title' => trans('public.toast_create_profile_success'),
             'type' => 'success',
@@ -169,7 +170,7 @@ class MarkupProfileController extends Controller
                     'id_number' => $userData->user?->id_number,
                 ];
             });
-    
+
         return response()->json([
             'accountTypes' => $accountTypes,
             'users' => $users
@@ -195,7 +196,7 @@ class MarkupProfileController extends Controller
     //     $validator->validate(); // Validate the request
 
     //     $profile = MarkupProfile::findOrFail($request->id);
-    
+
     //     // Update AccountType fields
     //     $profile->update([
     //         'name' => $request->name,
@@ -203,7 +204,7 @@ class MarkupProfileController extends Controller
     //         'description' => $request->description,
     //         'status' => 'active',
     //     ]);
-    
+
     //     // Handle account types update
     //     $accountTypes = $request->account_type_ids ?? []; // New account type IDs passed in the request
 
@@ -293,7 +294,7 @@ class MarkupProfileController extends Controller
     //         // Finally, remove the account type associations from the profile
     //         MarkupProfileToAccountType::where('markup_profile_id', $request->id)->delete();
     //     }
-    
+
     //     // Handle user associations update
     //     $userIds = $request->user_ids ?? [];
 
@@ -397,7 +398,7 @@ class MarkupProfileController extends Controller
     //         // Remove all associated user profiles
     //         UserToMarkupProfile::where('markup_profile_id', $request->id)->delete();
     //     }
-    
+
     //     return back()->with('toast', [
     //         'title' => trans('public.toast_update_markup_profile_success'),
     //         'type' => 'success',
@@ -447,24 +448,24 @@ class MarkupProfileController extends Controller
     {
         $accountTypes = $request->account_type_ids ?? [];
         $markupProfileId = $request->id; // Get the current markup profile ID
-    
+
         if ($accountTypes) {
             // Get existing account type IDs associated with the profile
             $existingAccountTypeIds = MarkupProfileToAccountType::where('markup_profile_id', $markupProfileId)
                 ->pluck('account_type_id')
                 ->toArray();
-    
+
             // Get the account types to add and remove
             $accountTypesToAdd = array_diff($accountTypes, $existingAccountTypeIds);
             $accountTypesToRemove = array_diff($existingAccountTypeIds, $accountTypes);
-    
+
             // Remove outdated account type associations
             if (!empty($accountTypesToRemove)) {
                 MarkupProfileToAccountType::where('markup_profile_id', $markupProfileId)
                     ->whereIn('account_type_id', $accountTypesToRemove)
                     ->delete();
             }
-    
+
             foreach ($accountTypesToAdd as $accountTypeId) {
                 MarkupProfileToAccountType::create([
                     'markup_profile_id' => $markupProfileId,
@@ -475,40 +476,40 @@ class MarkupProfileController extends Controller
             MarkupProfileToAccountType::where('markup_profile_id', $markupProfileId)->delete();
         }
     }
-        
+
     public function updateUserAssociations(Request $request)
     {
         $userIds = $request->user_ids ?? [];
         $markupProfileId = $request->id; // Get the current markup profile ID
-    
+
         if ($userIds) {
             $existingUserIds = UserToMarkupProfile::where('markup_profile_id', $markupProfileId)
                 ->pluck('user_id')
                 ->toArray();
-    
+
             $userIdsToAdd = array_diff($userIds, $existingUserIds);
             $userIdsToRemove = array_diff($existingUserIds, $userIds);
-    
+
             if (!empty($userIdsToRemove)) {
                 UserToMarkupProfile::where('markup_profile_id', $markupProfileId)
                     ->whereIn('user_id', $userIdsToRemove)
                     ->delete();
             }
-    
+
             foreach ($userIdsToAdd as $userId) {
                 $user = User::find($userId);
-    
+
                 if (!$user) {
                     continue;
                 }
-    
+
                 $referralCode = null;
                 if ($user->role === 'ib') {
                     do {
                         $referralCode = Str::random(10);
                     } while (UserToMarkupProfile::where('referral_code', $referralCode)->exists());
                 }
-    
+
                 UserToMarkupProfile::create([
                     'markup_profile_id' => $markupProfileId,
                     'user_id' => $userId,
@@ -519,7 +520,7 @@ class MarkupProfileController extends Controller
             UserToMarkupProfile::where('markup_profile_id', $markupProfileId)->delete();
         }
     }
-        
+
     public function updateStatus(Request $request)
     {
         $profile = MarkupProfile::find($request->id);

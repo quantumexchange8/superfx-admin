@@ -386,7 +386,7 @@ const exportReport = () => {
                     <span class="hidden md:block truncate">{{ $t('public.balance') }} ($)</span>
                 </template>
                 <template #body="slotProps">
-                    <span class="break-all">{{ formatAmount(slotProps.data?.balance) }}</span>
+                    <span class="break-all">{{ formatAmount(slotProps.data?.trading_account.balance ?? 0) }}</span>
                 </template>
             </Column>
             <Column
@@ -398,7 +398,7 @@ const exportReport = () => {
                     <span class="hidden md:block truncate">{{ $t('public.credit') }} ($)</span>
                 </template>
                 <template #body="slotProps">
-                    <span class="break-all">{{ slotProps.data?.credit ? formatAmount(slotProps.data?.credit) : formatAmount(0) }}</span>
+                    <span class="break-all">{{ slotProps.data?.trading_account.credit ? formatAmount(slotProps.data?.trading_account.credit) : formatAmount(0) }}</span>
                 </template>
             </Column>
             <Column
@@ -423,7 +423,7 @@ const exportReport = () => {
                 <template #body="slotProps">
                     <div class="flex gap-2 items-center">
                         <Tag
-                            severity="secondary"
+                            :severity="slotProps.data.account_type.trading_platform.slug === 'mt4' ? 'secondary' : 'info'"
                             class="uppercase"
                             :value="slotProps.data.account_type.trading_platform.slug"
                         />
@@ -708,15 +708,15 @@ const exportReport = () => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.balance') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.balance) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.trading_account.balance ?? 0) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.equity') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ data?.equity ? formatAmount(data?.equity) : formatAmount(0) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ data?.trading_account.equity ? formatAmount(data?.trading_account.equity) : formatAmount(0) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.credit') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.credit) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">$ {{ formatAmount(data?.trading_account.credit) }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.leverage') }}</span>
@@ -726,7 +726,7 @@ const exportReport = () => {
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.account_type') }}</span>
                 <div class="flex gap-2 items-center">
                     <Tag
-                        severity="secondary"
+                        :severity="data.account_type.trading_platform.slug === 'mt4' ? 'secondary' : 'info'"
                         class="uppercase"
                         :value="data.account_type.trading_platform.slug"
                     />
@@ -749,8 +749,8 @@ const exportReport = () => {
                 <div class="flex flex-col items-start">
                     <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data?.last_access).format('YYYY/MM/DD HH:mm:ss') }}</span>
                     <Tag
-                        :severity="dayjs().diff(dayjs(data?.last_access), 'day') === 0 ? 'secondary' : 'info'"
-                        :value="`${dayjs().diff(dayjs(data?.last_access), 'day')} ${$t('public.days')}`"
+                        :severity="dayjs().diff(dayjs(data?.last_access ?? dayjs().toDate()), 'day') === 0 ? 'secondary' : 'info'"
+                        :value="`${dayjs().diff(dayjs(data?.last_access ?? dayjs().toDate()), 'day')} ${$t('public.days')}`"
                     />
                 </div>
             </div>

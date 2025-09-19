@@ -117,18 +117,9 @@ const rowClicked = (data) => {
         <div class="flex flex-col items-center gap-5 md:gap-8">
             <div class="flex justify-end items-center self-stretch">
                 <AddProfile
-                    :accountTypes="props.accountTypes"
+                    :accountTypes="accountTypes"
                     :users="props.users"
                 />
-                <!-- <Button
-                    variant="primary-flat"
-                    type="button"
-                    class="w-full md:w-auto"
-                    :href="route('accountType.syncAccountTypes')"
-                >
-                    <IconRefresh size="20" stroke-width="1.25" color="#FFF" />
-                    {{ $t('public.synchronise') }}
-                </Button> -->
             </div>
 
             <div
@@ -191,10 +182,10 @@ const rowClicked = (data) => {
                         <Column field="action" class="md:w-[15%] max-w-0">
                             <template #body="slotProps">
                                 <div class="flex justify-end items-center gap-2 flex-1">
-                                    <MarkupProfileAction 
-                                        :profile="slotProps.data" 
+                                    <MarkupProfileAction
+                                        :profile="slotProps.data"
                                         :accountTypes="props.accountTypes"
-                                        :users="props.users" 
+                                        :users="props.users"
                                         :loading="loading"
                                     />
                                 </div>
