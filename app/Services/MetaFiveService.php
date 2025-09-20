@@ -2,20 +2,22 @@
 
 namespace App\Services;
 
+use App\Enums\MetaService;
+use App\Services\TradingPlatform\TradingPlatformInterface;
 use Carbon\Carbon;
+use GuzzleHttp\Promise\PromiseInterface;
+use Illuminate\Http\Client\Response;
 use Throwable;
 use App\Models\User as UserModel;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use App\Services\Data\CreateTradingUser;
 use App\Services\Data\UpdateTradingUser;
 use App\Services\Data\CreateTradingAccount;
 use App\Services\Data\UpdateTradingAccount;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Client\ConnectionException;
 
-class MetaFiveService
+class MetaFiveService implements TradingPlatformInterface
 {
     //private string $baseURL = "http://192.168.0.224:5000/api";
     private string $baseURL = "https://superfin-mt5.currenttech.pro/api";
@@ -60,11 +62,14 @@ class MetaFiveService
     /**
      * @throws ConnectionException
      */
-    public function getMetaUser($meta_login)
+    public function getUser($metaLogin): array
     {
         return Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
             ->post($this->baseURL . "/getuser", [
-                'login' => $meta_login
+                'login' => $metaLogin
             ])
             ->json();
     }
@@ -72,11 +77,14 @@ class MetaFiveService
     /**
      * @throws ConnectionException
      */
-    public function getMetaAccount($meta_login)
+    public function getAccount($metaLogin): array
     {
         return Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
             ->post($this->baseURL . "/getaccount", [
-                'login' => $meta_login
+                'login' => $metaLogin
             ])
             ->json();
     }
@@ -91,12 +99,12 @@ class MetaFiveService
             return;
         }
 
-        $userData = $this->getMetaUser($meta_login);
+        $userData = $this->getUser($meta_login);
         if (!$userData) {
             return;
         }
 
-        $metaAccountData = $this->getMetaAccount($meta_login);
+        $metaAccountData = $this->getAccount($meta_login);
         if (!$metaAccountData) {
             return;
         }
@@ -109,35 +117,28 @@ class MetaFiveService
      * @throws ConnectionException
      * @throws Throwable
      */
-    public function createUser(UserModel $user, $master_name, $account_type, $leverage)
+    public function createUser(UserModel $user, $group, $leverage): PromiseInterface|Response
     {
-        if ($account_type->type == 'virtual') {
-            $data = [
-                'name' => $master_name,
-                'login' => RunningNumberService::getID('virtual_account'),
-                'leverage' => $leverage,
-                'account_type_id' => $account_type->id
-            ];
-        } else {
-            $accountResponse = Http::acceptJson()->post($this->baseURL . "/create_user", [
-                'name' => $master_name,
-                'group' => $account_type->account_group,
-                'leverage' => $leverage,
-                'email' => $user->email,
-            ]);
-            $data = $accountResponse->json();
-            $data['account_type_id'] = $account_type->id;
-        }
+        $payload = [
+            'name' => $user->name,
+            'group' => $group->account_group,
+            'leverage' => $leverage,
+            'email' => $user->email,
+        ];
 
-        (new CreateTradingAccount)->execute($user, $data);
-        (new CreateTradingUser)->execute($user, $data);
+        $jsonPayload = json_encode($payload);
 
-        // Only disable trade for non-virtual accounts
-        if ($account_type->type !== 'virtual' && !$account_type->allow_trade) {
-            $this->disableTrade($data['login']);
-        }
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload)
+            ->post($this->baseURL . "/create_user");
 
-        return $data;
+        (new CreateTradingAccount)->execute($user, $accountResponse, $group);
+        (new CreateTradingUser)->execute($user, $accountResponse, $group);
+
+        return $accountResponse;
     }
 
     /**
@@ -148,7 +149,7 @@ class MetaFiveService
     {
         $payload = [
             'login' => $meta_login,
-            'imtDeal_EnDealAction' => $type == 'balance' ? 2 : 3,
+            'imtDeal_EnDealAction' => $type == 'balance' ? MetaService::DEAL_BALANCE : MetaService::DEAL_CREDIT,
             'amount' => (float) $amount,
             'expiration_date' => $expire_date,
             'comment' => $comment,
@@ -164,11 +165,20 @@ class MetaFiveService
             ->post($this->baseURL . "/transaction");
 
         $dealResponse = $dealResponse->json();
-        Log::debug('mt5 deal', $dealResponse);
 
-        $this->getUserInfo($meta_login);
+        if (isset($dealResponse['requestStatus']) && $dealResponse['requestStatus'] == 'success') {
 
-        return $dealResponse;
+            $this->getUserInfo($meta_login);
+
+            return [
+                'ticket' => $dealResponse['deal_id'],
+            ];
+        }
+
+        return [
+            'status' => 'fail',
+            'message' => trans('public.toast_connection_error')
+        ];
     }
 
     public function disableTrade($meta_login)
@@ -189,56 +199,58 @@ class MetaFiveService
         return Http::acceptJson()->get($this->baseURL . "/deal_history/{$meta_login}&{$start_date}&{$end_date}")->json();
     }
 
-    public function updateLeverage($trading_account, $leverage, $account_type)
+    /**
+     * @throws Throwable
+     * @throws ConnectionException
+     */
+    public function updateLeverage($meta_login, $leverage): void
     {
-        if ($account_type->type == 'virtual') {
-            $updatedResponse = [
-                'login' => $trading_account->meta_login,
-                'leverage' => $leverage,
-            ];
-
-            $userData = [
-                'group' => $account_type->account_group,
-                'name' => Auth::user()->full_name,
-                'company' => null,
-                'leverage' => $leverage,
-                'balance' => $trading_account->balance,
-                'credit' => $trading_account->credit ?? 0,
-                'rights' => 5,
-                'type' => $account_type->type,
-            ];
-
-            $metaAccountData = [
-                'balance' => $trading_account->balance,
-                'currencyDigits' => 2,
-                'credit' => $trading_account->credit ?? 0,
-                'marginLeverage' => $leverage,
-                'equity' => $trading_account->equity,
-                'floating' => $trading_account->floating,
-            ];
-        } else {
-            $updatedResponse = Http::acceptJson()->patch($this->baseURL . "/update_leverage", [
-                'login' => $trading_account->meta_login,
+        Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->patch($this->baseURL . "/update_leverage", [
+                'login' => $meta_login,
                 'leverage' => $leverage,
             ]);
-            $updatedResponse = $updatedResponse->json();
-            $userData = $this->getMetaUser($trading_account->meta_login);
-            $metaAccountData = $this->getMetaAccount($trading_account->meta_login);
-        }
-        (new UpdateTradingUser)->execute($trading_account->meta_login, $userData);
-        (new UpdateTradingAccount)->execute($trading_account->meta_login, $metaAccountData);
 
-        return $updatedResponse;
+        $this->getUserInfo($meta_login);
     }
 
-    public function changePassword($meta_login, $type, $password)
+    /**
+     * @throws Throwable
+     * @throws ConnectionException
+     */
+    public function changeMasterPassword($meta_login, $password): void
     {
-        $passwordResponse = Http::acceptJson()->patch($this->baseURL . "/change_password", [
-            'login' => $meta_login,
-            'type' => $type,
-            'password' => $password,
-        ]);
-        return $passwordResponse->json();
+        Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->patch($this->baseURL . "/changemasterpassword", [
+                'login' => $meta_login,
+                'password' => $password,
+            ]);
+
+        $this->getUserInfo($meta_login);
+    }
+
+    /**
+     * @throws Throwable
+     * @throws ConnectionException
+     */
+    public function changeInvestorPassword($meta_login, $password): void
+    {
+        Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->patch($this->baseURL . "/changeinvestorpassword", [
+                'login' => $meta_login,
+                'password' => $password,
+            ]);
+
+        $this->getUserInfo($meta_login);
     }
 
     public function userTrade($meta_login)

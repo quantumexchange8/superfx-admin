@@ -562,6 +562,17 @@ const isJson = (str) => {
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.from') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium"> {{ data.from_meta_login ? data.from_meta_login : data ? $t(`public.${data.from_wallet_name}`) : '' }}</span>
             </div>
+            <div v-if="data.from_meta_login" class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.account_type') }}</span>
+                <div class="flex gap-2 items-center">
+                    <Tag
+                        :severity="data.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                        class="uppercase"
+                        :value="data.trading_platform"
+                    />
+                    <span class="text-sm font-medium text-gray-950">{{ data.account_type }}</span>
+                </div>
+            </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.status') }}</span>
                 <StatusBadge :variant="data.status" :value="$t('public.' + data.status)"/>

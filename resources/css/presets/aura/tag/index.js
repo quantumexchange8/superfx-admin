@@ -22,7 +22,7 @@ export default {
                 'text-green-700 bg-green-100': props.severity == 'success',
                 'text-gray-700 bg-gray-100': props.severity == 'secondary',
                 'text-blue-700 bg-blue-100': props.severity == 'info',
-                'text-orange-700 bg-orange-100': props.severity == 'warning',
+                'text-amber-700 bg-amber-100': props.severity == 'warning',
                 'text-red-700 bg-red-100': props.severity == 'danger',
                 'text-white bg-black': props.severity == 'contrast'
             }

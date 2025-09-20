@@ -32,25 +32,6 @@ class TransactionController extends Controller
         $selectedMonthsArray = !empty($selectedMonths) ? explode(',', $selectedMonths) : [];
 
         // Define common fields
-        $commonFields = [
-            'id',
-            'user_id',
-            'category',
-            'transaction_type',
-            'transaction_number',
-            'payment_account_name',
-            'payment_platform',
-            'payment_platform_name',
-            'payment_account_no',
-            'payment_account_type',
-            'bank_code',
-            'amount',
-            'transaction_charges',
-            'transaction_amount',
-            'status',
-            'remarks',
-            'created_at',
-        ];
 
         if (empty($selectedMonthsArray)) {
             // If selectedMonths is empty, return an empty result
@@ -167,7 +148,7 @@ class TransactionController extends Controller
 
             $data = $summary;
         } else {
-            $query = Transaction::with('user', 'from_wallet', 'to_wallet', 'payment_gateway');
+            $query = Transaction::with('user', 'from_wallet', 'to_wallet', 'payment_gateway', 'fromMetaLogin.account_type.trading_platform', 'toMetaLogin.account_type.trading_platform');
 
             // Apply filtering for each selected month-year pair
             if (!empty($selectedMonthsArray)) {
@@ -205,7 +186,26 @@ class TransactionController extends Controller
             }
 
             // Fetch data
-            $data = $query->get()->map(function ($transaction) use ($commonFields, $type) {
+            $data = $query->get()->map(function ($transaction) use ($type) {
+                $commonFields = [
+                    'id',
+                    'user_id',
+                    'category',
+                    'transaction_type',
+                    'transaction_number',
+                    'payment_account_name',
+                    'payment_platform',
+                    'payment_platform_name',
+                    'payment_account_no',
+                    'payment_account_type',
+                    'bank_code',
+                    'amount',
+                    'transaction_charges',
+                    'transaction_amount',
+                    'status',
+                    'remarks',
+                    'created_at',
+                ];
                 // Initialize result array with common fields
                 $result = $transaction->only($commonFields);
 
@@ -224,6 +224,8 @@ class TransactionController extends Controller
                     $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->type : null;
                     $result['payment_gateway_id'] = $transaction->payment_gateway_id ? $transaction->payment_gateway_id : null;
                     $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
+                    $result['account_type'] = $transaction->toMetaLogin->account_type->name;
+                    $result['trading_platform'] = $transaction->toMetaLogin->account_type->trading_platform->slug;
                 } elseif ($type === 'withdrawal') {
                     $result['to_wallet_address'] = $transaction->to_wallet_address;
                     $result['from_meta_login'] = $transaction->from_meta_login;
@@ -234,6 +236,8 @@ class TransactionController extends Controller
                     $result['approved_at'] = $transaction->approved_at;
                     $result['payment_gateway_id'] = $transaction->payment_gateway_id ? $transaction->payment_gateway_id : null;
                     $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
+                    $result['account_type'] = $transaction->fromMetaLogin?->account_type?->name;
+                    $result['trading_platform'] = $transaction->fromMetaLogin?->account_type?->trading_platform?->slug;
                 } elseif ($type === 'transfer') {
                     $result['from_meta_login'] = $transaction->from_meta_login;
                     $result['to_meta_login'] = $transaction->to_meta_login;

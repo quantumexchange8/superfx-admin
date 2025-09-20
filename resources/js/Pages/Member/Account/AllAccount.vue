@@ -749,7 +749,7 @@ const exportReport = () => {
                 <div class="flex flex-col items-start">
                     <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data?.last_access).format('YYYY/MM/DD HH:mm:ss') }}</span>
                     <Tag
-                        :severity="dayjs().diff(dayjs(data?.last_access ?? dayjs().toDate()), 'day') === 0 ? 'secondary' : 'info'"
+                        :severity="dayjs().diff(dayjs(data?.last_access ?? dayjs().toDate()), 'day') === 0 ? 'secondary' : 'warning'"
                         :value="`${dayjs().diff(dayjs(data?.last_access ?? dayjs().toDate()), 'day')} ${$t('public.days')}`"
                     />
                 </div>

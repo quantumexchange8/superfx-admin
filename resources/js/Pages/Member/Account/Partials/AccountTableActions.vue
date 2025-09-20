@@ -162,6 +162,7 @@ const handleAccountUpdated = (updatedAccount) => {
             <ChangeLeverage
                 :account="account"
                 @update:visible="visible = false"
+                @updated:account="handleAccountUpdated"
             />
         </template>
         <template v-if="dialogType === 'change_account_type'">

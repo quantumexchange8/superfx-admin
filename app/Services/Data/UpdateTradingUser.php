@@ -27,7 +27,9 @@ class UpdateTradingUser
             ->first();
 
         // Safely pick status
-        $status = $data['status'] ?? $data['requestStatus'] ?? null;
+        $status = !empty($data['status'])
+            ? $data['status']
+            : ($data['requestStatus'] ?? null);
 
         if ($status == 'success') {
             $currentAccType = AccountType::find($tradingUser->account_type_id);
@@ -43,6 +45,11 @@ class UpdateTradingUser
             if (isset($data['registration'])) {
                 $tradingUser->registration = $data['registration'];
             }
+
+            if (isset($data['registration_date'])) {
+                $tradingUser->registration = $data['registration_date'];
+            }
+
             if (isset($data['last_ip'])) {
                 $tradingUser->last_ip = $data['last_ip'];
             }
@@ -59,14 +66,6 @@ class UpdateTradingUser
             DB::transaction(function () use ($tradingUser) {
                 $tradingUser->save();
             });
-        } else {
-            if ($tradingUser->balance <= 0) {
-                $tradingUser->update([
-                    'acc_status' => 'inactive',
-                ]);
-
-                // $tradingUser->delete();
-            }
         }
 
         return $tradingUser;

@@ -1,10 +1,11 @@
 <script setup>
 import InputLabel from "@/Components/InputLabel.vue";
-import {useForm} from "@inertiajs/vue3";
 import Button from "@/Components/Button.vue"
 import InputError from "@/Components/InputError.vue";
 import Dropdown from "primevue/dropdown";
-import {ref, watch} from "vue";
+import {ref} from "vue";
+import {transactionFormat} from "@/Composables/index.js";
+import toast from "@/Composables/toast.js";
 
 const props = defineProps({
     account: Object,
@@ -12,6 +13,7 @@ const props = defineProps({
 
 const leverages = ref([]);
 const emit = defineEmits(['update:visible'])
+const {formatAmount} = transactionFormat()
 
 const getOptions = async () => {
     try {
@@ -24,17 +26,44 @@ const getOptions = async () => {
 
 getOptions();
 
-const form = useForm({
+const form = ref({
     meta_login: props.account.meta_login,
     leverage: props.account.leverage,
 })
 
-const submitForm = () => {
-    form.post(route('member.updateLeverage'), {
-        onSuccess: () => {
+const formProcessing = ref(false);
+
+const submitForm = async () => {
+    formProcessing.value = true;
+    form.errors = {};
+
+    try {
+        const response = await axios.post(route('member.updateLeverage'), form.value);
+
+        closeDialog();
+
+        emit('updated:account', response.data.account);
+
+        toast.add({
+            type: 'success',
+            title: response.data.title,
+            message: response.data.message,
+        });
+    } catch (error) {
+        if (error.response?.status === 422) {
+            form.value.errors = error.response.data.errors;
+        } else {
             closeDialog();
+
+            const message = error.response?.data?.message || error.message || 'Something went wrong.';
+            toast.add({
+                type: 'error',
+                title: message,
+            });
         }
-    });
+    } finally {
+        formProcessing.value = false;
+    }
 }
 
 const closeDialog = () => {
@@ -48,7 +77,7 @@ const closeDialog = () => {
             <div class="flex flex-col items-center gap-5 self-stretch">
                 <div class="flex flex-col justify-center items-center py-4 px-8 gap-2 self-stretch bg-gray-200">
                     <span class="w-full text-gray-500 text-center text-xs font-medium">#{{ account.meta_login }} - {{ $t('public.available_account_balance') }}</span>
-                    <span class="w-full text-gray-950 text-center text-xl font-semibold">$ {{ account.balance }}</span>
+                    <span class="w-full text-gray-950 text-center text-xl font-semibold">$ {{ formatAmount(account?.trading_account.balance ?? 0) }}</span>
                 </div>
 
                 <!-- input fields -->
@@ -62,10 +91,10 @@ const closeDialog = () => {
                         :placeholder="$t('public.leverages_placeholder')"
                         class="w-full"
                         scroll-height="236px"
-                        :invalid="!!form.errors.leverage"
+                        :invalid="!!form?.errors?.leverage"
                         :disabled="!leverages.length"
                     />
-                    <InputError :message="form.errors.leverage" />
+                    <InputError :message="form?.errors?.leverage?.[0]" />
                 </div>
             </div>
         </div>
@@ -75,7 +104,7 @@ const closeDialog = () => {
                 variant="gray-tonal"
                 class="w-full md:w-[120px]"
                 @click.prevent="closeDialog()"
-                :disabled="form.processing"
+                :disabled="formProcessing"
             >
                 {{ $t('public.cancel') }}
             </Button>
@@ -83,7 +112,7 @@ const closeDialog = () => {
                 variant="primary-flat"
                 class="w-full md:w-[120px]"
                 @click.prevent="submitForm"
-                :disabled="form.processing"
+                :disabled="formProcessing"
             >
                 {{ $t('public.confirm') }}
             </Button>

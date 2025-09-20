@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MetaService;
 use App\Models\AccountType;
 use App\Models\TradingPlatform;
 use App\Services\MetaFiveService;
+use App\Services\TradingPlatform\TradingPlatformFactory;
 use Carbon\Carbon;
 use App\Models\User;
 use Inertia\Inertia;
@@ -68,7 +70,7 @@ class TradingAccountController extends Controller
                     },
                     'users.media', // media probably not soft-deleted
                     'trading_account' => function ($q) {
-                        $q->withTrashed()->select('id','user_id','meta_login','balance,credit');
+                        $q->withTrashed()->select('id','user_id','meta_login','balance','credit');
                     },
                     'accountType:id,trading_platform_id,slug,account_group,color',
                     'accountType.trading_platform:id,platform_name,slug',
@@ -221,11 +223,7 @@ class TradingAccountController extends Controller
         try {
             $account_type = AccountType::with('trading_platform')->find($request->account_type_id);
 
-            if ($account_type->trading_platform->slug == 'mt4' ) {
-                $service = new MetaFourService();
-            } else {
-                $service = new MetaFiveService();
-            }
+            $service = TradingPlatformFactory::make($account_type->trading_platform->slug);
 
             $service->getUserInfo($request->meta_login);
 
@@ -271,9 +269,17 @@ class TradingAccountController extends Controller
             ], 422);
         }
 
+        $trading_account = TradingAccount::with('account_type')
+            ->where('meta_login', $request->meta_login)
+            ->first();
+
+        $trading_platform = TradingPlatform::find($trading_account->account_type->trading_platform_id);
+
+        $service = TradingPlatformFactory::make($trading_platform->slug);
+
         try {
             // Fetch and update user info using MetaFourService
-            (new MetaFourService)->getUserInfo((int) $request->meta_login);
+            $service->getUserInfo($trading_account->meta_login);
 
             // Retrieve the updated account data
             $account = TradingAccount::where('meta_login', $request->meta_login)->first();
@@ -292,7 +298,6 @@ class TradingAccountController extends Controller
             ], 400);
         }
 
-        $trading_account = TradingAccount::where('meta_login', $request->meta_login)->first();
         $action = $request->action;
         $type = $request->type;
         $amount = $request->amount;
@@ -321,13 +326,11 @@ class TradingAccountController extends Controller
 
         $changeType = match($type) {
             'account_balance' => match($action) {
-                'balance_in' => ChangeTraderBalanceType::DEPOSIT,
-                'balance_out' => ChangeTraderBalanceType::WITHDRAW,
+                'balance_in', 'balance_out' => MetaService::BALANCE,
                 default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
             },
             'account_credit' => match($action) {
-                'credit_in' => ChangeTraderBalanceType::CREDIT_IN,
-                'credit_out' => ChangeTraderBalanceType::CREDIT_OUT,
+                'credit_in', 'credit_out' => MetaService::CREDIT,
                 default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
             },
             default => throw ValidationException::withMessages(['action' => trans('public.invalid_type')]),
@@ -338,13 +341,7 @@ class TradingAccountController extends Controller
         }
 
         try {
-            $trading_platform = TradingPlatform::find($trading_account->accountType->trading_platform_id);
-
-            if ($trading_platform->slug == 'mt4') {
-                $trade = (new MetaFourService())->createTrade($trading_account->meta_login, $amount, $transaction->remarks, $changeType);
-            } else {
-                $trade = (new MetaFiveService())->createDeal($trading_account->meta_login, $amount, $transaction->remarks, $changeType);
-            }
+            $trade = $service->createDeal($trading_account->meta_login, $amount, $transaction->remarks, $changeType, '');
 
             $transaction->update([
                 'ticket' => $trade['ticket'],
@@ -362,16 +359,7 @@ class TradingAccountController extends Controller
                 ]);
             }
 
-            $account = TradingUser::with([
-                'users:id,name,email,upline_id',
-                'users.media',
-                'trading_account:id,user_id,meta_login,balance',
-                'accountType:id,trading_platform_id,slug,account_group,color',
-                'accountType.trading_platform:id,platform_name,slug',
-            ])
-                ->withTrashed()
-                ->where('meta_login', $request->meta_login)
-                ->first();
+            $account = $this->getFreshAccount($trading_account->meta_login);
 
             return response()->json([
                 'title' => trans('public.successful'),
@@ -414,22 +402,37 @@ class TradingAccountController extends Controller
         ]);
         $validator->validate();
 
-        try {
-            (new MetaFourService())->updateLeverage($request->meta_login, $request->leverage);
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
-            return redirect()->back()->with('toast', [
-                'title' => trans('public.toast_change_leverage_success'),
-                'type' => 'success'
+        $trading_account = TradingAccount::with('account_type')
+            ->where('meta_login', $request->meta_login)
+            ->first();
+
+        $trading_platform = TradingPlatform::find($trading_account->account_type->trading_platform_id);
+
+        $service = TradingPlatformFactory::make($trading_platform->slug);
+
+        try {
+            $service->updateLeverage($request->meta_login, $request->leverage);
+
+            $account = $this->getFreshAccount($trading_account->meta_login);
+
+            return response()->json([
+                'title' => trans('public.successful'),
+                'message' => trans('public.toast_change_leverage_success'),
+                'account' => $account,
             ]);
         } catch (Throwable $e) {
             // Log the main error
-            Log::error('Error creating trade: ' . $e->getMessage());
+            Log::error('Error update leverage: ' . $e->getMessage());
 
-            return back()
-                ->with('toast', [
-                    'title' => trans('public.toast_change_leverage_failed'),
-                    'type' => 'error'
-                ]);
+            return response()->json([
+                'message' => trans('public.toast_change_leverage_failed')
+            ], 400);
         }
     }
 
@@ -465,7 +468,7 @@ class TradingAccountController extends Controller
 
     public function change_password(Request $request)
     {
-        Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'meta_login' => ['required'],
             'master_password' => ['nullable', Password::min(8)->letters()->mixedCase()->numbers()->symbols(), 'required_without:investor_password'],
             'investor_password' => ['nullable', Password::min(8)->letters()->mixedCase()->numbers()->symbols(), 'required_without:master_password'],
@@ -473,22 +476,36 @@ class TradingAccountController extends Controller
             'meta_login' => trans('public.meta_login'),
             'master_password' => trans('public.master_password'),
             'investor_password' => trans('public.investor_password'),
-        ])->validate();
+        ]);
+        $validator->validate();
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
         // $user = User::find($request->user_id);
         $meta_login = $request->meta_login;
         $master_password = $request->master_password;
         $investor_password = $request->investor_password;
 
-        // Try to update passwords and send notification
+        $trading_account = TradingAccount::with('account_type')
+            ->where('meta_login', $request->meta_login)
+            ->first();
+
+        $trading_platform = TradingPlatform::find($trading_account->account_type->trading_platform_id);
+
+        $service = TradingPlatformFactory::make($trading_platform->slug);
+
         try {
             if ($master_password || $investor_password) {
                 if ($master_password) {
-                    (new MetaFourService())->updateMasterPassword($meta_login, $master_password);
+                    $service->changeMasterPassword($meta_login, $master_password);
                 }
 
                 if ($investor_password) {
-                    (new MetaFourService())->updateInvestorPassword($meta_login, $investor_password);
+                    $service->changeInvestorPassword($meta_login, $investor_password);
                 }
 
                 // // Send notification
@@ -496,21 +513,20 @@ class TradingAccountController extends Controller
                 //     ->notify(new ChangeTradingAccountPasswordNotification($user, $meta_login, $master_password, $investor_password));
             }
 
-            // Success response
-            return back()->with('toast', [
-                'title' => trans("public.toast_update_password_success"),
-                'type' => 'success',
-            ]);
+            $account = $this->getFreshAccount($trading_account->meta_login);
 
+            return response()->json([
+                'title' => trans('public.successful'),
+                'message' => trans('public.toast_update_password_success'),
+                'account' => $account,
+            ]);
         } catch (Throwable $e) {
-            // Log the error
+            // Log the main error
             Log::error('Error updating trading account password: ' . $e->getMessage());
 
-            // Failure response
-            return back()->with('toast', [
-                'title' => trans('public.toast_update_password_failed'),
-                'type' => 'error',
-            ]);
+            return response()->json([
+                'message' => trans('public.toast_update_password_failed')
+            ], 400);
         }
     }
 
@@ -575,5 +591,19 @@ class TradingAccountController extends Controller
     public function refreshAllAccount(): void
     {
         UpdateAllAccountJob::dispatch();
+    }
+
+    private function getFreshAccount($meta_login)
+    {
+        return TradingUser::with([
+            'users:id,name,email,upline_id',
+            'users.media',
+            'trading_account:id,user_id,meta_login,balance,credit',
+            'accountType:id,trading_platform_id,slug,account_group,color',
+            'accountType.trading_platform:id,platform_name,slug',
+        ])
+            ->withTrashed()
+            ->where('meta_login', $meta_login)
+            ->first();
     }
 }

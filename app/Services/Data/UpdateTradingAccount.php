@@ -26,7 +26,10 @@ class UpdateTradingAccount
             ->first();
 
         // Safely pick status
-        $status = $data['status'] ?? $data['requestStatus'] ?? null;
+        $status = !empty($data['status'])
+            ? $data['status']
+            : ($data['requestStatus'] ?? null);
+
         if ($status == 'success') {
             $tradingAccount->balance = $data['balance'];
             $tradingAccount->credit = $data['credit'];

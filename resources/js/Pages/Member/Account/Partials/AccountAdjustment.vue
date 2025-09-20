@@ -147,21 +147,21 @@ const submitForm = async () => {
                     {{ $t('public.loading') }}..
                 </div>
                 <div v-else class="text-gray-950 text-center text-xl font-semibold">
-                    <span v-if="dialogType === 'account_balance'">{{ formatAmount(data.balance) }}</span>
-                    <span v-else-if="dialogType === 'account_credit'">{{ formatAmount(data.credit) }}</span>
+                    <span v-if="dialogType === 'account_balance'">{{ formatAmount(data.trading_account?.balance) }}</span>
+                    <span v-else-if="dialogType === 'account_credit'">{{ formatAmount(data.trading_account?.credit) }}</span>
                 </div>
             </div>
 
             <!-- action -->
             <div class="flex flex-col items-start gap-1 self-stretch">
                 <InputLabel for="action" :value="$t('public.action')" />
-                <div class="flex items-center gap-10">
+                <div class="flex items-center gap-5">
                     <div
                         v-for="(action, index) in radioOptions"
                         :key="index"
                         class="flex items-center gap-2 text-sm text-gray-950"
                     >
-                        <div class="flex w-8 h-8 p-2 justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
                             <RadioButton
                                 v-model="form.action"
                                 :inputId="action.value"

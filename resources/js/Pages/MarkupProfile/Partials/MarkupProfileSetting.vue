@@ -15,6 +15,7 @@ import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import Dialog from "primevue/dialog";
 import { trans, wTrans } from "laravel-vue-i18n";
+import Tag from "primevue/tag";
 
 const props = defineProps({
     profile: Object,
@@ -187,8 +188,13 @@ const submitForm = () => {
                             :disabled="isLoading"
                         >
                             <template #option="{ option }">
-                                <div class="flex flex-col">
+                                <div class="flex gap-2 items-center">
                                     <span>{{ option.name }}</span>
+                                    <Tag
+                                        :severity="option.trading_platform.slug === 'mt4' ? 'secondary' : 'info'"
+                                        class="uppercase"
+                                        :value="option.trading_platform.slug"
+                                    />
                                 </div>
                             </template>
                             <template #value>

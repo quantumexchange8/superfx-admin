@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Services\Data\UpdateAccountBalance;
+use App\Services\TradingPlatform\TradingPlatformInterface;
 use Carbon\Carbon;
 use App\Models\Setting;
 use App\Models\TradingUser;
 use App\Models\User as UserModel;
+use Exception;
 use Illuminate\Support\Facades\Http;
 use App\Services\Data\CreateTradingUser;
 use App\Services\Data\UpdateTradingUser;
@@ -15,7 +17,8 @@ use App\Services\Data\UpdateTradingAccount;
 use Illuminate\Http\Client\ConnectionException;
 use Throwable;
 
-class MetaFourService {
+class MetaFourService implements TradingPlatformInterface
+{
     private string $port = "8443";
     private string $login = "10012";
     private string $password = "Test1234.";
@@ -39,31 +42,27 @@ class MetaFourService {
     /**
      * @throws ConnectionException
      */
-    public function getUser($meta_login)
+    public function getUser($metaLogin): array
     {
         $payload = [
-            'meta_login' => $meta_login,
+            'meta_login' => $metaLogin,
         ];
 
         $jsonPayload = json_encode($payload);
 
-        $tradingUser = TradingUser::where('meta_login', $meta_login)->first();
-
-        if ($tradingUser && $tradingUser->category === 'live') {
-            $url = $this->baseURL;
-        } else {
-            $url = $this->demoURL;
-        }
-
-        $accountResponse = Http::withoutVerifying()
-            ->acceptJson()
+        $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload)
-            ->post($url . "/getuser");
+            ->post($this->baseURL . "/getuser");
 
         return $accountResponse->json();
+    }
+
+    public function getAccount($metaLogin): array
+    {
+        return [];
     }
 
     /**
@@ -141,7 +140,7 @@ class MetaFourService {
      * @throws Throwable
      * @throws ConnectionException
      */
-    public function createTrade($meta_login, $amount, $comment, $type)
+    public function createDeal($meta_login, $amount, $comment, $type, $expire_date): array
     {
         // Fetch the expiration date from the Setting model
         $setting = Setting::where('slug', 'credit_in_expired_date')->first();
@@ -149,7 +148,7 @@ class MetaFourService {
         // Check if the setting exists
         if (!$setting) {
             // Handle the error if the setting is not found
-            throw new \Exception("Expiration date setting not found.");
+            throw new Exception("Expiration date setting not found.");
         }
 
         // Assuming $setting->value is a string like "90", representing the number of days
@@ -166,7 +165,7 @@ class MetaFourService {
         if ($type === 'credit') {
             $payload['expiration_date'] = $expirationDate;  // Use the fetched expiration date
         } else {
-            $payload['expiration_date'] = '';  // Empty expiration date for balance transactions
+            $payload['expiration_date'] = $expire_date;  // Empty expiration date for balance transactions
         }
 
         $jsonPayload = json_encode($payload);
@@ -183,16 +182,19 @@ class MetaFourService {
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
-            ->withBody($jsonPayload, 'application/json')
+            ->withBody($jsonPayload)
             ->post($url . "/transaction");
 
         $this->getUserInfo($meta_login);
 
-        // Return the JSON response from the API
         return $accountResponse->json();
     }
 
-    public function updateLeverage($meta_login, $leverage)
+    /**
+     * @throws ConnectionException
+     * @throws Throwable
+     */
+    public function updateLeverage($meta_login, $leverage): void
     {
         $payload = [
             'meta_login' => $meta_login,
@@ -209,15 +211,14 @@ class MetaFourService {
             $url = $this->demoURL;
         }
 
-        $accountResponse = Http::acceptJson()
+        Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
             ->withBody($jsonPayload, 'application/json')
             ->patch($url . "/updateleverage");
 
-        // Return the JSON response from the API
-        return $accountResponse->json();
+        $this->getUserInfo($meta_login);
     }
 
 
@@ -249,7 +250,11 @@ class MetaFourService {
         return $accountResponse->json();
     }
 
-    public function updateMasterPassword($meta_login, $password)
+    /**
+     * @throws Throwable
+     * @throws ConnectionException
+     */
+    public function changeMasterPassword($meta_login, $password): void
     {
         $payload = [
             'meta_login' => $meta_login,
@@ -266,18 +271,21 @@ class MetaFourService {
             $url = $this->demoURL;
         }
 
-        $accountResponse = Http::acceptJson()
+        Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
-            ->withBody($jsonPayload, 'application/json')
+            ->withBody($jsonPayload)
             ->patch($url . "/changemasterpassword");
 
-        // Return the JSON response from the API
-        return $accountResponse->json();
+        $this->getUserInfo($meta_login);
     }
 
-    public function updateInvestorPassword($meta_login, $password)
+    /**
+     * @throws Throwable
+     * @throws ConnectionException
+     */
+    public function changeInvestorPassword($meta_login, $password): void
     {
         $payload = [
             'meta_login' => $meta_login,
@@ -294,15 +302,14 @@ class MetaFourService {
             $url = $this->demoURL;
         }
 
-        $accountResponse = Http::acceptJson()
+        Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
-            ->withBody($jsonPayload, 'application/json')
+            ->withBody($jsonPayload)
             ->patch($url . "/changeinvestorpassword");
 
-        // Return the JSON response from the API
-        return $accountResponse->json();
+        $this->getUserInfo($meta_login);
     }
 
     public function getUserByGroup($group, $type)
@@ -329,31 +336,4 @@ class MetaFourService {
         // Return the JSON response from the API
         return $accountResponse->json();
     }
-}
-
-class dealAction
-{
-    const DEPOSIT = true;
-    const WITHDRAW = false;
-}
-
-class dealType
-{
-    const DEAL_BALANCE = 2;
-    const DEAL_CREDIT = 3;
-    const DEAL_BONUS = 6;
-}
-
-class passwordType
-{
-    const MAIN = false;
-    const INVESTOR = true;
-}
-
-class ChangeTraderBalanceType
-{
-    const DEPOSIT = "balance";
-    const WITHDRAW = "balance";
-    const CREDIT_IN = "credit";
-    const CREDIT_OUT = "credit";
 }
