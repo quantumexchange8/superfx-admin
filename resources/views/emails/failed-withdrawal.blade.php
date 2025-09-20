@@ -485,7 +485,7 @@
                                                                                     href="https://www.facebook.com/superfinglobal/"
                                                                                     target="_blank"
 																				>
-																					<img 
+																					<img
 																						alt="Facebook"
                                                                                         height="auto"
                                                                                         src="{{ asset('email/images/facebook2x.png') }}"
@@ -500,7 +500,7 @@
                                                                                     href="https://www.linkedin.com/"
                                                                                     target="_blank"
 																				>
-																					<img 
+																					<img
 																						alt="Linkedin"
                                                                                         height="auto"
                                                                                         src="{{ asset('email/images/linkedin2x.png') }}"
@@ -515,7 +515,7 @@
                                                                                     href="https://www.instagram.com/"
                                                                                     target="_blank"
 																				>
-																					<img 
+																					<img
 																						alt="Instagram"
                                                                                         height="auto"
                                                                                         src="{{ asset('email/images/instagram2x.png') }}"
@@ -530,7 +530,7 @@
                                                                                     href="https://www.youtube.com/"
                                                                                     target="_blank"
 																				>
-																					<img 
+																					<img
 																						alt="YouTube"
                                                                                         height="auto"
                                                                                         src="{{ asset('email/images/youtube2x.png') }}"
@@ -545,7 +545,7 @@
                                                                                     href="https://telegram.org"
                                                                                     target="_blank"
 																				>
-																					<img 
+																					<img
 																						alt="Telegram"
                                                                                         height="auto"
                                                                                         src="{{ asset('email/images/telegram2x.png') }}"
@@ -599,7 +599,7 @@
 															<td class="pad" style="width:100%;">
 																<div class="alignment" align="center">
 																	<div style="max-width: 238.333px;">
-																		<img 
+																		<img
 																			alt=""
                                                                             height="auto"
                                                                             src="{{ asset('email/images/unnamed__2_-removebg-preview.png') }}"
@@ -618,7 +618,7 @@
 															<td class="pad" style="width:100%;">
 																<div class="alignment" align="center">
 																	<div style="max-width: 238.333px;">
-																		<img 
+																		<img
 																			alt=""
                                                                             height="auto"
                                                                             src="{{ asset('email/images/unnamed__3_-removebg-preview.png') }}"
@@ -637,7 +637,7 @@
 															<td class="pad" style="width:100%;">
 																<div class="alignment" align="center">
 																	<div style="max-width: 238.333px;">
-																		<img 
+																		<img
 																			alt=""
                                                                             height="auto"
                                                                             src="{{ asset('email/images/unnamed__4_-removebg-preview.png') }}"
@@ -792,7 +792,7 @@
 															<td class="pad" style="width:100%;">
 																<div class="alignment" align="center">
 																	<div style="max-width: 80px;">
-																		<img 
+																		<img
 																			alt=""
                                                                             height="auto" src="{{ asset('email/images/unnamed_5.png') }}"
                                                                             style="display: block; height: auto; border: 0; width: 100%;"
@@ -935,7 +935,7 @@
 														<tr>
 															<td class="pad">
 																<div style="color:#989898;direction:ltr;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:1.2;text-align:center;mso-line-height-alt:19px;">
-																	<p style="margin: 0;"><a href="https://superfin.global/mt4" target="_blank" style="text-decoration: underline; color: #989898;" rel="noopener">Metatrader 4</a></p>
+																	<p style="margin: 0;"><a href="{{ $platform == 'mt4' ? 'https://superfin.global/#mt4' : 'https://www.superfin.global/mt5' }}" target="_blank" style="text-decoration: underline; color: #989898;" rel="noopener">Metatrader {{ $platform == 'mt4' ? '4' : '5' }}</a></p>
 																</div>
 															</td>
 														</tr>

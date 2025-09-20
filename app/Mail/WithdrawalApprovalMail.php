@@ -20,8 +20,9 @@ class WithdrawalApprovalMail extends Mailable implements ShouldQueue
     private $amount;
     private $account_no;
     private $payment_platform;
+    private $platform;
 
-    public function __construct($user, $meta_login, $account_type, $amount, $account_no, $payment_platform)
+    public function __construct($user, $meta_login, $account_type, $amount, $account_no, $payment_platform, $platform)
     {
         $this->user = $user;
         $this->meta_login = $meta_login;
@@ -29,6 +30,7 @@ class WithdrawalApprovalMail extends Mailable implements ShouldQueue
         $this->amount = $amount;
         $this->account_no = $account_no;
         $this->payment_platform = $payment_platform;
+        $this->platform = $platform;
 
         // queue
         $this->queue = 'withdrawal_approval_email';
@@ -44,6 +46,7 @@ class WithdrawalApprovalMail extends Mailable implements ShouldQueue
                 'amount' => $this->amount,
                 'account_no' => $this->account_no,
                 'payment_platform' => $this->payment_platform,
+                'platform' => $this->platform,
             ])
             ->subject('Withdrawal Approval Notification');
     }

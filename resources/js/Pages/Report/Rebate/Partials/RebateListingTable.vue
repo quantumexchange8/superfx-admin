@@ -15,6 +15,7 @@ import OverlayPanel from 'primevue/overlaypanel';
 import debounce from "lodash/debounce.js";
 import Dropdown from "primevue/dropdown";
 import Badge from '@/Components/Badge.vue';
+import Tag from "primevue/tag";
 
 // Define props
 const props = defineProps({
@@ -375,14 +376,27 @@ const openDialog = (rowData) => {
                     class="hidden md:table-cell"
                 >
                     <template #body="slotProps">
-                        <div class="flex items-center content-center gap-3 flex-grow relative">
-                            <span >{{ slotProps.data.meta_login }}</span>
+                        {{ slotProps.data.meta_login }}
+                    </template>
+                </Column>
+                <Column
+                    field="account_type"
+                    :header="`${$t('public.account_type')}`"
+                    class="hidden text-nowrap md:table-cell"
+                >
+                    <template #body="slotProps">
+                        <div class="flex items-center gap-2">
+                            <Tag
+                                :severity="slotProps.data.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                                class="uppercase"
+                                :value="slotProps.data.trading_platform"
+                            />
                             <div
                                 class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
                                 :style="{
-                                    backgroundColor: formatRgbaColor(slotProps.data.color, 0.15),
-                                    color: `#${slotProps.data.color}`,
-                                }"
+                                        backgroundColor: formatRgbaColor(slotProps.data.color, 0.15),
+                                        color: `#${slotProps.data.color}`,
+                                    }"
                             >
                                 {{ $t(`public.${slotProps.data.slug}`) }}
                             </div>
@@ -460,6 +474,25 @@ const openDialog = (rowData) => {
             <div class="min-w-[100px] flex gap-1 flex-grow items-center self-stretch">
                 <span class="self-stretch text-gray-500 text-xs font-medium w-[88px] md:w-[140px]">{{ $t('public.account') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium flex-grow">{{ data.meta_login }}</span>
+            </div>
+            <div class="min-w-[100px] flex gap-1 flex-grow items-center self-stretch">
+                <span class="self-stretch text-gray-500 text-xs font-medium w-[88px] md:w-[140px]">{{ $t('public.account_type') }}</span>
+                <div class="flex items-center gap-2">
+                    <Tag
+                        :severity="data.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                        class="uppercase"
+                        :value="data.trading_platform"
+                    />
+                    <div
+                        class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
+                        :style="{
+                                        backgroundColor: formatRgbaColor(data.color, 0.15),
+                                        color: `#${data.color}`,
+                                    }"
+                    >
+                        {{ $t(`public.${data.slug}`) }}
+                    </div>
+                </div>
             </div>
             <div class="min-w-[100px] flex gap-1 flex-grow items-center self-stretch">
                 <span class="self-stretch text-gray-500 text-xs font-medium w-[88px] md:w-[140px]">{{ $t('public.total_trade_volume') }}</span>
@@ -651,7 +684,7 @@ const openDialog = (rowData) => {
     </Dialog>
 
     <OverlayPanel ref="op">
-        <div class="flex flex-col gap-8 w-72 py-5 px-4">
+        <div class="flex flex-col gap-5 w-72 py-5 px-4">
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_date') }}

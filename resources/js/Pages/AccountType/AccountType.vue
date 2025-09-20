@@ -264,7 +264,7 @@ const rowClicked = (data) => {
                         >
                             <template #body="{data}">
                                 <Tag
-                                    severity="secondary"
+                                    :severity="data.trading_platform.slug === 'mt4' ? 'secondary' : 'info'"
                                     class="uppercase"
                                     :value="data.trading_platform.slug"
                                 />

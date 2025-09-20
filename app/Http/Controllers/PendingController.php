@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MetaService;
+use App\Models\TradingAccount;
+use App\Models\TradingPlatform;
 use App\Models\User;
 use App\Services\PaymentService;
+use App\Services\TradingPlatform\TradingPlatformFactory;
 use Exception;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
@@ -22,7 +26,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Models\CurrencyConversionRate;
 use App\Services\RunningNumberService;
-use App\Services\ChangeTraderBalanceType;
 use Throwable;
 
 class PendingController extends Controller
@@ -43,7 +46,8 @@ class PendingController extends Controller
                 'user:id,email,name',
                 'user.media',
                 'payment_account:id,payment_account_name,account_no',
-                'fromMetaLogin:id,meta_login,balance',
+                'fromMetaLogin:id,account_type_id,meta_login,balance',
+                'fromMetaLogin.account_type.trading_platform',
                 'payment_gateway:id,name'
             ])
                 ->where('transaction_type', 'withdrawal')
@@ -84,12 +88,18 @@ class PendingController extends Controller
 
             $pendingWithdrawals->getCollection()->transform(function ($transaction) {
                 if ($transaction->from_meta_login) {
+                    $trading_platform = TradingPlatform::find($transaction->fromMetaLogin->account_type->trading_platform_id);
+
+                    $service = TradingPlatformFactory::make($trading_platform->slug);
+
                     try {
-                        (new MetaFourService())->getUserInfo($transaction->from_meta_login);
+                        $service->getUserInfo($transaction->from_meta_login);
                     } catch (Throwable $e) {
                         Log::error($e->getMessage());
                     }
                     $transaction->balance = $transaction->fromMetaLogin->balance ?? 0;
+                    $transaction->account_type = $transaction->fromMetaLogin->account_type->name;
+                    $transaction->trading_platform = $transaction->fromMetaLogin->account_type->trading_platform->slug;
                 } else {
                     $transaction->balance = $transaction->from_wallet->balance ?? 0;
                 }
@@ -147,12 +157,22 @@ class PendingController extends Controller
             'handle_by' => Auth::id()
         ]);
 
+        if ($transaction->from_meta_login) {
+            $trading_account = TradingAccount::with('account_type.trading_platform')
+                ->where($transaction->from_meta_login)
+                ->first();
+
+            $trading_platform = $trading_account->account_type->trading_platform->slug;
+        } else {
+            $trading_platform = '';
+        }
+
         if ($transaction->status == 'rejected') {
             // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
             $this->handleTransactionUpdate($transaction);
 
             $user = User::find($transaction->user_id);
-            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction, $trading_platform));
 
             return response()->json([
                 'success'       => true,
@@ -226,7 +246,7 @@ class PendingController extends Controller
                 $this->handleTransactionUpdate($transaction);
 
                 $user = User::find($transaction->user_id);
-                Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+                Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction, $trading_platform));
 
                 return response()->json([
                     'success'       => false,
@@ -296,7 +316,7 @@ class PendingController extends Controller
 
         // Create a trade using MetaFourService
         try {
-            $trade = (new MetaFourService())->createTrade((int) $assetRevoke->meta_login, -abs($assetRevoke->penalty_fee),$request->remarks,ChangeTraderBalanceType::WITHDRAW);
+            $trade = (new MetaFourService())->createTrade((int) $assetRevoke->meta_login, -abs($assetRevoke->penalty_fee),$request->remarks,MetaService::BALANCE);
 
             // Create a new Transaction record
             Transaction::create([
@@ -314,7 +334,7 @@ class PendingController extends Controller
                 'handle_by' => Auth::id(),
             ]);
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Log the main error
             Log::error('Error creating trade: ' . $e->getMessage());
 
@@ -429,6 +449,16 @@ class PendingController extends Controller
 
         $user = User::find($transaction->user_id);
 
+        if ($transaction->from_meta_login) {
+            $trading_account = TradingAccount::with('account_type.trading_platform')
+                ->where($transaction->from_meta_login)
+                ->first();
+
+            $trading_platform = $trading_account->account_type->trading_platform->slug;
+        } else {
+            $trading_platform = '';
+        }
+
         if ($transaction->status == 'successful') {
             // Check if `meta_login` exists
             if ($transaction->from_meta_login) {
@@ -440,10 +470,11 @@ class PendingController extends Controller
                         $data['group'],
                         $transaction->transaction_amount,
                         $transaction->payment_account_no,
-                        $transaction->payment_platform)
+                        $transaction->payment_platform,
+                        $trading_platform)
                 );
             } else {
-                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform));
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform, $trading_platform));
             }
 
             return response()->json([
@@ -454,7 +485,7 @@ class PendingController extends Controller
             // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
             $this->handleTransactionUpdate($transaction);
 
-            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction, $trading_platform));
 
             return response()->json([
                 'status' => 'fail',
@@ -508,6 +539,16 @@ class PendingController extends Controller
 
         $user = User::find($transaction->user_id);
 
+        if ($transaction->from_meta_login) {
+            $trading_account = TradingAccount::with('account_type.trading_platform')
+                ->where($transaction->from_meta_login)
+                ->first();
+
+            $trading_platform = $trading_account->account_type->trading_platform->slug;
+        } else {
+            $trading_platform = '';
+        }
+
         if ($transaction->status == 'successful') {
 
             if ($transaction->from_meta_login) {
@@ -519,10 +560,11 @@ class PendingController extends Controller
                         $data['group'],
                         $transaction->transaction_amount,
                         $transaction->payment_account_no,
-                        $transaction->payment_platform)
+                        $transaction->payment_platform,
+                        $trading_platform)
                 );
             } else {
-                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform));
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform, $trading_platform));
             }
 
             return response("RECEIVED", 200)
@@ -531,7 +573,7 @@ class PendingController extends Controller
             // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
             $this->handleTransactionUpdate($transaction);
 
-            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction, $trading_platform));
 
             return response("SIGNATURE VERIFICATION FAILED", 404)
                 ->header('Content-Type', 'text/plain');
@@ -586,6 +628,16 @@ class PendingController extends Controller
 
         $user = User::find($transaction->user_id);
 
+        if ($transaction->from_meta_login) {
+            $trading_account = TradingAccount::with('account_type.trading_platform')
+                ->where($transaction->from_meta_login)
+                ->first();
+
+            $trading_platform = $trading_account->account_type->trading_platform->slug;
+        } else {
+            $trading_platform = '';
+        }
+
         if ($transaction->status == 'successful') {
             if ($transaction->from_meta_login) {
                 $data = (new MetaFourService())->getUser($transaction->from_meta_login);
@@ -596,10 +648,11 @@ class PendingController extends Controller
                         $data['group'],
                         $transaction->transaction_amount,
                         $transaction->payment_account_no,
-                        $transaction->payment_platform)
+                        $transaction->payment_platform,
+                        $trading_platform)
                 );
             } else {
-                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform));
+                Mail::to($user->email)->send(new WithdrawalApprovalMail($user, null, null, $transaction->transaction_amount, $transaction->payment_account_no, $transaction->payment_platform, $trading_platform));
             }
 
             return response("SUCCESS", 200)
@@ -608,7 +661,7 @@ class PendingController extends Controller
             // Handle different categories (rebate_wallet, bonus_wallet, trading_account)
             $this->handleTransactionUpdate($transaction);
 
-            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction));
+            Mail::to($user->email)->send(new FailedWithdrawalMail($user, $transaction, $trading_platform));
 
             return response("SIGNATURE VERIFICATION FAILED", 404)
                 ->header('Content-Type', 'text/plain');
@@ -638,27 +691,32 @@ class PendingController extends Controller
             }
         }
 
+        $tradingUser = TradingUser::where('meta_login', $transaction->from_meta_login)->with('trading_account', 'accountType')->first();
+        $multiplier = $tradingUser->accountType ? $tradingUser->accountType->balance_multiplier : 1;
+        $adjustedAmount = $transaction->amount * $multiplier;
+
+        $trading_platform = TradingPlatform::find($tradingUser->accountType->trading_platform_id);
+
+        $service = TradingPlatformFactory::make($trading_platform->slug);
+
         // Trading account logic
         if ($transaction->category == 'trading_account') {
             try {
-                $tradingUser = TradingUser::where('meta_login', $transaction->from_meta_login)->with('trading_account', 'accountType')->first();
-                $multiplier = $tradingUser->accountType ? $tradingUser->accountType->balance_multiplier : 1;
-                $adjustedAmount = $transaction->amount * $multiplier;
-
-                $trade = (new MetaFourService)->createTrade(
+                $trade = $service->createDeal(
                     $transaction->from_meta_login,
                     $adjustedAmount,
                     $transaction->remarks,
-                    ChangeTraderBalanceType::DEPOSIT
+                    MetaService::BALANCE,
+                    ''
                 );
 
                 $transaction->update([
                     'ticket' => $trade['ticket'],
                 ]);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::error('Error creating trade: ' . $e->getMessage());
 
-                $account = (new MetaFourService())->getUser($transaction->from_meta_login);
+                $account = $service->getUser($transaction->from_meta_login);
                 if (!$account) {
                     TradingUser::where('meta_login', $transaction->from_meta_login)
                         ->update(['acc_status' => 'inactive']);

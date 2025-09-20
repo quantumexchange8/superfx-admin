@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\MetaService;
 use App\Models\AccountType;
 use App\Models\TradingPlatform;
-use App\Services\MetaFiveService;
 use App\Services\TradingPlatform\TradingPlatformFactory;
 use Carbon\Carbon;
 use App\Models\User;
@@ -22,7 +21,6 @@ use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AccountListingExport;
 use App\Services\RunningNumberService;
-use App\Services\ChangeTraderBalanceType;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -70,7 +68,7 @@ class TradingAccountController extends Controller
                     },
                     'users.media', // media probably not soft-deleted
                     'trading_account' => function ($q) {
-                        $q->withTrashed()->select('id','user_id','meta_login','balance','credit');
+                        $q->withTrashed()->select('id','user_id','meta_login','balance','credit','equity');
                     },
                     'accountType:id,trading_platform_id,slug,account_group,color',
                     'accountType.trading_platform:id,platform_name,slug',
@@ -187,37 +185,6 @@ class TradingAccountController extends Controller
         return response()->json(['success' => false, 'data' => []]);
     }
 
-    public function getTradingAccountData(Request $request)
-    {
-        try {
-            // Fetch and update user info using MetaFourService
-            (new MetaFourService)->getUserInfo((int) $request->meta_login);
-
-            // Retrieve the updated account data
-            $account = TradingAccount::where('meta_login', $request->meta_login)->first();
-
-            if (!$account) {
-                return response()->json([
-                    'message' => 'Account not found.',
-                ], 404);
-            }
-
-            return response()->json([
-                'currentAmount' => [
-                    'account_balance' => $account->balance,
-                    'account_credit' => $account->credit,
-                ],
-            ]);
-        } catch (Throwable $e) {
-            // Log any errors during the process
-            Log::error("Error updating account {$request->meta_login}: {$e->getMessage()}");
-
-            return response()->json([
-                'message' => 'An error occurred while fetching account data.',
-            ], 500);
-        }
-    }
-
     public function getFreshTradingAccountData(Request $request)
     {
         try {
@@ -230,7 +197,7 @@ class TradingAccountController extends Controller
             $account = TradingUser::with([
                 'users:id,name,email,upline_id',
                 'users.media',
-                'trading_account:id,user_id,meta_login,balance,credit',
+                'trading_account:id,user_id,meta_login,balance,credit,equity',
                 'accountType:id,trading_platform_id,slug,account_group,color',
                 'accountType.trading_platform:id,platform_name,slug',
             ])
@@ -598,7 +565,7 @@ class TradingAccountController extends Controller
         return TradingUser::with([
             'users:id,name,email,upline_id',
             'users.media',
-            'trading_account:id,user_id,meta_login,balance,credit',
+            'trading_account:id,user_id,meta_login,balance,credit,equity',
             'accountType:id,trading_platform_id,slug,account_group,color',
             'accountType.trading_platform:id,platform_name,slug',
         ])

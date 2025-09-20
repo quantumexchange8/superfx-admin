@@ -33,9 +33,9 @@ class ReportController extends Controller
         $group = $request->query('group');
         $search = $request->input('search');
         $uplineId = $request->input('upline_id');
-    
+
         $baseQuery = TradeRebateSummary::with('symbolGroup', 'user', 'accountType');
-    
+
         if ($search) {
             $baseQuery->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($query) use ($search) {
@@ -47,47 +47,47 @@ class ReportController extends Controller
                 })->orWhere('meta_login', 'like', '%' . $search . '%');
             });
         }
-    
+
         if ($startDate && $endDate) {
             $baseQuery->whereDate('execute_at', '>=', $startDate)
                       ->whereDate('execute_at', '<=', $endDate);
         } else {
             $baseQuery->whereDate('execute_at', '>=', '2024-01-01');
         }
-    
+
         if ($group) {
             $baseQuery->whereHas('accountType', function ($q) use ($group) {
                 $q->where('category', $group);
             });
         }
-    
+
         // Clone query for volume-only calculation
         $volumeQuery = clone $baseQuery;
-    
+
         if ($uplineId) {
             $upline = User::find($uplineId);
             $childrenIds = $upline ? $upline->getChildrenIds() : [];
             $childrenIds[] = $uplineId;
-    
+
             // Rebate summary: include upline and children
             $baseQuery->whereIn('upline_user_id', $childrenIds);
-    
+
             // Volume: only upline's own volume
             $volumeQuery->where('upline_user_id', $uplineId);
         }
-    
+
         // Fetch rebate summary data (for upline + children)
         $rebateSummary = $baseQuery->get(['symbol_group', 'rebate']);
-    
+
         // Fetch volume data (for upline only)
         $volumeSummary = $volumeQuery->get(['symbol_group', 'volume']);
-    
+
         $symbolGroups = SymbolGroup::whereNotNull('display')->pluck('display', 'id');
-    
+
         // Initialize summary arrays
         $rebateSummaryData = [];
         $volumeSummaryData = [];
-    
+
         // Group & sum rebate data
         foreach ($rebateSummary as $item) {
             $symbolGroupId = $item->symbol_group;
@@ -96,7 +96,7 @@ class ReportController extends Controller
             }
             $rebateSummaryData[$symbolGroupId]['rebate'] += $item->rebate;
         }
-    
+
         // Group & sum volume data
         foreach ($volumeSummary as $item) {
             $symbolGroupId = $item->symbol_group;
@@ -105,25 +105,25 @@ class ReportController extends Controller
             }
             $volumeSummaryData[$symbolGroupId]['volume'] += $item->volume;
         }
-    
+
         $finalSummary = [];
         $totalVolume = 0;
         $totalRebate = 0;
-    
+
         foreach ($symbolGroups as $id => $display) {
             $volume = isset($volumeSummaryData[$id]) ? $volumeSummaryData[$id]['volume'] : 0;
             $rebate = isset($rebateSummaryData[$id]) ? $rebateSummaryData[$id]['rebate'] : 0;
-    
+
             $finalSummary[] = [
                 'symbol_group' => $display,
                 'volume' => $volume,
                 'rebate' => $rebate,
             ];
-    
+
             $totalVolume += $volume;
             $totalRebate += $rebate;
         }
-    
+
         return response()->json([
             'rebateSummary' => $finalSummary,
             'totalVolume' => $totalVolume,
@@ -143,9 +143,9 @@ class ReportController extends Controller
             $sortOrder = $data['sortOrder'];
 
             $allSymbolGroups = SymbolGroup::pluck('display', 'id')->toArray();
-        
-            $query = TradeRebateSummary::with('user', 'accountType');
-        
+
+            $query = TradeRebateSummary::with('user', 'accountType.trading_platform');
+
             if ($data['filters']['global']) {
                 $keyword = $data['filters']['global'];
 
@@ -163,12 +163,12 @@ class ReportController extends Controller
             if ($startDate && $endDate) {
                 $start_date = Carbon::parse($startDate)->addDay()->startOfDay();
                 $end_date = Carbon::parse($endDate)->addDay()->endOfDay();
-                
+
                 $query->whereBetween('execute_at', [$start_date, $end_date]);
             } else {
                 $query->whereDate('execute_at', '>=', '2024-01-01');
             }
-        
+
             if ($group) {
                 $query->whereHas('accountType', function ($q) use ($group) {
                     $q->where('category', $group);
@@ -182,7 +182,7 @@ class ReportController extends Controller
                 $upline = User::find($uplineId);
                 $childrenIds = $upline ? $upline->getChildrenIds() : [];
                 $childrenIds[] = $uplineId;
-            
+
                 $query->whereIn('upline_user_id', $childrenIds);
             }
 
@@ -201,7 +201,7 @@ class ReportController extends Controller
             }
 
             $rawData = $query->get();
-        
+
             $itemData = [];
             foreach ($rawData as $item) {
                 $itemData[] = [
@@ -218,37 +218,38 @@ class ReportController extends Controller
                     'rebate' => $item->rebate,
                     'slug' => $item->accountType->slug,
                     'color' => $item->accountType->color,
+                    'trading_platform' => $item->accountType->trading_platform->slug,
                 ];
             }
-    
+
             $grouped = [];
             foreach ($itemData as $item) {
                 $key = $item['upline_user_id'] . '-' . $item['user_id'] . '-' . $item['meta_login'];
                 $grouped[$key][] = $item;
             }
-    
+
             $rebateListing = [];
             foreach ($grouped as $items) {
                 $volume = 0;
                 $rebate = 0;
                 $summaryByDate = [];
-        
+
                 foreach ($items as $item) {
                     $volume += $item['volume'];
                     $rebate += $item['rebate'];
                     $date = $item['execute_at'];
-        
+
                     if (!isset($summaryByDate[$date])) {
                         $summaryByDate[$date] = [];
                     }
-        
+
                     $summaryByDate[$date][] = $item;
                 }
-        
+
                 $summaries = [];
                 foreach ($summaryByDate as $date => $executeGroup) {
                     $detailsBySymbol = [];
-        
+
                     foreach ($executeGroup as $item) {
                         $symbolGroupId = $item['symbol_group'];
                         if (!isset($detailsBySymbol[$symbolGroupId])) {
@@ -260,11 +261,11 @@ class ReportController extends Controller
                                 'rebate' => 0,
                             ];
                         }
-        
+
                         $detailsBySymbol[$symbolGroupId]['volume'] += $item['volume'];
                         $detailsBySymbol[$symbolGroupId]['rebate'] += $item['rebate'];
                     }
-        
+
                     foreach ($allSymbolGroups as $symbolGroupId => $symbolGroupName) {
                         if (!isset($detailsBySymbol[$symbolGroupId])) {
                             $detailsBySymbol[$symbolGroupId] = [
@@ -276,12 +277,12 @@ class ReportController extends Controller
                             ];
                         }
                     }
-        
+
                     // Sort by ID
                     usort($detailsBySymbol, function ($a, $b) {
                         return $a['id'] <=> $b['id'];
                     });
-        
+
                     $summaries[] = [
                         'execute_at' => $date,
                         'volume' => array_sum(array_column($executeGroup, 'volume')),
@@ -289,9 +290,9 @@ class ReportController extends Controller
                         'details' => array_values($detailsBySymbol),
                     ];
                 }
-        
+
                 $first = $items[0];
-        
+
                 $rebateListing[] = [
                     'user_id' => $first['user_id'],
                     'name' => $first['name'],
@@ -303,14 +304,15 @@ class ReportController extends Controller
                     'summary' => $summaries,
                     'slug' => $first['slug'],
                     'color' => $first['color'],
+                    'trading_platform' => $first['trading_platform'],
                 ];
             }
-    
+
             // Export logic
             if ($request->has('exportStatus') && $request->exportStatus) {
                 return Excel::download(new RebateListingExport($rebateListing), now() . '-rebate-summary.xlsx');
             }
-        
+
             // // Handle pagination
             $rowsPerPage = $data['rows'] ?? 15; // Default to 15 if 'rows' not provided
             // $currentPage = $request->input('page', 0); // Laravel uses 1-based page numbers, PrimeVue uses 0-based
@@ -324,13 +326,17 @@ class ReportController extends Controller
                 $page,
                 ['path' => LengthAwarePaginator::resolveCurrentPath()]
             );
+
+            return response()->json([
+                'data' => $paginatedListing
+            ]);
         }
-        
+
         return response()->json([
-            'data' => $paginatedListing
+            'data' => []
         ]);
     }
-    
+
     // public function getGroupTransaction(Request $request)
     // {
     //     $user = Auth::user();
@@ -424,10 +430,11 @@ class ReportController extends Controller
             $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true); //only() extract parameters in lazyEvent
 
             $query = TradeRebateHistory::with([
-                    'upline:id,name,email,id_number',
-                    'downline:id,name,email,id_number',
-                    'of_account_type:id,slug,color'
-                ])
+                'upline:id,name,email,id_number',
+                'downline:id,name,email,id_number',
+                'of_account_type:id,name,trading_platform_id,slug,color',
+                'of_account_type.trading_platform:id,platform_name,slug'
+            ])
                 ->where('t_status', 'approved');
 
             // Handle search functionality
@@ -455,19 +462,19 @@ class ReportController extends Controller
             if ($startDate && $endDate) {
                 $start_date = Carbon::parse($startDate)->addDay()->startOfDay();
                 $end_date = Carbon::parse($endDate)->addDay()->endOfDay();
-                
+
                 $query->whereBetween('created_at', [$start_date, $end_date]);
             } else {
                 $query->whereDate('created_at', '>=', '2024-01-01');
             }
-        
+
             $startClosedDate = $data['filters']['start_close_date'];
             $endClosedDate = $data['filters']['end_close_date'];
 
             if ($startClosedDate && $endClosedDate) {
                 $start_close_date = Carbon::parse($startClosedDate)->addDay()->startOfDay();
                 $end_close_date = Carbon::parse($endClosedDate)->addDay()->endOfDay();
-                
+
                 $query->whereBetween('closed_time', [$start_close_date, $end_close_date]);
             } else {
                 $query->whereDate('created_at', '>=', '2024-01-01');
@@ -480,7 +487,7 @@ class ReportController extends Controller
                 $upline = User::find($uplineId);
                 $childrenIds = $upline ? $upline->getChildrenIds() : [];
                 $childrenIds[] = $uplineId;
-            
+
                 $query->whereIn('upline_user_id', $childrenIds);
             }
 
@@ -498,7 +505,7 @@ class ReportController extends Controller
 
             // Handle pagination
             $rowsPerPage = $data['rows'] ?? 15; // Default to 15 if 'rows' not provided
-                    
+
             // Export logic
             if ($request->has('exportStatus') && $request->exportStatus) {
                 $rebateHistory = $query->get();
@@ -510,13 +517,15 @@ class ReportController extends Controller
             $totalRebateAmount = (clone $query)->sum('revenue');
 
             $histories = $query->paginate($rowsPerPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $histories,
+                'totalVolume' => $totalVolume,
+                'totalRebateAmount' => $totalRebateAmount,
+            ]);
         }
-        
-        return response()->json([
-            'success' => true,
-            'data' => $histories,
-            'totalVolume' => $totalVolume,
-            'totalRebateAmount' => $totalRebateAmount,
-        ]);
+
+        return response()->json(['success' => false, 'data' => []]);
     }
 }

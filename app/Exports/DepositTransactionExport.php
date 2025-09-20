@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -30,11 +31,12 @@ class DepositTransactionExport implements FromCollection, WithHeadings
                 : (isset($obj['payment_account_type']) ? trans('public.' . $obj['payment_account_type']) : '');
 
             $rows[] = [
-                isset($obj['created_at']) ? \Carbon\Carbon::parse($obj['created_at'])->format('Y/m/d') : '',
+                isset($obj['created_at']) ? Carbon::parse($obj['created_at'])->format('Y/m/d') : '',
                 $obj['name'] ?? '',
                 $obj['email'] ?? '',
                 $obj['transaction_number'] ?? '',
                 $toDisplay,
+                strtoupper($obj['trading_platform']) . '-' . $obj['account_type'],
                 $obj['transaction_amount'] ?? '',
                 isset($obj['status']) ? trans('public.' . $obj['status']) : '',
                 $obj['to_wallet_address'] ?? '',
@@ -57,6 +59,7 @@ class DepositTransactionExport implements FromCollection, WithHeadings
             trans('public.email'),
             trans('public.id'),
             trans('public.account'),
+            trans('public.account_type'),
             trans('public.amount') . ' ($)',
             trans('public.status'),
             trans('public.receiving_address'),

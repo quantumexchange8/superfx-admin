@@ -1379,10 +1379,10 @@
                                                                 <div
                                                                     style="color:#989898;direction:ltr;font-family:Arial, 'Helvetica Neue', Helvetica, sans-serif;font-size:16px;font-weight:400;letter-spacing:0px;line-height:120%;text-align:center;mso-line-height-alt:19.2px;">
                                                                     <p style="margin: 0;"><a
-                                                                            href="https://superfin.global/mt4"
+                                                                            href="{{ $platform == 'mt4' ? 'https://superfin.global/#mt4' : 'https://www.superfin.global/mt5' }}"
                                                                             rel="noopener"
                                                                             style="text-decoration: underline; color: #989898;"
-                                                                            target="_blank">Metatrader 4</a></p>
+                                                                            target="_blank">Metatrader {{ $platform == 'mt4' ? '4' : '5' }}</a></p>
                                                                 </div>
                                                             </td>
                                                         </tr>

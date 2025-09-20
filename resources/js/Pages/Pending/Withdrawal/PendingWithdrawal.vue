@@ -24,6 +24,7 @@ import Empty from "@/Components/Empty.vue";
 import toast from "@/Composables/toast.js";
 import debounce from "lodash/debounce.js";
 import { emitter } from "@/Composables/useEventBus.js";
+import Tag from "primevue/tag";
 
 const props = defineProps({
     paymentGateways: Array,
@@ -506,6 +507,19 @@ const submitForm = async (transaction) => {
                             $ {{ formatAmount(pendingData.balance) }}
                         </div>
                     </div>
+                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                        <div class="w-[140px] text-gray-500 text-xs font-medium">
+                            {{ $t('public.account_type') }}
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <Tag
+                                :severity="pendingData.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                                class="uppercase"
+                                :value="pendingData.trading_platform"
+                            />
+                            <span class="text-sm font-medium text-gray-950">{{ pendingData.account_type }}</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div v-if="pendingData" class="flex flex-col gap-3 items-start w-full pt-4">
@@ -542,7 +556,7 @@ const submitForm = async (transaction) => {
                     <!-- Bank extra fields -->
                     <template v-else-if="pendingData.payment_platform === 'bank'">
                         <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
-                            <div class="w-[140px] text-gray-500 text-xs font-medium">
+                            <div class="min-w-[140px] text-gray-500 text-xs font-medium">
                                 {{ $t('public.bank_name') }}
                             </div>
                             <div class="text-gray-950 text-sm font-medium">

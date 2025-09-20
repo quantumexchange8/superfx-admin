@@ -15,7 +15,7 @@ class RebateListingExport implements FromCollection, WithHeadings
         $this->listings = $listings;
     }
 
-    public function collection()
+    public function collection(): Collection
     {
         $result = [];
 
@@ -24,6 +24,7 @@ class RebateListingExport implements FromCollection, WithHeadings
                 'name' => $listing['name'] ?? '-',
                 'id' => $listing['id_number'] ?? '-',
                 'account' => $listing['meta_login'] ?? '-',
+                'account_type' => strtoupper($listing['trading_platform']) . '-' . trans("public.{$listing['slug']}") ?? '-',
                 'volume' => number_format((float)($listing['volume'] ?? 0), 2),
                 'rebate' => number_format((float)($listing['rebate'] ?? 0), 2),
             ];

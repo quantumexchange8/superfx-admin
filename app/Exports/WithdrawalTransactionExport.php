@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use DateTimeInterface;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -23,12 +24,11 @@ class WithdrawalTransactionExport implements FromCollection, WithHeadings
             // Format requested_date and approval_date safely
             $requestedDate = $obj['created_at'] ?? null;
             $approvalDate = $obj['approved_at'] ?? null;
-
-            $requestedDateFormatted = $requestedDate instanceof \DateTimeInterface
+            $requestedDateFormatted = $requestedDate instanceof DateTimeInterface
                 ? $requestedDate->format('Y/m/d')
                 : ($requestedDate ? date('Y/m/d', strtotime($requestedDate)) : '');
 
-            $approvalDateFormatted = $approvalDate instanceof \DateTimeInterface
+            $approvalDateFormatted = $approvalDate instanceof DateTimeInterface
                 ? $approvalDate->format('Y/m/d')
                 : ($approvalDate ? date('Y/m/d', strtotime($approvalDate)) : '');
 
@@ -54,6 +54,7 @@ class WithdrawalTransactionExport implements FromCollection, WithHeadings
                 $obj['email'] ?? '',                       // email
                 $obj['transaction_number'] ?? '',         // id (transaction_number)
                 $obj['from_meta_login'] ?? '',             // from
+                isset($obj['from_meta_login']) ? strtoupper($obj['trading_platform']) . '-' . $obj['account_type'] : '-',             // acc type
                 $obj['transaction_amount'] ?? '',         // amount ($)
                 isset($obj['status']) ? trans('public.' . $obj['status']) : '', // status
                 $obj['to_wallet_address'] ?? '',          // receiving_address
@@ -79,6 +80,7 @@ class WithdrawalTransactionExport implements FromCollection, WithHeadings
             trans('public.email'),
             trans('public.id'),
             trans('public.from'),
+            trans('public.account_type'),
             trans('public.amount') . ' ($)',
             trans('public.status'),
             trans('public.receiving_address'),

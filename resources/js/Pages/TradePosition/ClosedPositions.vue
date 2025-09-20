@@ -555,7 +555,12 @@ const clearFilter = () => {
                                 class="hidden md:table-cell"
                             >
                                 <template #body="slotProps">
-                                    <div class="flex justify-center items-center">
+                                    <div class="flex gap-2 items-center">
+                                        <Tag
+                                            :severity="slotProps.data.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                                            class="uppercase"
+                                            :value="slotProps.data.trading_platform"
+                                        />
                                         <div
                                             class="flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded"
                                             :style="{
@@ -772,7 +777,7 @@ const clearFilter = () => {
             </div>
         </div>
         <OverlayPanel ref="op">
-            <div class="flex flex-col gap-8 w-72 py-5 px-4">
+            <div class="flex flex-col gap-5 w-72 py-5 px-4">
                 <div class="flex flex-col gap-2 items-center self-stretch">
                     <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                         {{ $t('public.filter_open_time') }}

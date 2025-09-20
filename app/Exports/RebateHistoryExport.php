@@ -2,9 +2,7 @@
 
 namespace App\Exports;
 
-use Illuminate\Contracts\Support\Responsable;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
@@ -36,13 +34,14 @@ class RebateHistoryExport implements FromCollection, WithHeadings
             trans('public.upline_id'),
             trans('public.profit') . ' ($)',
             trans('public.account'),
+            trans('public.account_type'),
             trans('public.volume') . ' (Ł)',
             trans('public.rebate') . ' ($)',
             trans('public.status'),
         ];
     }
 
-    public function collection()
+    public function collection(): Collection
     {
         $data = [];
 
@@ -64,6 +63,7 @@ class RebateHistoryExport implements FromCollection, WithHeadings
                 $history->upline->id_number ?? '',
                 $history->trade_profit ?? 0,
                 $history->meta_login,
+                strtoupper($history->of_account_type->trading_platform->slug) . '-' . $history->of_account_type->name,
                 $history->volume ?? 0,
                 $history->revenue ?? 0,
                 trans('public.completed'),

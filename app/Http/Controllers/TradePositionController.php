@@ -32,6 +32,7 @@ class TradePositionController extends Controller
                 ->leftJoin('users as upline', 'user.upline_id', '=', 'upline.id')
                 ->leftJoin('trading_accounts', 'open_trade.meta_login', '=', 'trading_accounts.meta_login')
                 ->leftJoin('account_types', 'trading_accounts.account_type_id', '=', 'account_types.id')
+                ->leftJoin('trading_platforms', 'account_types.trading_platform_id', '=', 'trading_platforms.id')
                 ->select([
                     'open_trade.*',
                     'user.name as name',
@@ -46,10 +47,11 @@ class TradePositionController extends Controller
                     'account_types.account_group as account_type_account_group',
                     'account_types.currency as account_type_currency',
                     'account_types.color as account_type_color',
+                    'trading_platforms.slug as trading_platform',
                 ])
                 ->whereIn('open_trade.trade_type', ['buy', 'sell'])
                 ->where('open_trade.status', 'open');
-        
+
             // Handle search functionality
             $search = $data['filters']['global'];
             if ($search) {
@@ -74,10 +76,10 @@ class TradePositionController extends Controller
             if ($startDate && $endDate) {
                 $start_date = Carbon::parse($startDate)->addDay()->startOfDay();
                 $end_date = Carbon::parse($endDate)->addDay()->endOfDay();
-                
+
                 $query->whereBetween('trade_open_time', [$start_date, $end_date]);
             }
-        
+
             if ($data['filters']['upline_id']) {
                 $uplineId = $data['filters']['upline_id'];
 
@@ -85,7 +87,7 @@ class TradePositionController extends Controller
                 $upline = User::withTrashed()->find($uplineId);
                 $childrenIds = $upline ? $upline->getChildrenIds() : [];
                 $childrenIds[] = $uplineId;
-            
+
                 // Filter OpenTrade by user.upline_id in childrenIds
                 $query->whereHas('user', function ($q) use ($childrenIds) {
                     $q->withTrashed()->whereIn('upline_id', $childrenIds);
@@ -116,7 +118,7 @@ class TradePositionController extends Controller
 
             // Handle pagination
             $rowsPerPage = $data['rows'] ?? 15; // Default to 15 if 'rows' not provided
-                    
+
             // Export logic
             if ($request->has('exportStatus') && $request->exportStatus) {
                 $records = $query->get();
@@ -130,7 +132,7 @@ class TradePositionController extends Controller
             $totalProfit = (clone $query)->sum('trade_profit_usd');
 
             $openTrades = $query->paginate($rowsPerPage);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $openTrades,
@@ -140,7 +142,7 @@ class TradePositionController extends Controller
                 'totalProfit' => $totalProfit,
             ]);
         }
-        
+
         return response()->json(['success' => false, 'data' => []]);
 
     }
@@ -163,28 +165,31 @@ class TradePositionController extends Controller
                 ->leftJoin('users as upline', 'user.upline_id', '=', 'upline.id')
                 ->leftJoin('trading_accounts', 'trade_broker_histories.meta_login', '=', 'trading_accounts.meta_login')
                 ->leftJoin('account_types', 'trading_accounts.account_type_id', '=', 'account_types.id')
+                ->leftJoin('trading_platforms', 'account_types.trading_platform_id', '=', 'trading_platforms.id')
                 ->select([
                     // all trade_broker_histories columns
                     'trade_broker_histories.*',
-            
+
                     // user columns with alias
                     'user.name as name',
                     'user.email as email',
                     'user.id_number as id_number',
-            
+
                     // upline columns with alias
                     'upline.id as upline_id',
                     'upline.name as upline_name',
                     'upline.email as upline_email',
                     'upline.id_number as upline_id_number',
-            
+
                     // account_types columns with alias
                     'account_types.name as account_type_name',
                     'account_types.slug as account_type_slug',
                     'account_types.currency as account_type_currency',
                     'account_types.color as account_type_color',
+
+                    'trading_platforms.slug as trading_platform',
                 ]);
-        
+
             // Handle search functionality
             $search = $data['filters']['global'];
             if ($search) {
@@ -202,17 +207,17 @@ class TradePositionController extends Controller
                         ->orWhere('trade_broker_histories.trade_deal_id', 'like', '%' . $search . '%');
                 });
             }
-            
+
             $startDate = $data['filters']['start_date'];
             $endDate = $data['filters']['end_date'];
 
             if ($startDate && $endDate) {
                 $start_date = Carbon::parse($startDate)->addDay()->startOfDay();
                 $end_date = Carbon::parse($endDate)->addDay()->endOfDay();
-                
+
                 $query->whereBetween('trade_open_time', [$start_date, $end_date]);
             }
-        
+
             $startClosedDate = $data['filters']['start_close_date'];
             $endClosedDate = $data['filters']['end_close_date'];
 
@@ -230,7 +235,7 @@ class TradePositionController extends Controller
                 $upline = User::withTrashed()->find($uplineId);
                 $childrenIds = $upline ? $upline->getChildrenIds() : [];
                 $childrenIds[] = $uplineId;
-            
+
                 // Filter OpenTrade by user.upline_id in childrenIds
                 $query->whereHas('trading_account.ofUser', function ($q) use ($childrenIds) {
                     $q->withTrashed()->whereIn('upline_id', $childrenIds);
@@ -261,7 +266,7 @@ class TradePositionController extends Controller
 
             // Handle pagination
             $rowsPerPage = $data['rows'] ?? 15; // Default to 15 if 'rows' not provided
-                    
+
             // Export logic
             if ($request->has('exportStatus') && $request->exportStatus) {
                 $records = $query->get();
@@ -285,7 +290,7 @@ class TradePositionController extends Controller
                 'totalProfit' => $totalProfit,
             ]);
         }
-        
+
         return response()->json(['success' => false, 'data' => []]);
     }
 }

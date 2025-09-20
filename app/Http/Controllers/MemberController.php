@@ -34,7 +34,6 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Services\RunningNumberService;
 use App\Http\Requests\AddMemberRequest;
 use App\Services\DropdownOptionService;
-use App\Services\ChangeTraderBalanceType;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -90,13 +89,13 @@ class MemberController extends Controller
         if ($request->input('role')) {
             $query->where('role', $request->input('role'));
         }
-        
+
         if ($request->input('group_id')) {
             $query->whereHas('groupHasUser', function ($query) use ($request) {
                 $query->where('group_id', $request->input('group_id'));
             });
         }
-        
+
         if ($request->input('upline_id')) {
             $query->where('upline_id', $request->input('upline_id'));
         }
@@ -117,7 +116,7 @@ class MemberController extends Controller
         // Handle pagination
         $rowsPerPage = $request->input('rows', 15); // Default to 15 if 'rows' not provided
         $currentPage = $request->input('page', 0) + 1; // Laravel uses 1-based page numbers, PrimeVue uses 0-based
-        
+
         // Export logic
         if ($request->has('exportStatus') && $request->exportStatus == true) {
             $members = $query; // Fetch all members for export
@@ -271,14 +270,14 @@ class MemberController extends Controller
     public function getAvailableUplines(Request $request)
     {
         $role = $request->input('role', ['ib', 'member']);
-    
+
         $memberId = $request->input('id');
 
         // Fetch the member and get their children (downline) IDs
         $member = User::findOrFail($memberId);
         $excludedIds = $member->getChildrenIds();
         $excludedIds[] = $memberId;
-    
+
         // Fetch uplines who are not in the excluded list
         $uplines = User::whereIn('role', (array) $role)
             ->whereNotIn('id', $excludedIds)
@@ -292,39 +291,39 @@ class MemberController extends Controller
                     'profile_photo' => $user->getFirstMediaUrl('profile_photo')
                 ];
             });
-    
+
         // Return the uplines as JSON
         return response()->json([
             'uplines' => $uplines
         ]);
     }
-    
+
     public function getUplineData(Request $request)
     {
         $upline = User::find($request->upline_id);
         if (!$upline) {
             return response()->json(['error' => 'Upline not found'], 404);
         }
-    
+
         $uplineRebate = RebateAllocation::with('symbol_group:id,display')
             ->where('user_id', $upline->id)
             ->get();
-    
+
         $user = User::find($request->user_id);
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
-    
+
         $userRebate = null;
         if ($user->upline_id === $upline->id) {
             $userRebate = RebateAllocation::with('symbol_group:id,display')
                 ->where('user_id', $user->id)
                 ->get();
         }
-    
+
         // Get account type details from upline's rebate
         $availableAccountTypeId = $uplineRebate->pluck('account_type_id')->toArray();
-    
+
         // Fetch account types based on available account type IDs
         $accountTypeSel = AccountType::whereIn('id', $availableAccountTypeId)
             ->select('id', 'name')
@@ -335,7 +334,7 @@ class MemberController extends Controller
                     'name' => $accountType->name,
                 ];
             });
-    
+
         // Fetch all markup profiles associated with the upline
         $markupProfiles = MarkupProfile::whereHas('userToMarkupProfiles', function ($query) use ($upline) {
             $query->where('user_id', $upline->id);
@@ -354,7 +353,7 @@ class MemberController extends Controller
                     }),
                 ];
             });
-    
+
         return response()->json([
             'rebateDetails' => $uplineRebate,
             'userRebateDetails' => $userRebate,
@@ -362,7 +361,7 @@ class MemberController extends Controller
             'markupProfiles' => $markupProfiles,
         ]);
     }
-        
+
     public function transferUpline(Request $request)
     {
         // Validate the incoming request data
@@ -371,10 +370,10 @@ class MemberController extends Controller
             'upline_id' => 'required|exists:users,id',
             'role'      => 'required|in:ib,member',
         ]);
-    
+
         // Find the user to be transferred
         $user = User::findOrFail($request->input('user_id'));
-    
+
         // Check if the new upline is valid and not the same as the current one
         if ($user->upline_id === $request->input('upline_id')) {
             return back()->with('toast', [
@@ -382,7 +381,7 @@ class MemberController extends Controller
                 'type'  => 'warning',
             ]);
         }
-    
+
         // Find the new upline
         $upline_id = $request->input('upline_id');
         $newUpline = User::find($upline_id);
@@ -392,11 +391,11 @@ class MemberController extends Controller
         } else {
             $hierarchyList = $newUpline->hierarchyList . $upline_id . "-";
         }
-    
+
         // Step 1: Update the user's hierarchyList to reflect the new upline's hierarchy and ID
         $user->hierarchyList = $hierarchyList;
         $user->upline_id = $newUpline->id;
-    
+
         // Update the user's group relationship
         if ($newUpline->groupHasUser) {
             $user->assignedGroup($newUpline->groupHasUser->group_id);
@@ -409,11 +408,11 @@ class MemberController extends Controller
         // Now not all set to 0 but set to the amount user input else those not have set to 0
         if ($request->input('role') === 'ib') {
             $amounts = $request->input('amounts');
-    
+
             // Find the upline user and their rebate allocations
             $upline_user = User::find($request->input('upline_id'));
             $uplineRebates = RebateAllocation::where('user_id', $upline_user->id)->get();
-    
+
             // Get the account_type_id and symbol_group_id combinations for the upline
             $uplineCombinations = $uplineRebates->map(function($rebate) {
                 return [
@@ -421,7 +420,7 @@ class MemberController extends Controller
                     'symbol_group_id' => $rebate->symbol_group_id
                 ];
             })->toArray();
-    
+
             // Get the account_type_id and symbol_group_id combinations from the request
             $requestCombinations = array_map(function($amount) {
                 return [
@@ -429,22 +428,22 @@ class MemberController extends Controller
                     'symbol_group_id' => $amount['symbol_group_id']
                 ];
             }, $amounts);
-    
+
             $errors = [];
-    
+
             // Validate amounts
             foreach ($amounts as $index => $amount) {
                 $uplineRebate = RebateAllocation::find($amount['rebate_detail_id']);
-    
+
                 if ($uplineRebate && $amount['amount'] > $uplineRebate->amount) {
                     $errors["amounts.$index"] = 'Amount should not be higher than $' . $uplineRebate->amount;
                 }
             }
-    
+
             if (!empty($errors)) {
                 throw ValidationException::withMessages($errors);
             }
-    
+
             // Update or create rebate allocations for amounts in the request
             foreach ($amounts as $amount) {
                 RebateAllocation::updateOrCreate(
@@ -477,33 +476,33 @@ class MemberController extends Controller
                 }
             }
         }
-        
+
         // Step 3: Update related users' hierarchyList and their RebateAllocation amounts if they are ibs
         $relatedUsers = User::where('hierarchyList', 'like', '%-' . $user->id . '-%')->get();
-    
+
         foreach ($relatedUsers as $relatedUser) {
             $userIdSegment = '-' . $user->id . '-';
-    
+
             // Find the position of `-user_id-` in the related user's hierarchyList
             $pos = strpos($relatedUser->hierarchyList, $userIdSegment);
-    
+
             if ($pos !== false) {
                 // Extract the part after the user's ID segment (tail part)
                 $tailHierarchy = substr($relatedUser->hierarchyList, $pos + strlen($userIdSegment));
-    
+
                 // Prepend the user's new hierarchyList + user ID to the tail part
                 $relatedUser->hierarchyList = $user->hierarchyList . $user->id . '-' . $tailHierarchy;
             }
-    
+
             // Save the updated hierarchyList for the related user
             $relatedUser->save();
-    
+
             // Step 4: If the related user is an ib, set their RebateAllocation amounts to 0
             if ($relatedUser->role === 'ib') {
                 RebateAllocation::where('user_id', $relatedUser->id)->update(['amount' => 0]);
             }
         }
-    
+
         // Step 5: Update the related user group has user as transfer upline will change group as well
         if ($group_id = $newUpline->groupHasUser->group_id ?? null) {
             $relatedUserIds = $relatedUsers->pluck('id')->toArray();
@@ -523,18 +522,18 @@ class MemberController extends Controller
                 $existingMarkupProfileIds = UserToMarkupProfile::where('user_id', $request->input('user_id'))
                     ->pluck('markup_profile_id')
                     ->toArray();
-    
+
                 // Get the markup profile IDs to add and remove
                 $markupProfileIdsToAdd = array_diff($markupProfileIds, $existingMarkupProfileIds);
                 $markupProfileIdsToRemove = array_diff($existingMarkupProfileIds, $markupProfileIds);
-    
+
                 // Remove outdated user associations
                 if (!empty($markupProfileIdsToRemove)) {
                     UserToMarkupProfile::where('user_id', $request->input('user_id'))
                         ->whereIn('markup_profile_id', $markupProfileIdsToRemove)
                         ->delete();
                 }
-    
+
                 // Add new user associations
                 foreach ($markupProfileIdsToAdd as $markupProfileId) {
                     UserToMarkupProfile::create([
@@ -543,20 +542,20 @@ class MemberController extends Controller
                         'referral_code' => null,
                     ]);
                 }
-    
+
                 if ($request->input('role') === 'ib') {
                     // Update referral codes for records without a referral code (both new and existing)
                     $recordsToUpdate = UserToMarkupProfile::where('user_id', $request->input('user_id'))
                         ->whereNull('referral_code')
                         ->get();
-    
+
                     foreach ($recordsToUpdate as $userToMarkupProfile) {
                         // Generate a unique referral code
                         $referralCode = Str::random(10);
                         while (UserToMarkupProfile::where('referral_code', $referralCode)->exists()) {
                             $referralCode = Str::random(10); // Ensure the referral code is unique
                         }
-    
+
                         // Update the referral code for this specific record
                         $userToMarkupProfile->update(['referral_code' => $referralCode]);
                     }
@@ -573,7 +572,7 @@ class MemberController extends Controller
             'type'  => 'success',
         ]);
     }
-    
+
     public function getAvailableUplineData(Request $request)
     {
         $user = User::with('upline')->find($request->user_id);
@@ -753,7 +752,7 @@ class MemberController extends Controller
             // If no markup profile IDs are provided, remove all associated markup profiles for this user
             UserToMarkupProfile::where('user_id', $user_id)->delete();
         }
-        
+
         return back()->with('toast', [
             'title' => trans('public.upgrade_to_ib_success_alert'),
             'type' => 'success',
@@ -794,7 +793,7 @@ class MemberController extends Controller
         $user->update([
             'email_verified_at' => Carbon::now(),
         ]);
-    
+
         return redirect()->back()->with('toast', [
             'title' => trans('public.toast_verify_email_success'),
             'type' => 'success'
@@ -813,7 +812,7 @@ class MemberController extends Controller
     public function getUserData(Request $request)
     {
         $user = User::with(['groupHasUser', 'upline:id,name', 'country:id,name,phone_code'])->find($request->id);
-    
+
         // Prepare kyc_verification with created_at
         $kycVerification = [];
         foreach ($user->getMedia('kyc_verification') as $media) {
@@ -821,7 +820,7 @@ class MemberController extends Controller
             $data['created_at'] = $media->created_at->toDateTimeString();
             $kycVerification[] = $data;
         }
-    
+
         $userData = [
             'id' => $user->id,
             'name' => $user->name,
@@ -846,17 +845,17 @@ class MemberController extends Controller
             'kyc_approved_at' => $user->kyc_approved_at,
             'kyc_status' => $user->kyc_status,
         ];
-    
+
         $paymentAccounts = $user->paymentAccounts()
             ->latest()
             ->get();
-    
+
         return response()->json([
             'userDetail' => $userData,
             'paymentAccounts' => $paymentAccounts
         ]);
     }
-    
+
     public function updateContactInfo(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -1049,7 +1048,7 @@ class MemberController extends Controller
         } elseif ($action == 'reject') {
             Mail::to($user->email)->queue(new KycRejectedMail($user));
         }
-    
+
         return redirect()->back()->with('toast', [
             'title' => $action == 'approve' ? trans('public.toast_kyc_approved') : trans('public.toast_kyc_rejected'),
             'type' => 'success'
