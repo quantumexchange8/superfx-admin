@@ -5,7 +5,6 @@ import Button from '@/Components/Button.vue';
 import {useForm, usePage} from '@inertiajs/vue3';
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
-import {FilterMatchMode} from "primevue/api";
 import Loader from "@/Components/Loader.vue";
 import Dropdown from "primevue/dropdown";
 import {
@@ -22,6 +21,7 @@ import toast from '@/Composables/toast';
 import debounce from "lodash/debounce.js";
 import { transactionFormat } from "@/Composables/index.js";
 const { formatAmount } = transactionFormat()
+import Tag from "primevue/tag";
 
 const props = defineProps({
     accountTypes: Array,
@@ -41,7 +41,7 @@ watch(() => props.accountTypes, (newAccountTypes) => {
     accountTypes.value = newAccountTypes;
 }, { immediate: true }); // immediate: true will execute the watcher immediately on component mount
 
-const accountType = ref(accountTypes.value[0].value);
+const accountType = ref(accountTypes.value[0]);
 const loading = ref(false);
 const dt = ref();
 const ibs = ref();
@@ -68,12 +68,12 @@ const getResults = async (type_id) => {
 };
 
 // Fetch results initially using the current accountType
-getResults(accountType.value, search.value);
+getResults(accountType.value.value, search.value);
 
 // Watch for changes in accountType and fetch new results accordingly
 watch(accountType, (newValue) => {
-    emit('update:accountType', newValue);  // Emit the new value to the parent
-    getResults(newValue, search.value);
+    emit('update:accountType', newValue.value);  // Emit the new value to the parent
+    getResults(newValue.value, search.value);
 });
 
 // Flag to temporarily disable the watcher
@@ -83,7 +83,7 @@ let isChangingIB = false;
 watch(search, debounce((newSearchValue) => {
     // Prevent getResults from being called when changing ib
     if (!isChangingIB) {
-        getResults(accountType.value, newSearchValue); // Fetch with current account type and search query
+        getResults(accountType.value.value, newSearchValue); // Fetch with current account type and search query
     }
 }, 1000)); // Debounce time (1000ms)
 
@@ -97,7 +97,7 @@ const changeIB = async (newIB) => {
         // Clear the search value to ensure it doesn't trigger a search
         clearSearch();
 
-        const response = await axios.get(`/rebate_allocate/changeIBs?id=${newIB.id}&type_id=${accountType.value}`);
+        const response = await axios.get(`/rebate_allocate/changeIBs?id=${newIB.id}&type_id=${accountType.value.value}`);
         ibs.value = response.data;
     } catch (error) {
         console.error('Error get change:', error);
@@ -130,7 +130,7 @@ const onRowEditSave = (event) => {
     ibs.value[index] = newData;
 
     const data = ibs.value[index][1];
-    
+
     // Map the indexes (1, 2, 3, 4, 5) to the corresponding categories
     const categories = [
         { key: 1, name: 'forex' },
@@ -159,15 +159,15 @@ const onRowEditSave = (event) => {
         // Check if the value exceeds the upline max or falls below the downline min
         if (value > uplineMax) {
             // Show a warning message for exceeding the upline
-            toast.add({ 
-                type: 'warning', 
+            toast.add({
+                type: 'warning',
                 title: exceedUplineMessage,
             });
             canPost = false; // Set flag to false, prevent form post
         } else if (value < downlineMax) {
             // Show a warning message for falling below the downline
-            toast.add({ 
-                type: 'warning', 
+            toast.add({
+                type: 'warning',
                 title: exceedDownlineMessage,
             });
             canPost = false; // Set flag to false, prevent form post
@@ -214,16 +214,16 @@ const submitForm = (submitData) => {
         // Check if the value exceeds the upline max or falls below the downline min
         if (value > uplineMax) {
             // Show a warning message for exceeding the upline
-            toast.add({ 
-                type: 'warning', 
+            toast.add({
+                type: 'warning',
                 title: exceedUplineMessage,
             });
             closeDialog();
             canPost = false; // Set flag to false, prevent form post
         } else if (value < downlineMax) {
             // Show a warning message for falling below the downline
-            toast.add({ 
-                type: 'warning', 
+            toast.add({
+                type: 'warning',
                 title: exceedDownlineMessage,
             });
             closeDialog();
@@ -248,7 +248,7 @@ const closeDialog = () => {
 
 watchEffect(() => {
     if (usePage().props.toast !== null) {
-        getResults(accountType.value);
+        getResults(accountType.value.value);
     }
 });
 </script>
@@ -287,9 +287,32 @@ watchEffect(() => {
                         v-model="accountType"
                         :options="accountTypes"
                         optionLabel="name"
-                        optionValue="value"
                         class="w-full md:w-52 font-normal"
-                    />
+                    >
+                        <template #value="{value, placeholder}">
+                            <div v-if="value" class="flex items-center gap-2">
+                                {{ value.name }}
+                                <Tag
+                                    :severity="value.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                                    :value="value.trading_platform"
+                                    class="text-xxs uppercase"
+                                />
+                            </div>
+                            <div v-else>
+                                {{ placeholder }}
+                            </div>
+                        </template>
+                        <template #option="{option}">
+                            <div class="flex items-center gap-2">
+                                {{ option.name }}
+                                <Tag
+                                    :severity="option.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                                    :value="option.trading_platform"
+                                    class="text-xxs uppercase"
+                                />
+                            </div>
+                        </template>
+                    </Dropdown>
                 </div>
             </template>
             <template #empty> {{ $t('public.empty_rebate_title') }}</template>

@@ -232,13 +232,15 @@ class GeneralController extends Controller
 
     public function getAllAccountTypes($returnAsArray = false)
     {
-        $accountTypes = AccountType::where('status', 'active')
+        $accountTypes = AccountType::with('trading_platform:id,slug')
+            ->where('status', 'active')
             ->where('account_group', '!=', 'Demo Account')
             ->get()
             ->map(function ($accountType) {
                 return [
                     'value' => $accountType->id,
                     'name' => trans('public.' . $accountType->slug),
+                    'trading_platform' => $accountType->trading_platform->slug,
                 ];
             });
 

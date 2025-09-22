@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncRebateAllocationJob;
 use App\Models\TradingPlatform;
 use Auth;
 use Illuminate\Support\Facades\Validator;
@@ -201,6 +202,9 @@ class AccountTypeController extends Controller
         AccountType::where('trading_platform_id', $trading_platform->id)
             ->whereNotIn('name', $incomingNames)
             ->delete();
+
+        // Execute job to sync rebate allocations
+        SyncRebateAllocationJob::dispatch();
 
         return back()->with('toast', [
             'title' => trans('public.toast_sync_account_type'),
