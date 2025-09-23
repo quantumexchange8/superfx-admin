@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SiteSetting from "@/Pages/Settings/SiteSetting/SiteSetting.vue";
 import TradingPlatform from "@/Pages/Settings/TradingPlatform/TradingPlatform.vue";
+import PaymentPlatform from "@/Pages/Settings/PaymentPlatform/PaymentPlatform.vue";
 
 </script>
 
@@ -9,10 +10,13 @@ import TradingPlatform from "@/Pages/Settings/TradingPlatform/TradingPlatform.vu
     <AuthenticatedLayout :title="$t('public.system')">
         <div class="grid grid-cols-12 gap-5">
             <div class="col-span-12 md:col-span-6">
-                <SiteSetting />
+                <div class="grid gap-5">
+                    <SiteSetting />
+                    <TradingPlatform />
+                </div>
             </div>
             <div class="col-span-12 md:col-span-6">
-                <TradingPlatform />
+                <PaymentPlatform />
             </div>
         </div>
     </AuthenticatedLayout>

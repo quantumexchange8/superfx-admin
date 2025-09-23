@@ -300,6 +300,10 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
         // Trading platform
         Route::get('/getTradingPlatforms', [SettingsController::class, 'getTradingPlatforms'])->name('system.getTradingPlatforms');
         Route::patch('/updateTradingPlatform/{id}', [SettingsController::class, 'updateTradingPlatform'])->name('system.updateTradingPlatform');
+
+        // Payment platform
+        Route::get('/getPaymentPlatforms', [SettingsController::class, 'getPaymentPlatforms'])->name('system.getPaymentPlatforms');
+        Route::patch('/updatePaymentPlatform/{id}', [SettingsController::class, 'updatePaymentPlatform'])->name('system.updatePaymentPlatform');
     });
 
     /**

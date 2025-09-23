@@ -758,4 +758,6 @@ return [
     "toast_adjustment_error" => "Adjustment Failed",
     "no_account_found" => "No Account Found",
     "deleted" => "Deleted",
+    "payment_platform" => "Payment Platform",
+    "toast_update_payment_platform_success" => "You’ve successfully updated a payment platform!",
 ];

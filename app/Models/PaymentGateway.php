@@ -21,6 +21,8 @@ class PaymentGateway extends Model
         'secondary_key',
         'edited_by',
         'status',
+        'can_deposit',
+        'can_withdraw',
     ];
 
     // Relations

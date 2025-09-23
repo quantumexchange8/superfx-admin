@@ -758,4 +758,6 @@ return [
     "toast_adjustment_error" => "调整失败",
     "no_account_found" => "未找到账户",
     "deleted" => "已删除",
+    "payment_platform" => "支付平台",
+    "toast_update_payment_platform_success" => "您已成功更新支付平台！",
 ];

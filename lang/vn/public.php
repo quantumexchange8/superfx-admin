@@ -758,4 +758,6 @@ return [
     "toast_adjustment_error" => "Điều chỉnh thất bại",
     "no_account_found" => "Không tìm thấy tài khoản",
     "deleted" => "Đã xóa",
+    "payment_platform" => "Nền tảng thanh toán",
+    "toast_update_payment_platform_success" => "Bạn đã cập nhật nền tảng thanh toán thành công!",
 ];
