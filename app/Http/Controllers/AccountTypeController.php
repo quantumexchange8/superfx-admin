@@ -8,6 +8,8 @@ use App\Models\TradingPlatform;
 use App\Models\User;
 use Auth;
 use DB;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -138,6 +140,9 @@ class AccountTypeController extends Controller
         ]);
     }
 
+    /**
+     * @throws ConnectionException
+     */
     public function syncAccountTypes(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -209,6 +214,17 @@ class AccountTypeController extends Controller
 
         // Execute job to sync rebate allocations
         SyncRebateAllocationJob::dispatch();
+
+        $accountTypeIds = AccountType::where('trading_platform_id', $trading_platform->id)
+            ->pluck('id')
+            ->toArray();
+
+        dispatch(function () use ($accountTypeIds) {
+            Http::acceptJson()
+                ->post("http://218.208.86.100:5000/api/account_types", [
+                    'accountTypeIds' => $accountTypeIds
+                ]);
+        })->onQueue('sync_account_type_symbols');
 
         return back()->with('toast', [
             'title' => trans('public.toast_sync_account_type'),
