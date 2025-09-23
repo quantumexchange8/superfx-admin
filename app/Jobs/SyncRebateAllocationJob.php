@@ -29,55 +29,91 @@ class SyncRebateAllocationJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // 1. Get all IB user IDs
+        // 1. Get IB users
         $ibUserIds = User::where('role', 'ib')->pluck('id')->toArray();
 
-        // 2. Get all account type IDs
-        $accountTypeIds = AccountType::pluck('id')->toArray();
+        // 2. Get account types with account_group + trading_platform_id
+        $accountTypes   = AccountType::select(['id', 'account_group', 'trading_platform_id'])->get();
+        $accountTypeIds = $accountTypes->pluck('id')->toArray();
 
         // 3. Symbol group IDs
         $symbolGroupIds = range(1, 6);
 
-        // 4. Get all existing allocations in one query
-        $existing = RebateAllocation::whereIn('user_id', $ibUserIds)
-            ->get(['user_id', 'account_type_id', 'symbol_group_id'])
-            ->map(fn ($item) => "{$item->user_id}-{$item->account_type_id}-{$item->symbol_group_id}")
-            ->flip(); // keys become lookup array
+        // 4. Get all existing allocations as a lightweight lookup array
+        $existing = []; // [user_id][account_type_id][symbol_group_id] => amount
 
-        // 5. Build missing records
-        $missingRecords = [];
-        $now = now();
-        $editedBy = auth()->id() ?? 1; // or system user
+        // Use cursor() to stream
+        RebateAllocation::whereIn('user_id', $ibUserIds)
+            ->select(['user_id', 'account_type_id', 'symbol_group_id', 'amount'])
+            ->cursor()
+            ->each(function ($item) use (&$existing) {
+                $existing[$item->user_id][$item->account_type_id][$item->symbol_group_id] = $item->amount;
+            });
 
-        foreach ($ibUserIds as $userId) {
-            foreach ($accountTypeIds as $accountTypeId) {
-                foreach ($symbolGroupIds as $symbolGroupId) {
-                    $key = "{$userId}-{$accountTypeId}-{$symbolGroupId}";
+        // 4b. Map account_type_id to model (group + platform)
+        $accountTypeMap = $accountTypes->keyBy('id'); // id => model
 
-                    if (! isset($existing[$key])) {
-                        $missingRecords[] = [
+        $now      = now();
+        $editedBy = auth()->id() ?? 1;
+
+        DB::transaction(function () use (
+            $ibUserIds,
+            $accountTypeIds,
+            $symbolGroupIds,
+            $existing,
+            $accountTypes,
+            $accountTypeMap,
+            $now,
+            $editedBy
+        ) {
+            $chunk = [];
+
+            foreach ($ibUserIds as $userId) {
+                foreach ($accountTypeIds as $accountTypeId) {
+                    /** @var AccountType $acctType */
+                    $acctType = $accountTypeMap[$accountTypeId];
+
+                    foreach ($symbolGroupIds as $symbolGroupId) {
+                        // Skip if already exists
+                        if (isset($existing[$userId][$accountTypeId][$symbolGroupId])) {
+                            continue;
+                        }
+
+                        // Try to find an existing allocation from another platform but same account_group
+                        $sameGroupOtherTypes = $accountTypes->where('account_group', $acctType->account_group)
+                            ->where('trading_platform_id', '!=', $acctType->trading_platform_id);
+
+                        $amount = 0;
+                        foreach ($sameGroupOtherTypes as $otherType) {
+                            if (isset($existing[$userId][$otherType->id][$symbolGroupId])) {
+                                $amount = $existing[$userId][$otherType->id][$symbolGroupId];
+                                break; // take the first found
+                            }
+                        }
+
+                        $chunk[] = [
                             'user_id'         => $userId,
                             'account_type_id' => $accountTypeId,
                             'symbol_group_id' => $symbolGroupId,
-                            'amount'          => 0,
+                            'amount'          => $amount,
                             'edited_by'       => $editedBy,
                             'created_at'      => $now,
                             'updated_at'      => $now,
                         ];
+
+                        // Insert every 500 rows to keep memory low
+                        if (count($chunk) === 500) {
+                            RebateAllocation::insert($chunk);
+                            $chunk = [];
+                        }
                     }
                 }
             }
-        }
 
-        // 6. Bulk insert
-        if (! empty($missingRecords)) {
-            // optional: wrap in a transaction for safety
-            DB::transaction(function () use ($missingRecords) {
-                // chunk to avoid hitting DB limit
-                foreach (array_chunk($missingRecords, 1000) as $chunk) {
-                    RebateAllocation::insert($chunk);
-                }
-            });
-        }
+            // Insert any remaining records
+            if (! empty($chunk)) {
+                RebateAllocation::insert($chunk);
+            }
+        });
     }
 }

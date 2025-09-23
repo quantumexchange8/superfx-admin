@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SyncRebateAllocationJob;
+use App\Models\RebateAllocation;
 use App\Models\TradingPlatform;
+use App\Models\User;
 use Auth;
+use DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -13,6 +16,7 @@ use App\Models\AccountType;
 use Illuminate\Http\Request;
 use App\Models\AccountTypeAccess;
 use App\Http\Requests\UpdateAccountTypeRequest;
+use Throwable;
 
 class AccountTypeController extends Controller
 {
@@ -290,5 +294,4 @@ class AccountTypeController extends Controller
             'users' => $users
         ]);
     }
-
 }

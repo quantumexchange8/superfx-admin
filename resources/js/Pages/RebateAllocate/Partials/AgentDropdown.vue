@@ -20,7 +20,7 @@ watch(()=>props.ibs, () => {
         v-model="selectedib"
         :options="ibs"
         filter
-        :filterFields="['name']"
+        :filterFields="['name', 'id_number', 'email']"
         optionLabel="name"
         class="w-44"
         scroll-height="236px"

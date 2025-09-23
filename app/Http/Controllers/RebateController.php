@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountType;
 use App\Models\User;
+use DB;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Models\RebateAllocation;
 use Illuminate\Support\Facades\Auth;
+use Throwable;
 
 class RebateController extends Controller
 {
@@ -55,17 +58,41 @@ class RebateController extends Controller
         ]);
     }
 
+    /**
+     * @throws Throwable
+     */
     public function updateRebateAllocation(Request $request)
     {
-        $ids = $request->id;
+        $ids     = $request->id;
         $amounts = $request->amount;
 
-        foreach ($ids as $index => $id) {
-            RebateAllocation::find($id)->update([
-                'amount' => $amounts[$index],
-                'edited_by' => Auth::id()
-            ]);
-        }
+        DB::transaction(function () use ($ids, $amounts) {
+            foreach ($ids as $index => $id) {
+                // 1. Find rebate and acc type
+                $rebateAllocation = RebateAllocation::with('account_type')
+                    ->findOrFail($id);
+
+                $userId         = $rebateAllocation->user_id;
+                $symbolGroupId  = $rebateAllocation->symbol_group_id;
+                $newAmount      = $amounts[$index];
+
+                // 2. Get account_group of account_type
+                $accountGroup = $rebateAllocation->account_type->account_group;
+
+                // 3. Find same account_group
+                $accountTypeIds = AccountType::where('account_group', $accountGroup)
+                    ->pluck('id');
+
+                // 4. Update all matching RebateAllocations (same user, same symbol_group, same group)
+                RebateAllocation::where('user_id', $userId)
+                    ->where('symbol_group_id', $symbolGroupId)
+                    ->whereIn('account_type_id', $accountTypeIds)
+                    ->update([
+                        'amount'     => $newAmount,
+                        'edited_by'  => Auth::id(),
+                    ]);
+            }
+        });
 
         return redirect()->back()->with('toast', [
             'title' => trans('public.update_rebate_success_alert'),
@@ -168,7 +195,7 @@ class RebateController extends Controller
                     ->orWhere('id_number', 'like', "%$search%");
             });
         }
-        
+
         // Get the level 1 ibs based on the query
         $lv1_ibs = $query->get()
             ->map(function ($ib) use ($search) {
@@ -180,6 +207,7 @@ class RebateController extends Controller
                     'profile_photo' => $ib->getFirstMediaUrl('profile_photo'),
                     'name' => $ib->name,
                     'email' => $ib->email,
+                    'id_number' => $ib->id_number,
                     'hierarchy_list' => $ib->hierarchyList,
                     'upline_id' => $ib->upline_id,
                     'level' => $level,
@@ -240,6 +268,7 @@ class RebateController extends Controller
                         'profile_photo' => $ib->getFirstMediaUrl('profile_photo'),
                         'name' => $ib->name,
                         'email' => $ib->email,
+                        'id_number' => $ib->id_number,
                         'hierarchy_list' => $ib->hierarchyList,
                         'upline_id' => $ib->upline_id,
                         'level' => $this->calculateLevel($ib->hierarchyList),
@@ -436,13 +465,23 @@ class RebateController extends Controller
     {
         $data = $request->rebates;
 
+        // 1. Find the acc type
+        $accountType = AccountType::findOrFail($data['account_type_id']);
+
+        // 2. Get same account_group
+        $accountTypeIds = AccountType::where('account_group', $accountType->account_group)
+            ->pluck('id');
+
+        // 3. Get all rebate allocations for this user across the same account_group
         $rebates = RebateAllocation::where('user_id', $data['user_id'])
-            ->where('account_type_id', $data['account_type_id'])
+            ->whereIn('account_type_id', $accountTypeIds)
             ->get();
 
+        // 4. Update rebates symbol_group-wise
         foreach ($rebates as $rebate) {
             if (isset($data[$rebate->symbol_group_id])) {
-                $rebate->amount = $data[$rebate->symbol_group_id];
+                $rebate->amount     = $data[$rebate->symbol_group_id];
+                $rebate->edited_by  = auth()->id();
                 $rebate->save();
             }
         }
