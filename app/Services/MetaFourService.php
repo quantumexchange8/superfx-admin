@@ -312,7 +312,10 @@ class MetaFourService implements TradingPlatformInterface
         $this->getUserInfo($meta_login);
     }
 
-    public function getUserByGroup($group, $type)
+    /**
+     * @throws ConnectionException
+     */
+    public function getAccountByGroup($group): array
     {
         $payload = [
             'group' => $group,
@@ -320,20 +323,22 @@ class MetaFourService implements TradingPlatformInterface
 
         $jsonPayload = json_encode($payload);
 
-        if ($type && $type === 'live') {
-            $url = $this->baseURL;
-        } else {
-            $url = $this->demoURL;
-        }
-
         $accountResponse = Http::acceptJson()
             ->withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
             ])
-            ->withBody($jsonPayload, 'application/json')
-            ->get($url . "/getuserbygroup");
+            ->withBody($jsonPayload)
+            ->post($this->baseURL . "/getuserbygroup");
 
-        // Return the JSON response from the API
-        return $accountResponse->json();
+        $accounts = $accountResponse->json();
+
+        if (isset($accounts['status']) && $accounts['status'] == 'success') {
+            return $accounts['users'];
+        }
+
+        return [
+            'status' => 'fail',
+            'message' => trans('public.toast_connection_error')
+        ];
     }
 }

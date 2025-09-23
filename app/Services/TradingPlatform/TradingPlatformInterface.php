@@ -33,4 +33,9 @@ interface TradingPlatformInterface
      * Update leverage for meta login.
      */
     public function changeInvestorPassword($meta_login, $password): void;
+
+    /**
+     * Fetch account data by group.
+     */
+    public function getAccountByGroup($group): array;
 }

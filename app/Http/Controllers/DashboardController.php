@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\TradingPlatform\TradingPlatformFactory;
 use Inertia\Inertia;
 use App\Models\ForumPost;
 use App\Models\AccountType;
@@ -18,8 +19,13 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $totalBalance = AccountType::sum('account_group_balance');
+        $totalEquity = AccountType::sum('account_group_equity');
+
         return Inertia::render('Dashboard/Dashboard', [
             'postCounts' => ForumPost::count(),
+            'totalAccountBalance' => (float) $totalBalance,
+            'totalAccountEquity' => (float) $totalEquity,
         ]);
     }
 
@@ -61,47 +67,49 @@ class DashboardController extends Controller
 
     public function getAccountData()
     {
-        // Standard Account and Premium Account group IDs
-        $groups = AccountType::whereNotNull('account_group')
-            ->pluck('account_group')
-            ->toArray();
+        // Get all account types
+        $accountTypes = AccountType::with('trading_platform:id,slug')
+            ->where('status', 'active')
+            ->get();
 
-        foreach ($groups as $group) {
-            // Fetch data for each group ID
-            $response = (new MetaFourService())->getUserByGroup($group, 'live');
+        // meta_logins grouped by account_type_id
+        $tradingAccountsByType = TradingAccount::select(['account_type_id', 'meta_login'])
+            ->whereIn('account_type_id', $accountTypes->pluck('id'))
+            ->get()
+            ->groupBy('account_type_id');
 
-            // Find the corresponding AccountType model
-            $accountType = AccountType::where('account_group', $group)->first();
+        $totalBalance = 0;
+        $totalEquity = 0;
 
-            // Initialize or reset group balance and equity
+        foreach ($accountTypes as $type) {
+            $service = TradingPlatformFactory::make($type->trading_platform->slug);
+
+            $accounts = $service->getAccountByGroup($type->account_group);
+
+            // get meta_logins for this type from grouped acc type
+            $meta_logins = $tradingAccountsByType->get($type->id)?->pluck('meta_login')->toArray() ?? [];
+
+            // calculate group totals
             $groupBalance = 0;
             $groupEquity = 0;
 
-            $meta_logins = TradingAccount::where('account_type_id', $accountType->id)->pluck('meta_login')->toArray();
-
-            if (isset($response['users']) && is_array($response['users'])) {
-                foreach ($response['users'] as $user) {
-                    if (in_array($user['meta_login'], $meta_logins)) {
-                        $groupBalance += (float) $user['balance'];
-                        // Only add equity if it exists in the user data
-                        if (isset($user['equity'])) {
-                            $groupEquity += (float) $user['equity'];
-                        }
-                    }
+            foreach ($accounts as $account) {
+                if (in_array($account['meta_login'], $meta_logins)) {
+                    $groupBalance += (float) $account['balance'];
+                    $groupEquity += isset($account['equity']) ? (float) $account['equity'] : $account['balance'];
                 }
             }
 
-                // Update account group balance and equity
-                $accountType->account_group_balance = $groupBalance;
-                $accountType->account_group_equity = $groupEquity;
-                $accountType->save();
-            }
+            // update model only if values changed
+            $type->account_group_balance = $groupBalance;
+            $type->account_group_equity = $groupEquity;
+            $type->save();
 
-        // Recalculate total balance and equity from the updated account types
-        $totalBalance = AccountType::sum('account_group_balance');
-        $totalEquity = AccountType::sum('account_group_equity');
+            // accumulate total
+            $totalBalance += $groupBalance;
+            $totalEquity += $groupEquity;
+        }
 
-        // Return the total balance and total equity as a JSON response
         return response()->json([
             'totalBalance' => $totalBalance,
             'totalEquity' => $totalEquity,

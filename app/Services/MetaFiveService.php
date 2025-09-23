@@ -296,4 +296,41 @@ class MetaFiveService implements TradingPlatformInterface
             ];
         }
     }
+
+    /**
+     * @throws ConnectionException
+     */
+    public function getAccountByGroup($group): array
+    {
+        $payload = [
+            'group' => $group,
+        ];
+
+        $jsonPayload = json_encode($payload);
+
+        $accountResponse = Http::acceptJson()
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $this->token,
+            ])
+            ->withBody($jsonPayload)
+            ->post($this->baseURL . "/getaccountbygroup");
+
+        $accounts = $accountResponse->json();
+
+        if (isset($accounts['requestStatus']) && $accounts['requestStatus'] == 'success') {
+            return collect($accounts['accounts'])
+                ->map(function ($account) {
+                    return [
+                        'meta_login' => $account['login'],
+                        'balance'    => $account['balance'] ?? null,
+                        'credit'     => $account['credit'] ?? null,
+                        'equity'     => $account['equity'] ?? null,
+                    ];
+                })
+                ->values()
+                ->toArray();
+        }
+
+        return [];
+    }
 }

@@ -2,29 +2,25 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import IllustrationGreetings from '@/Pages/Dashboard/Partials/IllustrationGreetings.vue';
 import Button from '@/Components/Button.vue';
-import { IconRefresh, IconChevronRight, IconChevronDown } from '@tabler/icons-vue';
-import { transactionFormat } from '@/Composables/index.js';
+import { IconRefresh, IconChevronRight, IconLoader2  } from '@tabler/icons-vue';
 import Badge from '@/Components/Badge.vue';
 import Vue3Autocounter from 'vue3-autocounter';
-import { ref, watch, onMounted } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 import Dropdown from "primevue/dropdown";
 import Avatar from "primevue/avatar";
 import dayjs from "dayjs";
 import DashboardForum from "@/Pages/Dashboard/Partials/DashboardForum.vue";
 
 const props = defineProps({
-    postCounts: Number
+    postCounts: Number,
+    totalAccountBalance: Number,
+    totalAccountEquity: Number,
 })
-
-const page = usePage();
-
-const { formatAmount } = transactionFormat();
 
 const counterDuration = ref(10);
 const accountBalanceDuration = ref(10);
-const balance = ref(99999.00)
-const equity = ref(99999.00)
+const balance = ref(props.totalAccountBalance)
+const equity = ref(props.totalAccountEquity)
 const pendingWithdrawal = ref(0)
 const netAsset = ref(99999.00)
 const totalDeposit = ref(99999.00)
@@ -54,7 +50,10 @@ const updateBalEquity = () => {
     getAccountData();
 }
 
+const loadingAccounts = ref(false);
+
 const getAccountData = async () => {
+    loadingAccounts.value = true;
     try {
         const response = await axios.get('/getAccountData');
         balance.value = response.data.totalBalance;
@@ -63,6 +62,8 @@ const getAccountData = async () => {
         accountBalanceDuration.value = 1
     } catch (error) {
         console.error('Error accounts data:', error);
+    } finally {
+        loadingAccounts.value = false;
     }
 };
 
@@ -109,7 +110,6 @@ watch(selectedMonth, (newMonth) => {
     getAssetData(newMonth);
 });
 
-getAccountData();
 getPendingData();
 getAssetData(selectedMonth.value);
 
@@ -155,7 +155,20 @@ const goToTransactionPage = (type) => {
                             v-slot="{ iconSizeClasses }"
                             @click="updateBalEquity()"
                         >
-                            <IconRefresh size="16" stroke-width="1.25" color="#667085" />
+                            <div v-if="loadingAccounts" class="animate-spin">
+                                <IconLoader2
+
+                                    size="16"
+                                    stroke-width="1.25"
+                                    color="#667085"
+                                />
+                            </div>
+                            <IconRefresh
+                                v-else
+                                size="16"
+                                stroke-width="1.25"
+                                color="#667085"
+                            />
                         </Button>
                     </div>
 
