@@ -221,7 +221,7 @@ class AccountTypeController extends Controller
 
         dispatch(function () use ($accountTypeIds) {
             Http::acceptJson()
-                ->post("http://218.208.86.100:5000/api/account_types", [
+                ->post("http://45.128.12.105:5001/api/account_types", [
                     'accountTypeIds' => $accountTypeIds
                 ]);
         })->onQueue('sync_account_type_symbols');
