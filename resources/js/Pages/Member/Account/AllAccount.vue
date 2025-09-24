@@ -156,13 +156,12 @@ const filterCount = computed(() => {
 
 const clearAll = () => {
     filters.value['global'].value = null;
-    filters.value['start_date'].value = null;
-    filters.value['end_date'].value = null;
-    filters.value['group_id'].value = null;
     filters.value['platform'].value = null;
     filters.value['account_type'].value = null;
-
-    selectedDate.value = [];
+    filters.value['last_logged_in_days'].value = null;
+    filters.value['leverage'].value = null;
+    filters.value['upline'].value = null;
+    filters.value['balance_type'].value = null;
 };
 
 const clearFilterGlobal = () => {
@@ -428,7 +427,7 @@ const exportReport = () => {
                             :value="slotProps.data.account_type.trading_platform.slug"
                         />
                         <div
-                            class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded w-fit"
+                            class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded w-fit text-nowrap"
                             :style="{
                             backgroundColor: formatRgbaColor(slotProps.data?.account_type.color, 0.15),
                             color: `#${slotProps.data?.account_type.color}`,

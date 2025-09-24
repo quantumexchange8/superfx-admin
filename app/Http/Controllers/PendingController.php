@@ -159,7 +159,7 @@ class PendingController extends Controller
 
         if ($transaction->from_meta_login) {
             $trading_account = TradingAccount::with('account_type.trading_platform')
-                ->where($transaction->from_meta_login)
+                ->where('meta_login', $transaction->from_meta_login)
                 ->first();
 
             $trading_platform = $trading_account->account_type->trading_platform->slug;

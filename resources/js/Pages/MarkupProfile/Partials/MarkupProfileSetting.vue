@@ -52,7 +52,13 @@ const getMarkupProfileData = async () => {
 
     try {
         const response = await axios.get(`/markup_profile/getMarkupProfileData?id=${props.profile.id}`);
-        selectedAccountTypes.value = response.data.accountTypes;
+
+        // Get IDs only
+        const accountTypeIds = response.data.accountTypes.map(a => a.value);
+
+        selectedAccountTypes.value = props.accountTypes.filter(a =>
+            accountTypeIds.includes(a.id)
+        );
         selectedUsers.value = response.data.users;
     } catch (error) {
         console.error('Error getting account type users:', error);
@@ -104,7 +110,7 @@ const requireConfirmation = (action_type) => {
 };
 
 const submitForm = () => {
-    form.account_type_ids = selectedAccountTypes.value?.length ? selectedAccountTypes.value.map(type => type.value) : [];
+    form.account_type_ids = selectedAccountTypes.value.map(a => a.id);
     form.user_ids = selectedUsers.value?.length ? selectedUsers.value.map(user => user.value) : [];
 
     requireConfirmation('update_markup_profile');
@@ -178,7 +184,7 @@ const submitForm = () => {
                         <InputLabel for="account_types">{{ $t('public.account_type') }}</InputLabel>
                         <MultiSelect
                             v-model="selectedAccountTypes"
-                            :options="props.accountTypes"
+                            :options="accountTypes"
                             :placeholder="$t('public.select_account_type')"
                             filter
                             :filterFields="['name']"

@@ -155,7 +155,7 @@ const submitForm = () => {
                         <InputLabel for="account_types">{{ $t('public.account_type') }}</InputLabel>
                         <MultiSelect
                             v-model="selectedAccountTypes"
-                            :options="props.accountTypes"
+                            :options="accountTypes"
                             :placeholder="$t('public.select_account_type')"
                             filter
                             :filterFields="['name']"

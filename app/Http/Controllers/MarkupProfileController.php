@@ -3,15 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccountType;
+use App\Models\TradingPlatform;
 use App\Models\User;
 use Inertia\Inertia;
-use App\Models\SymbolGroup;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\MarkupProfile;
-use App\Models\RebateAllocation;
 use App\Models\UserToMarkupProfile;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\MarkupProfileToAccountType;
 
@@ -22,6 +20,7 @@ class MarkupProfileController extends Controller
         return Inertia::render('MarkupProfile/MarkupProfile', [
             'accountTypes' => AccountType::with('trading_platform:id,platform_name,slug')->where('status', 'active')->get()->toArray(),
             'users' => (new GeneralController())->getAllUsers(true),
+            'tradingPlatforms' => TradingPlatform::pluck('slug')->toArray(),
         ]);
     }
 
@@ -49,7 +48,8 @@ class MarkupProfileController extends Controller
             $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
 
             $query = MarkupProfile::with([
-                'markupProfileToAccountTypes.accountType:id,name',
+                'markupProfileToAccountTypes.accountType:id,name,trading_platform_id,account_group,color',
+                'markupProfileToAccountTypes.accountType.trading_platform:id,slug',
             ])->withCount('userToMarkupProfiles');
 
             // Handle sorting
@@ -76,11 +76,16 @@ class MarkupProfileController extends Controller
 
                 unset($profile->markupProfileToAccountTypes, $profile->user_to_markup_profiles_count);
             }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ]);
         }
 
         return response()->json([
-            'success' => true,
-            'data' => $result,
+            'success' => false,
+            'data' => [],
         ]);
     }
 
@@ -420,8 +425,7 @@ class MarkupProfileController extends Controller
             'account_type_ids' => trans('public.account_type_ids'),
             'user_ids' => trans('public.user_ids'),
         ]);
-
-        $validator->validate(); // Validate the request
+        $validator->validate();
 
         $profile = MarkupProfile::findOrFail($request->id);
 

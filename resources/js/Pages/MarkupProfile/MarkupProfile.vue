@@ -10,10 +10,12 @@ import Loader from "@/Components/Loader.vue";
 import { usePage } from '@inertiajs/vue3';
 import AddProfile from '@/Pages/MarkupProfile/Partials/AddProfile.vue';
 import MarkupProfileAction from '@/Pages/MarkupProfile/Partials/MarkupProfileAction.vue';
+import {generalFormat} from "@/Composables/index.js";
 
 const props = defineProps({
     accountTypes: Array,
     users: Array,
+    tradingPlatforms: Array,
 })
 
 const markupProfiles = ref();
@@ -21,6 +23,7 @@ const totalRecords = ref(0);
 const loading = ref(false);
 const dt = ref(null);
 const first = ref(0);
+const { formatRgbaColor } = generalFormat()
 
 const lazyParams = ref({});
 const abortController = ref(null);
@@ -118,7 +121,7 @@ const rowClicked = (data) => {
             <div class="flex justify-end items-center self-stretch">
                 <AddProfile
                     :accountTypes="accountTypes"
-                    :users="props.users"
+                    :users="users"
                 />
             </div>
 
@@ -163,17 +166,48 @@ const rowClicked = (data) => {
                                 <span class="px-2.5 md:px-0">{{ slotProps.data.name }}</span>
                             </template>
                         </Column>
-                        <Column field="account_types" class="hidden md:table-cell md:w-2/5 max-w-0">
+                        <Column
+                            v-for="platform in tradingPlatforms"
+                            field="account_types"
+                            class="hidden md:table-cell w-1/4"
+                        >
                             <template #header>
-                                <span>{{ $t('public.account_type') }}</span>
+                                <span>{{ platform }}</span>
                             </template>
                             <template #body="slotProps">
-                                {{ slotProps.data.account_types?.length ? slotProps.data.account_types.map(type => type.name).join(', ') : $t('public.no_account_type') }}
+                                <div class="flex flex-wrap gap-2">
+                                    <template v-if="
+                                    slotProps.data.account_types &&
+                                    slotProps.data.account_types.filter(
+                                        at => at.trading_platform.slug === platform
+                                    ).length
+                                ">
+                                        <div
+                                            v-for="accountType in slotProps.data.account_types.filter(
+                                                at => at.trading_platform.slug === platform
+                                            )"
+                                            :key="accountType.id"
+                                            class="flex px-2 py-1 justify-center items-center text-xs font-semibold
+                                           hover:-translate-y-1 transition-all duration-300 ease-in-out
+                                           rounded w-fit"
+                                            :style="{
+                                            backgroundColor: formatRgbaColor(accountType?.color, 0.15),
+                                            color: `#${accountType?.color}`,
+                                        }"
+                                        >
+                                            {{ accountType.account_group }}
+                                        </div>
+                                    </template>
+
+                                    <template v-else>
+                                        -
+                                    </template>
+                                </div>
                             </template>
                         </Column>
-                        <Column field="total_account" sortable bodyClass="text-center md:text-left" class="hidden md:table-cell md:w-1/5 max-w-0">
+                        <Column field="total_account" sortable bodyClass="text-center md:text-left" class="hidden md:table-cell">
                             <template #header>
-                                <span class="w-14 truncate sm:w-auto">{{ $t('public.total_account') }}</span>
+                                <span class="w-14 truncate sm:w-auto">{{ $t('public.total_users') }}</span>
                             </template>
                             <template #body="slotProps">
                                 {{ slotProps.data.total_account }}

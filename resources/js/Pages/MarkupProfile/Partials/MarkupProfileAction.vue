@@ -87,10 +87,10 @@ const handleMarkupProfileStatus = () => {
             @click="handleMarkupProfileStatus"
             :disabled="props.loading"
         />
-        <MarkupProfileSetting 
-            :profile="props.profile" 
-            :accountTypes="props.accountTypes" 
-            :users="props.users"
+        <MarkupProfileSetting
+            :profile="props.profile"
+            :accountTypes="accountTypes"
+            :users="users"
             :loading="props.loading"
         />
     </div>
