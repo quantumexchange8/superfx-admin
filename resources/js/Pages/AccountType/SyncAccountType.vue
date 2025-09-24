@@ -93,6 +93,7 @@ const closeDialog = () => {
         type="button"
         class="w-full md:w-auto"
         @click="openDialog"
+        disabled
     >
         <IconRefresh size="20" stroke-width="1.25" color="#FFF" />
         {{ $t('public.synchronise') }}
