@@ -507,7 +507,7 @@ const submitForm = async (transaction) => {
                             $ {{ formatAmount(pendingData.balance) }}
                         </div>
                     </div>
-                    <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
+                    <div v-if="pendingData.category === 'trading_account'" class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">
                         <div class="w-[140px] text-gray-500 text-xs font-medium">
                             {{ $t('public.account_type') }}
                         </div>

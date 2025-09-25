@@ -346,7 +346,7 @@ class TradingAccountController extends Controller
             Log::error('Error creating trade: ' . $e->getMessage());
 
             // Attempt to get the account and mark account as inactive if not found
-            $account = (new MetaFourService())->getUser($trading_account->meta_login);
+            $account = $service->getUser($trading_account->meta_login);
             if (!$account) {
                 TradingUser::where('meta_login', $trading_account->meta_login)
                     ->update(['acc_status' => 'inactive']);

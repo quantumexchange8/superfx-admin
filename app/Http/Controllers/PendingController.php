@@ -451,7 +451,7 @@ class PendingController extends Controller
 
         if ($transaction->from_meta_login) {
             $trading_account = TradingAccount::with('account_type.trading_platform')
-                ->where($transaction->from_meta_login)
+                ->where('meta_login', $transaction->from_meta_login)
                 ->first();
 
             $trading_platform = $trading_account->account_type->trading_platform->slug;
@@ -462,7 +462,9 @@ class PendingController extends Controller
         if ($transaction->status == 'successful') {
             // Check if `meta_login` exists
             if ($transaction->from_meta_login) {
-                $data = (new MetaFourService())->getUser($transaction->from_meta_login);
+                $service = TradingPlatformFactory::make($trading_platform);
+
+                $data = $service->getUser($transaction->from_meta_login);
 
                 Mail::to($user->email)->send(new WithdrawalApprovalMail(
                         $user,
@@ -541,7 +543,7 @@ class PendingController extends Controller
 
         if ($transaction->from_meta_login) {
             $trading_account = TradingAccount::with('account_type.trading_platform')
-                ->where($transaction->from_meta_login)
+                ->where('meta_login', $transaction->from_meta_login)
                 ->first();
 
             $trading_platform = $trading_account->account_type->trading_platform->slug;
@@ -552,7 +554,9 @@ class PendingController extends Controller
         if ($transaction->status == 'successful') {
 
             if ($transaction->from_meta_login) {
-                $data = (new MetaFourService())->getUser($transaction->from_meta_login);
+                $service = TradingPlatformFactory::make($trading_platform);
+
+                $data = $service->getUser($transaction->from_meta_login);
 
                 Mail::to($user->email)->send(new WithdrawalApprovalMail(
                         $user,
@@ -630,7 +634,7 @@ class PendingController extends Controller
 
         if ($transaction->from_meta_login) {
             $trading_account = TradingAccount::with('account_type.trading_platform')
-                ->where($transaction->from_meta_login)
+                ->where('meta_login', $transaction->from_meta_login)
                 ->first();
 
             $trading_platform = $trading_account->account_type->trading_platform->slug;
@@ -640,7 +644,9 @@ class PendingController extends Controller
 
         if ($transaction->status == 'successful') {
             if ($transaction->from_meta_login) {
-                $data = (new MetaFourService())->getUser($transaction->from_meta_login);
+                $service = TradingPlatformFactory::make($trading_platform);
+
+                $data = $service->getUser($transaction->from_meta_login);
 
                 Mail::to($user->email)->send(new WithdrawalApprovalMail(
                         $user,
