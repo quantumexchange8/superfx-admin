@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
 
         LogViewer::auth(function ($request) {
             $allowedEmails = [
-                'admin@admin.com',
+                'system@superfin.com',
                 'admin@superfinfx.com',
             ];
 
