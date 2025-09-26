@@ -382,8 +382,27 @@ class TransactionController extends Controller
 
         // -------- Date filters --------
         if (!empty($data['filters']['start_date']['value']) && !empty($data['filters']['end_date']['value'])) {
-            $startDate = Carbon::parse($data['filters']['start_date']['value'])->addDay()->startOfDay();
-            $endDate   = Carbon::parse($data['filters']['end_date']['value'])->addDay()->endOfDay();
+
+            // Parse incoming values as Carbon
+            $userStart = Carbon::parse($data['filters']['start_date']['value']);
+            $userEnd   = Carbon::parse($data['filters']['end_date']['value']);
+
+            // Check if start date is today
+            if ($userStart->isToday()) {
+                $startDate = $userStart->startOfDay();
+            } else {
+                // If not today, addDay to start date
+                $startDate = $userStart->addDay()->startOfDay();
+            }
+
+            // Check if end date is today
+            if ($userEnd->isToday()) {
+                $endDate = $userEnd->endOfDay();
+            } else {
+                // If not today, addDay to end date
+                $endDate = $userEnd->addDay()->endOfDay();
+            }
+
         } else {
             $startDate = $firstMonth;
             $endDate   = $lastMonth;
