@@ -697,13 +697,15 @@ class PendingController extends Controller
             }
         }
 
-        $tradingUser = TradingUser::where('meta_login', $transaction->from_meta_login)->with('trading_account', 'accountType')->first();
-        $multiplier = $tradingUser->accountType ? $tradingUser->accountType->balance_multiplier : 1;
+        $trading_account = TradingAccount::with('account_type.trading_platform')
+            ->where('meta_login', $transaction->from_meta_login)
+            ->first();
+
+        $multiplier = $trading_account->account_type ? $trading_account->account_type->balance_multiplier : 1;
+
         $adjustedAmount = $transaction->amount * $multiplier;
 
-        $trading_platform = TradingPlatform::find($tradingUser->accountType->trading_platform_id);
-
-        $service = TradingPlatformFactory::make($trading_platform->slug);
+        $service = TradingPlatformFactory::make($trading_account->account_type->trading_platform->slug);
 
         // Trading account logic
         if ($transaction->category == 'trading_account') {

@@ -348,7 +348,7 @@ const submitForm = async (transaction) => {
                         <span class="hidden md:block items-center justify-center w-full">{{ $t('public.from') }}</span>
                     </template>
                     <template #body="slotProps">
-                        {{ slotProps.data.from_meta_login ? slotProps.data.from_meta_login?.meta_login :$t('public.rebate_wallet') }}
+                        {{ slotProps.data.from_meta_login ? slotProps.data.from_meta_login :$t('public.rebate_wallet') }}
                     </template>
                 </Column>
                 <Column field="payment_platform" headerClass="hidden md:table-cell" >
@@ -496,7 +496,7 @@ const submitForm = async (transaction) => {
                             {{ $t('public.from') }}
                         </div>
                         <div class="text-gray-950 text-sm font-medium">
-                            {{ pendingData.from_meta_login ? pendingData.from_meta_login?.meta_login : $t('public.rebate_wallet') }}
+                            {{ pendingData.from_meta_login ? pendingData.from_meta_login : $t('public.rebate_wallet') }}
                         </div>
                     </div>
                     <div class="flex flex-col md:flex-row md:items-center gap-1 self-stretch">

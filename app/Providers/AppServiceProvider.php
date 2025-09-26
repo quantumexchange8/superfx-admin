@@ -24,15 +24,15 @@ class AppServiceProvider extends ServiceProvider
         if (App::environment('production') || App::environment('staging')) {
             resolve(\Illuminate\Routing\UrlGenerator::class)->forceScheme('https');
             $this->app['request']->server->set('HTTPS', true);
+
+            LogViewer::auth(function ($request) {
+                $allowedEmails = [
+                    'system@superfin.com',
+                    'admin@superfinfx.com',
+                ];
+
+                return $request->user() && in_array($request->user()->email, $allowedEmails);
+            });
         }
-
-        LogViewer::auth(function ($request) {
-            $allowedEmails = [
-                'system@superfin.com',
-                'admin@superfinfx.com',
-            ];
-
-            return $request->user() && in_array($request->user()->email, $allowedEmails);
-        });
     }
 }
