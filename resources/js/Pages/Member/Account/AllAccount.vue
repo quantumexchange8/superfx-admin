@@ -268,7 +268,7 @@ const exportReport = () => {
         @filter="onFilter($event)"
         selectionMode="single"
         @row-click="(event) => openDialog(event.data)"
-        :globalFilterFields="['first_name', 'last_name', 'email', 'username', 'meta_login']"
+        :globalFilterFields="['name', 'email', 'id_number', 'meta_login']"
     >
         <template #header>
             <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
@@ -331,7 +331,7 @@ const exportReport = () => {
                     <span class="hidden md:block truncate">{{ $t('public.last_logged_in') }}</span>
                 </template>
                 <template #body="{data}">
-                    {{ dayjs(data.last_access).format('YYYY-MM-DD') }}
+                    {{ dayjs(data.last_access).format('YYYY/MM/DD') }}
                     <div class="text-xs text-gray-500">
                         {{ dayjs(data.last_access).format('HH:mm:ss') }}
                     </div>
@@ -545,7 +545,6 @@ const exportReport = () => {
                     {{ $t('public.filter_platform') }}
                 </div>
                 <div class="flex flex-col self-stretch">
-                    <!-- Zero Balance -->
                     <div
                         v-for="platform in tradingPlatforms"
                         class="flex items-center gap-2 text-sm text-gray-950"

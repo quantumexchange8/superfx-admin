@@ -15,36 +15,17 @@ import PayoutTransactionTable from "@/Pages/Transaction/Partials/PayoutTransacti
 import {wTrans} from "laravel-vue-i18n";
 import Avatar from "primevue/avatar";
 
+const props = defineProps({
+    months: Array,
+    tradingPlatforms: Array,
+})
+
 const totalTransaction = ref(999);
 const totalTransactionAmount = ref(999);
 const maxAmount = ref(999);
 const counterDuration = ref(10);
-const months = ref([]);
-const paymentGateways = ref([]);
-
-const getTransactionMonths = async () => {
-    try {
-        const monthsResponse = await axios.get('/transaction/getTransactionMonths');
-        months.value = monthsResponse.data;
-    } catch (error) {
-        console.error('Error transaction months:', error);
-    }
-};
-
-
-const getPaymentGateways = async () => {
-    try {
-        const response = await axios.get('/get_payment_gateways');
-        paymentGateways.value = response.data.paymentGateways;
-
-    } catch (error) {
-        console.error('Error fetching selectedCountry:', error);
-    }
-};
 
 onMounted(() => {
-    getPaymentGateways();
-    getTransactionMonths();
     // Extract the type from the URL directly
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
@@ -54,20 +35,17 @@ onMounted(() => {
     if (type && tabs.value.some(tab => tab.type === type)) {
         selectedType.value = type;
     }
-
 })
 
 const tabs = ref([
     {
         title: wTrans('public.deposit'),
-        component: h(DepositTransactionTable,
-        { copyToClipboard: copyToClipboard }),
+        component: h(DepositTransactionTable),
         type: 'deposit'
     },
     {
         title: wTrans('public.withdrawal'),
-        component: h(WithdrawalTransactionTable,
-        { copyToClipboard: copyToClipboard }),
+        component: h(WithdrawalTransactionTable),
         type: 'withdrawal'
     },
     {
@@ -104,61 +82,39 @@ function updateType(event) {
 
 // data overview
 const dataOverviews = computed(() => [
-  {
-    icon: 'TotalTransaction',
-    total: totalTransaction.value,
-    label: 'total_transaction',
-  },
-  {
-    icon: 'TotalApprovedAmount',
-    total: totalTransactionAmount.value,
-    label: selectedType.value !== 'payout' ? 'total_approved_amount' : 'total_payout_amount',
-  },
-  {
-    icon: 'MaximumAmount',
-    total: maxAmount.value,
-    label: 'maximum_amount',
-  },
+    {
+        icon: 'TotalTransaction',
+        total: totalTransaction.value,
+        label: 'total_transaction',
+    },
+    {
+        icon: 'TotalApprovedAmount',
+        total: totalTransactionAmount.value,
+        label: selectedType.value !== 'payout' ? 'total_approved_amount' : 'total_payout_amount',
+    },
+    {
+        icon: 'MaximumAmount',
+        total: maxAmount.value,
+        label: 'maximum_amount',
+    },
 ])
+
 // Function to get the current month and year as a string
 const getCurrentMonthYear = () => {
-  const date = new Date();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${month}/${year}`;
+    const date = new Date();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${year}/${month}`;
 };
 
 // Reactive variables
 const selectedMonths = ref([getCurrentMonthYear()]);
 
-function copyToClipboard(text) {
-    const textToCopy = text;
-
-    const textArea = document.createElement('textarea');
-    document.body.appendChild(textArea);
-
-    textArea.value = textToCopy;
-    textArea.select();
-
-    try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-            console.log('Copied to clipboard:', textToCopy);
-        } else {
-            console.error('Unable to copy to clipboard.');
-        }
-    } catch (err) {
-        console.error('Copy to clipboard failed:', err);
-    }
-
-    document.body.removeChild(textArea);
-}
-
 const handleUpdateTotals = (data) => {
-  totalTransaction.value = data.totalTransaction;
-  totalTransactionAmount.value = data.totalTransactionAmount;
-  maxAmount.value = data.maxAmount;
-  counterDuration.value = 1;
+    totalTransaction.value = data.totalTransaction;
+    totalTransactionAmount.value = data.totalTransactionAmount;
+    maxAmount.value = data.maxAmount;
+    counterDuration.value = 1;
 };
 
 </script>
@@ -212,8 +168,15 @@ const handleUpdateTotals = (data) => {
                     </div>
                 </div>
             </div>
+
             <div class="flex flex-col items-center py-6 px-4 gap-5 self-stretch rounded-2xl border border-gray-200 bg-white shadow-table md:py-6 md:gap-6">
-                <component :is="tabs[activeIndex]?.component" :selectedMonths="selectedMonths" :selectedType="selectedType" :paymentGateways="paymentGateways" @update-totals="handleUpdateTotals" />
+                <component
+                    :is="tabs[activeIndex]?.component"
+                    :selectedMonths="selectedMonths"
+                    :selectedType="selectedType"
+                    :tradingPlatforms="tradingPlatforms"
+                    @update-totals="handleUpdateTotals"
+                />
             </div>
         </div>
     </AuthenticatedLayout>

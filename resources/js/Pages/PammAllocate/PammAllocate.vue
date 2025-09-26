@@ -65,7 +65,7 @@ const getOptions = async () => {
 
 const getProfitLoss = async (date) => {
     try {
-        const formattedDate = dayjs(date).format('YYYY-MM-DD');
+        const formattedDate = dayjs(date).format('YYYY/MM/DD');
         const response = await axios.get('/pamm_allocate/getProfitLoss', { params: { date: formattedDate } });
         profit.value = response.data.profit;
         loss.value = response.data.loss;

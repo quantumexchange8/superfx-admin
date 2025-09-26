@@ -266,7 +266,7 @@ const exportReport = () => {
                     <span class="hidden md:block truncate">{{ $t('public.deleted_time') }}</span>
                 </template>
                 <template #body="{data}">
-                    {{ dayjs(data.deleted_at).format('YYYY-MM-DD') }}
+                    {{ dayjs(data.deleted_at).format('YYYY/MM/DD') }}
                     <div class="text-xs text-gray-500">
                         {{ dayjs(data.deleted_at).format('HH:mm:ss') }}
                     </div>

@@ -2,34 +2,33 @@
 
 namespace App\Exports;
 
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
-class PayoutTransactionExport implements FromCollection, WithHeadings
+class PayoutTransactionExport implements FromQuery, WithHeadings, WithMapping
 {
-    protected $data;
+    protected $query;
 
-    public function __construct(Collection $data)
+    public function __construct($query)
     {
-        $this->data = $data;
+        $this->query = $query;
     }
 
-    public function collection()
+    public function query()
     {
-        $rows = [];
+        return $this->query;
+    }
 
-        foreach ($this->data as $item) {
-            $rows[] = [
-                $item['execute_at'] ?? '',
-                $item['name'] ?? '',
-                $item['email'] ?? '',
-                $item['volume'] ?? 0,
-                $item['rebate'] ?? 0,
-            ];
-        }
-
-        return new Collection($rows);
+    public function map($row): array
+    {
+        return [
+            $row->execute_date,
+            $row->upline_user->name ?? $row->name ?? '',
+            $row->upline_user->email ?? $row->email ?? '',
+            $row->total_volume ?? 0,
+            $row->total_rebate ?? 0,
+        ];
     }
 
     public function headings(): array

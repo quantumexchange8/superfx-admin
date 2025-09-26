@@ -52,6 +52,7 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::get('/get_payment_gateways', [GeneralController::class, 'get_payment_gateways'])->name('get_payment_gateways');
     Route::get('/getPlatformAccountTypes', [GeneralController::class, 'getPlatformAccountTypes'])->name('getPlatformAccountTypes');
     Route::get('/getAccountTypeByPlatform', [GeneralController::class, 'getAccountTypeByPlatform'])->name('getAccountTypeByPlatform');
+    Route::get('/getUsers', [GeneralController::class, 'getUsers'])->name('getUsers');
 
     /**
      * ==============================
@@ -220,8 +221,8 @@ Route::middleware(['auth', 'role:super-admin|admin'])->group(function () {
     Route::prefix('transaction')->group(function () {
         Route::get('/', [TransactionController::class, 'listing'])->name('transaction');
         Route::get('/getTransactionListingData', [TransactionController::class, 'getTransactionListingData'])->name('transaction.getTransactionListingData');
-        Route::get('/getTransactionMonths', [TransactionController::class, 'getTransactionMonths'])->name('transaction.getTransactionMonths');
-
+        Route::get('/getTransferData', [TransactionController::class, 'getTransferData'])->name('transaction.getTransferData');
+        Route::get('/getPayoutData', [TransactionController::class, 'getPayoutData'])->name('transaction.getPayoutData');
     });
 
     /**

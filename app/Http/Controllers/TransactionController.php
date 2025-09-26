@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountType;
+use App\Models\TradingPlatform;
+use App\Models\User;
+use Carbon\CarbonPeriod;
 use Inertia\Inertia;
 use App\Models\SymbolGroup;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
 use App\Models\RebateAllocation;
 use App\Models\TradeRebateSummary;
 use Maatwebsite\Excel\Facades\Excel;
@@ -15,264 +19,526 @@ use App\Exports\PayoutTransactionExport;
 use App\Exports\DepositTransactionExport;
 use App\Exports\TransferTransactionExport;
 use App\Exports\WithdrawalTransactionExport;
+use PhpOffice\PhpSpreadsheet\Exception;
 
 class TransactionController extends Controller
 {
-    public function listing()
+    public function listing(Request $request)
     {
-        return Inertia::render('Transaction/Transaction');
+        $months = collect(CarbonPeriod::create(
+            Transaction::oldest('created_at')->first()->created_at->startOfMonth(),
+            '1 month',
+            now()->startOfMonth()
+        ))->map(fn($d) => $d->format('Y/m'));
+
+        return Inertia::render('Transaction/Transaction', [
+            'months' => $months,
+            'tradingPlatforms' => TradingPlatform::where('status', 'active')->get()->toArray(),
+        ]);
     }
 
+    /**
+     * @throws Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
     public function getTransactionListingData(Request $request)
     {
-        $type = $request->query('type');
-        $selectedMonths = $request->query('selectedMonths'); // Get selectedMonths as a comma-separated string
+        if ($request->has('lazyEvent')) {
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
 
-        // Convert the comma-separated string to an array
-        $selectedMonthsArray = !empty($selectedMonths) ? explode(',', $selectedMonths) : [];
+            $type = $data['filters']['type']['value'];
+            $month_range = $data['filters']['month_range']['value'] ?? [];
 
-        // Define common fields
+            if (empty($month_range)) {
+                // default to current month
+                $firstMonth = now()->startOfMonth();
+                $lastMonth = now()->endOfMonth();
+            } else {
+                // Convert all months to Carbon start-of-month
+                $months = collect($month_range)->map(function ($m) {
+                    return Carbon::createFromFormat('Y/m', $m)->startOfMonth();
+                });
 
-        if (empty($selectedMonthsArray)) {
-            // If selectedMonths is empty, return an empty result
-            return response()->json([
-                'transactions' => [],
-            ]);
-        }
+                $firstMonth = $months->min();
+                $lastMonth = $months->max()->copy()->endOfMonth();
+            }
 
-        if ($type === 'payout') {
-            // Retrieve query parameters
-            $startDate = $request->query('startDate');
-            $endDate = $request->query('endDate');
+            $query = Transaction::with([
+                'user:id,name,email,hierarchyList,id_number',
+                'user.media' => function ($q) {
+                    $q->where('collection_name', 'profile_photo');
+                },
+                'payment_gateway:id,name,platform'
+            ])
+                ->where('transaction_type', $type)
+                ->whereBetween('created_at', [$firstMonth, $lastMonth]);
 
-            // Fetch all symbol groups from the database
-            $allSymbolGroups = SymbolGroup::pluck('display', 'id')->toArray();
+            if ($type == 'deposit') {
+                $query->with([
+                    'to_login:id,meta_login,account_type_id',
+                    'to_login.account_type:id,account_group,trading_platform_id,color',
+                    'to_login.account_type.trading_platform:id,slug',
+                ]);
+            } elseif ($type == 'withdrawal') {
+                $query->with([
+                    'from_login:id,meta_login,account_type_id',
+                    'from_login.account_type:id,account_group,trading_platform_id,color',
+                    'from_login.account_type.trading_platform:id,slug',
+                    'from_wallet'
+                ]);
+            }
 
-            // Initialize query for TradeRebateSummary
-            $query = TradeRebateSummary::with('upline_user', 'accountType');
+            if ($data['filters']['global']['value']) {
+                $keyword = $data['filters']['global']['value'];
 
-            if (!empty($selectedMonthsArray)) {
-                $query->where(function ($q) use ($selectedMonthsArray) {
-                    foreach ($selectedMonthsArray as $range) {
-                        [$month, $year] = explode('/', $range);
-
-                        // Restrict data to the selected months
-                        $q->orWhere(function ($subQuery) use ($month, $year) {
-                            $subQuery->whereMonth('execute_at', $month)
-                                     ->whereYear('execute_at', $year);
+                $query->where(function ($q) use ($keyword) {
+                    $q->whereHas('user', function ($query) use ($keyword) {
+                        $query->where(function ($q) use ($keyword) {
+                            $q->where('name', 'like', '%' . $keyword . '%')
+                                ->orWhere('email', 'like', '%' . $keyword . '%')
+                                ->orWhere('id_number', 'like', '%' . $keyword . '%');
                         });
-                    }
+                    })->orWhere('from_meta_login', 'like', '%' . $keyword . '%')
+                        ->orWhere('to_meta_login', 'like', '%' . $keyword . '%')
+                        ->orWhere('transaction_number', 'like', '%' . $keyword . '%');
                 });
             }
 
-            // Apply date filter based on availability of startDate and/or endDate
-            if ($startDate && $endDate) {
-                // Both startDate and endDate are provided
-                $query->whereDate('execute_at', '>=', $startDate)
-                    ->whereDate('execute_at', '<=', $endDate);
-            } else {
-                // Apply default start date if no endDate is provided
-                $query->whereDate('execute_at', '>=', '2024-01-01');
+            if (!empty($data['filters']['start_date']['value']) && !empty($data['filters']['end_date']['value'])) {
+                $start_date = Carbon::parse($data['filters']['start_date']['value'])->addDay()->startOfDay();
+                $end_date = Carbon::parse($data['filters']['end_date']['value'])->addDay()->endOfDay();
+
+                $query->whereBetween('created_at', [$start_date, $end_date]);
             }
 
-            // Fetch and map summarized data from TradeRebateSummary
-            $data = $query->get()->map(function ($item) {
-                return [
-                    'user_id' => $item->upline_user_id,
-                    'name' => $item->upline_user->name,
-                    'email' => $item->upline_user->email,
-                    'account_type' => $item->accountType->slug ?? null,
-                    'execute_at' => Carbon::parse($item->execute_at)->toDateString(),
-                    'symbol_group' => $item->symbol_group,
-                    'volume' => $item->volume,
-                    'net_rebate' => $item->net_rebate,
-                    'rebate' => $item->rebate,
-                ];
+            if (!empty($data['filters']['trading_platform']['value'])) {
+                if ($type == 'deposit') {
+                    $query->whereHas('to_login.account_type.trading_platform', function ($q) use ($data) {
+                        $q->where('slug', $data['filters']['trading_platform']['value']);
+                    });
+                } else {
+                    $query->whereHas('from_login.account_type.trading_platform', function ($q) use ($data) {
+                        $q->where('slug', $data['filters']['trading_platform']['value']);
+                    });
+                }
+            }
+
+            if (!empty($data['filters']['account_type']['value'])) {
+                $rawValue = $data['filters']['account_type']['value'];
+                $ids = collect($rawValue)->pluck('id')->filter()->values();
+                if ($ids->isEmpty()) {
+                    $ids = collect($rawValue)->filter()->values();
+                }
+
+                if ($type == 'deposit') {
+                    $query->whereHas('to_login.account_type', function ($q) use ($ids) {
+                        $q->whereIn('id', $ids);
+                    });
+                } else {
+                    $query->whereHas('from_login.account_type', function ($q) use ($ids) {
+                        $q->whereIn('id', $ids);
+                    });
+                }
+            }
+
+            if (!empty($data['filters']['status']['value'])) {
+                $query->where('status', $data['filters']['status']['value']);
+            }
+
+            if (!empty($data['filters']['role']['value'])) {
+                $query->whereHas('user', function ($q) use ($data) {
+                    $q->where('role', $data['filters']['role']['value']);
+                });
+            }
+
+            if (!empty($data['filters']['payment_platform']['value'])) {
+                $query->where('payment_gateway_id', $data['filters']['payment_platform']['value']);
+            }
+
+            if (!empty($data['filters']['upline']['value'])) {
+                $query->whereHas('user', function ($q) use ($data) {
+                    $selected_referrers = User::find($data['filters']['upline']['value']['id']);
+
+                    $userIds = $selected_referrers->getChildrenIds();
+                    $userIds[] = $data['filters']['upline']['value']['id'];
+
+                    $q->whereIn('upline_id', $userIds);
+                });
+            }
+
+            //sort field/order
+            if ($data['sortField'] && $data['sortOrder']) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+                $query->orderBy($data['sortField'], $order);
+            } else {
+                $query->orderByDesc('created_at');
+            }
+
+            $total_success_amount = (clone $query)->where('status', 'successful')
+                ->sum('transaction_amount');
+
+            $max_amount = (clone $query)
+                ->where('status', 'successful')
+                ->max('transaction_amount');
+
+            // Export logic
+            if ($request->has('exportStatus') && $request->exportStatus) {
+                if ($type == 'deposit') {
+                    return Excel::download(new DepositTransactionExport($query), now() . '-deposit.xlsx');
+                } else {
+                    return Excel::download(new WithdrawalTransactionExport($query), now() . '-withdrawal.xlsx');
+                }
+            }
+
+            $transactions = $query->paginate($data['rows']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $transactions,
+                'totalSuccessAmount' => (float)$total_success_amount,
+                'maxAmount' => (float)$max_amount,
+            ]);
+        }
+
+        return response()->json(['success' => false, 'data' => []]);
+    }
+
+    /**
+     * @throws Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
+    public function getTransferData(Request $request)
+    {
+        if ($request->has('lazyEvent')) {
+            $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
+
+            $month_range = $data['filters']['month_range']['value'] ?? [];
+
+            if (empty($month_range)) {
+                // default to current month
+                $firstMonth = now()->startOfMonth();
+                $lastMonth = now()->endOfMonth();
+            } else {
+                // Convert all months to Carbon start-of-month
+                $months = collect($month_range)->map(function ($m) {
+                    return Carbon::createFromFormat('Y/m', $m)->startOfMonth();
+                });
+
+                $firstMonth = $months->min();
+                $lastMonth = $months->max()->copy()->endOfMonth();
+            }
+
+            $query = Transaction::with([
+                'user:id,name,email,hierarchyList,id_number',
+                'user.media' => function ($q) {
+                    $q->where('collection_name', 'profile_photo');
+                },
+                'to_login:id,meta_login,account_type_id',
+                'to_login.account_type:id,account_group,trading_platform_id,color',
+                'to_login.account_type.trading_platform:id,slug',
+                'from_login:id,meta_login,account_type_id',
+                'from_login.account_type:id,account_group,trading_platform_id,color',
+                'from_login.account_type.trading_platform:id,slug',
+                'from_wallet'
+            ])
+                ->whereBetween('created_at', [$firstMonth, $lastMonth]);
+
+            if ($data['filters']['global']['value']) {
+                $keyword = $data['filters']['global']['value'];
+
+                $query->where(function ($q) use ($keyword) {
+                    $q->whereHas('user', function ($query) use ($keyword) {
+                        $query->where(function ($q) use ($keyword) {
+                            $q->where('name', 'like', '%' . $keyword . '%')
+                                ->orWhere('email', 'like', '%' . $keyword . '%')
+                                ->orWhere('id_number', 'like', '%' . $keyword . '%');
+                        });
+                    })->orWhere('from_meta_login', 'like', '%' . $keyword . '%')
+                        ->orWhere('to_meta_login', 'like', '%' . $keyword . '%')
+                        ->orWhere('transaction_number', 'like', '%' . $keyword . '%');
+                });
+            }
+
+            if (!empty($data['filters']['start_date']['value']) && !empty($data['filters']['end_date']['value'])) {
+                $start_date = Carbon::parse($data['filters']['start_date']['value'])->addDay()->startOfDay();
+                $end_date = Carbon::parse($data['filters']['end_date']['value'])->addDay()->endOfDay();
+
+                $query->whereBetween('created_at', [$start_date, $end_date]);
+            }
+
+            $type = $data['filters']['type']['value'];
+
+            if (!empty($type)) {
+                $query->where('transaction_type', $type);
+            } else {
+                $query->whereIn('transaction_type', ['transfer_to_account', 'account_to_account']);
+            }
+
+            if (!empty($data['filters']['from_trading_platform']['value'])) {
+                $slug = $data['filters']['from_trading_platform']['value'];
+                $query->whereHas('from_login.account_type.trading_platform', function ($q) use ($slug) {
+                    $q->where('slug', $slug);
+                });
+            }
+
+            if (!empty($data['filters']['from_account_type']['value'])) {
+                $rawValue = $data['filters']['from_account_type']['value'];
+                $ids = collect($rawValue)->pluck('id')->filter()->values();
+                if ($ids->isEmpty()) {
+                    $ids = collect($rawValue)->filter()->values();
+                }
+
+                $query->whereHas('from_login.account_type', function ($q) use ($ids) {
+                    $q->whereIn('id', $ids);
+                });
+            }
+
+            if (!empty($data['filters']['to_trading_platform']['value'])) {
+                $slug = $data['filters']['to_trading_platform']['value'];
+                $query->whereHas('to_login.account_type.trading_platform', function ($q) use ($slug) {
+                    $q->where('slug', $slug);
+                });
+            }
+
+            if (!empty($data['filters']['to_account_type']['value'])) {
+                $rawValue = $data['filters']['to_account_type']['value'];
+                $ids = collect($rawValue)->pluck('id')->filter()->values();
+                if ($ids->isEmpty()) {
+                    $ids = collect($rawValue)->filter()->values();
+                }
+
+                $query->whereHas('to_login.account_type', function ($q) use ($ids) {
+                    $q->whereIn('id', $ids);
+                });
+            }
+
+            if (!empty($data['filters']['upline']['value'])) {
+                $query->whereHas('user', function ($q) use ($data) {
+                    $selected_referrers = User::find($data['filters']['upline']['value']['id']);
+
+                    $userIds = $selected_referrers->getChildrenIds();
+                    $userIds[] = $data['filters']['upline']['value']['id'];
+
+                    $q->whereIn('upline_id', $userIds);
+                });
+            }
+
+            //sort field/order
+            if ($data['sortField'] && $data['sortOrder']) {
+                $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+                $query->orderBy($data['sortField'], $order);
+            } else {
+                $query->orderByDesc('created_at');
+            }
+
+            $total_success_amount = (clone $query)->where('status', 'successful')
+                ->sum('transaction_amount');
+
+            $max_amount = (clone $query)
+                ->where('status', 'successful')
+                ->max('transaction_amount');
+
+            if ($request->has('exportStatus') && $request->exportStatus) {
+                return Excel::download(new TransferTransactionExport($query), now() . '-transfer.xlsx');
+            }
+
+            $transactions = $query->paginate($data['rows']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $transactions,
+                'totalSuccessAmount' => (float)$total_success_amount,
+                'maxAmount' => (float)$max_amount,
+            ]);
+        }
+
+        return response()->json(['success' => false, 'data' => []]);
+    }
+
+    /**
+     * @throws Exception
+     * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
+     */
+    public function getPayoutData(Request $request)
+    {
+        if (!$request->has('lazyEvent')) {
+            return response()->json(['success' => false, 'data' => []]);
+        }
+
+        $data = json_decode($request->only(['lazyEvent'])['lazyEvent'], true);
+
+        // -------- Month range --------
+        $month_range = $data['filters']['month_range']['value'] ?? [];
+        if (empty($month_range)) {
+            $firstMonth = now()->startOfMonth();
+            $lastMonth  = now()->endOfMonth();
+        } else {
+            $months = collect($month_range)->map(fn($m) =>
+            Carbon::createFromFormat('Y/m', $m)->startOfMonth()
+            );
+            $firstMonth = $months->min();
+            $lastMonth  = $months->max()->copy()->endOfMonth();
+        }
+
+        // -------- Date filters --------
+        if (!empty($data['filters']['start_date']['value']) && !empty($data['filters']['end_date']['value'])) {
+            $startDate = Carbon::parse($data['filters']['start_date']['value'])->addDay()->startOfDay();
+            $endDate   = Carbon::parse($data['filters']['end_date']['value'])->addDay()->endOfDay();
+        } else {
+            $startDate = $firstMonth;
+            $endDate   = $lastMonth;
+        }
+
+        // -------- Base query with filters (for totals & details) --------
+        $base = TradeRebateSummary::query()->whereBetween('execute_at', [$startDate, $endDate]);
+
+        if (!empty($data['filters']['global']['value'])) {
+            $keyword = $data['filters']['global']['value'];
+            $base->whereHas('upline_user', function ($q) use ($keyword) {
+                $q->where(function ($sub) use ($keyword) {
+                    $sub->where('name', 'like', '%' . $keyword . '%')
+                        ->orWhere('email', 'like', '%' . $keyword . '%')
+                        ->orWhere('id_number', 'like', '%' . $keyword . '%');
+                });
+            });
+        }
+
+        // -------- Totals before paginate --------
+        $totalPayout = (float) (clone $base)->sum('rebate');
+
+        // For maxAmount at symbol-group level
+        $maxAmount = (float) (clone $base)
+            ->selectRaw('upline_user_id, DATE(execute_at) as execute_date, SUM(rebate) as rebate_sum')
+            ->groupBy('upline_user_id', 'execute_date')
+            ->get()
+            ->max('rebate_sum') ?? 0;
+
+        // -------- Aggregated main rows (paginated) --------
+        $query = (clone $base)
+            ->selectRaw('upline_user_id, DATE(execute_at) as execute_date, SUM(volume) as total_volume, SUM(rebate) as total_rebate, MAX(net_rebate) as net_rebate')
+            ->with([
+                'upline_user',
+                'upline_user.media' => fn($q) => $q->where('collection_name', 'profile_photo')
+            ])
+            ->groupBy('upline_user_id', 'execute_date');
+
+        // -------- Sorting before paginate --------
+        if ($data['sortField'] && $data['sortOrder']) {
+            $order = $data['sortOrder'] == 1 ? 'asc' : 'desc';
+
+            $fieldMap = [
+                'rebate' => 'total_rebate',
+                'volume' => 'total_volume',
+                'execute_at' => 'execute_date',
+            ];
+
+            $field = $fieldMap[$data['sortField']] ?? 'execute_date';
+
+            $query->orderBy($field, $order);
+        } else {
+            // default sort by execute_date desc
+            $query->orderByDesc('execute_date');
+        }
+
+        // Export logic
+        if ($request->has('exportStatus') && $request->exportStatus) {
+            return Excel::download(new PayoutTransactionExport($query), now() . '-payout.xlsx');
+        }
+
+        $perPage = $data['rows'] ?? 15;
+        $transactions = $query->paginate($perPage);
+
+        // -------- Keys of current page for details --------
+        $pageKeys = $transactions->getCollection()->map(fn($item) => [
+            'upline_user_id' => $item->upline_user_id,
+            'execute_date'   => $item->execute_date,
+        ]);
+
+        // -------- Details query only for current page --------
+        $detailsQuery = TradeRebateSummary::query()
+            ->selectRaw('upline_user_id, account_type_id, DATE(execute_at) as execute_date, symbol_group,
+            SUM(volume) as volume, SUM(rebate) as rebate, MAX(net_rebate) as net_rebate')
+            ->groupBy('upline_user_id', 'account_type_id', 'execute_date', 'symbol_group')
+            ->where(function ($q) use ($pageKeys) {
+                foreach ($pageKeys as $key) {
+                    $q->orWhere(function ($sub) use ($key) {
+                        $sub->where('upline_user_id', $key['upline_user_id'])
+                            ->whereDate('execute_at', $key['execute_date']);
+                    });
+                }
             });
 
-            // Generate summary and details
-            $summary = $data->groupBy(function ($item) {
-                return $item['execute_at'] . '-' . $item['user_id'];
-            })->map(function ($group) use ($allSymbolGroups) {
-                $group = collect($group);
+        $allDetails = $detailsQuery->get();
+        $detailsByKey = $allDetails->groupBy(fn($row) => $row->upline_user_id . '|' . $row->execute_date);
 
-                // Generate detailed data for this summary item
-                $symbolGroupDetails = $group->groupBy('symbol_group')->map(function ($symbolGroupItems) use ($allSymbolGroups) {
-                    $symbolGroupId = $symbolGroupItems->first()['symbol_group'];
+        // -------- Lookups (symbol groups, account types, platform slugs) --------
+        $allSymbolGroups = SymbolGroup::pluck('display', 'id')->toArray();
+        $accountTypes    = AccountType::with('trading_platform:id,slug')->get();
+        $allAccountTypes = $accountTypes->pluck('name', 'id')->toArray();
+        $accountTypeColors = $accountTypes->pluck('color', 'id')->toArray();
+        $accountTypePlatforms = $accountTypes
+            ->mapWithKeys(fn($at) => [$at->id => $at->trading_platform->slug ?? null])
+            ->toArray();
 
-                    return [
-                        'id' => $symbolGroupId,
-                        'name' => $allSymbolGroups[$symbolGroupId] ?? 'Unknown',
-                        'volume' => $symbolGroupItems->sum('volume'),
-                        'net_rebate' => $symbolGroupItems->first()['net_rebate'] ?? 0,
-                        'rebate' => $symbolGroupItems->sum('rebate'),
-                    ];
-                })->values();
+        // -------- Transform paginated collection with details --------
+        $transactions->getCollection()->transform(function ($item) use (
+            $detailsByKey, $allSymbolGroups, $allAccountTypes, $accountTypeColors, $accountTypePlatforms
+        ) {
+            $key = $item->upline_user_id . '|' . $item->execute_date;
+            $detailRows = $detailsByKey->get($key, collect());
+            $byAccountType = $detailRows->groupBy('account_type_id');
 
-                // Add missing symbol groups with volume, net_rebate, and rebate as 0
+            $details = $byAccountType->map(function ($rows, $accountTypeId) use ($allSymbolGroups, $allAccountTypes, $accountTypeColors, $accountTypePlatforms) {
+                $symbolGroups = $rows->map(fn($row) => [
+                    'id'         => $row->symbol_group,
+                    'name'       => $allSymbolGroups[$row->symbol_group] ?? 'Unknown',
+                    'volume'     => $row->volume,
+                    'net_rebate' => $row->net_rebate,
+                    'rebate'     => $row->rebate,
+                ]);
+
+                // fill missing symbol groups
                 foreach ($allSymbolGroups as $symbolGroupId => $symbolGroupName) {
-                    if (!$symbolGroupDetails->pluck('id')->contains($symbolGroupId)) {
-                        $symbolGroupDetails->push([
-                            'id' => $symbolGroupId,
-                            'name' => $symbolGroupName,
-                            'volume' => 0,
+                    if (!$symbolGroups->pluck('id')->contains($symbolGroupId)) {
+                        $symbolGroups->push([
+                            'id'         => $symbolGroupId,
+                            'name'       => $symbolGroupName,
+                            'volume'     => 0,
                             'net_rebate' => 0,
-                            'rebate' => 0,
+                            'rebate'     => 0,
                         ]);
                     }
                 }
 
-                // Sort the symbol group details array to match the order of symbol groups
-                $symbolGroupDetails = $symbolGroupDetails->sortBy('id')->values();
-
-                // Return summary item with details included
                 return [
-                    'user_id' => $group->first()['user_id'],
-                    'name' => $group->first()['name'],
-                    'email' => $group->first()['email'],
-                    'account_type' => $group->first()['account_type'],
-                    'execute_at' => $group->first()['execute_at'],
-                    'volume' => $group->sum('volume'),
-                    'rebate' => $group->sum('rebate'),
-                    'details' => $symbolGroupDetails,
+                    'account_type_id'    => $accountTypeId,
+                    'account_type_name'  => $allAccountTypes[$accountTypeId] ?? 'Unknown',
+                    'account_type_color' => $accountTypeColors[$accountTypeId] ?? null,
+                    'trading_platform'   => $accountTypePlatforms[$accountTypeId] ?? null,
+                    'total_volume'       => $rows->sum('volume'),
+                    'total_rebate'       => $rows->sum('rebate'),
+                    'symbol_groups'      => $symbolGroups->sortBy('id')->values(),
                 ];
             })->values();
 
-            // Sort summary by execute_at in descending order to get the latest dates first
-            $summary = $summary->sortByDesc('execute_at');
-
-            // Export logic
-            if ($request->has('exportStatus') && $request->exportStatus == true) {
-                return Excel::download(new PayoutTransactionExport($data), now() . '-payout.xlsx');
-            }
-
-            $data = $summary;
-        } else {
-            $query = Transaction::with('user', 'from_wallet', 'to_wallet', 'payment_gateway', 'fromMetaLogin.account_type.trading_platform', 'toMetaLogin.account_type.trading_platform');
-
-            // Apply filtering for each selected month-year pair
-            if (!empty($selectedMonthsArray)) {
-                $query->where(function ($q) use ($selectedMonthsArray) {
-                    foreach ($selectedMonthsArray as $range) {
-                        [$month, $year] = explode('/', $range);
-                        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-                        $endDate = Carbon::create($year, $month, 1)->endOfMonth();
-
-                        // Add a condition to match transactions for this specific month-year
-                        $q->orWhereBetween('created_at', [$startDate, $endDate]);
-                    }
-                });
-            }
-
-            // Filter by transaction type
-            if ($type) {
-                if ($type === 'transfer') {
-                    $query->where(function ($q) {
-                        $q->where('transaction_type', 'transfer_to_account')
-                        ->orWhere('transaction_type', 'account_to_account');
-                    });
-                } else {
-                    $query->where('transaction_type', $type);
-                }
-            }
-
-            // Apply ordering based on the transaction type
-            if ($type === 'withdrawal') {
-                $query->where('status', '!=', 'processing')
-                    ->orderByDesc('approved_at')
-                    ->orderByDesc('created_at');
-            } else {
-                $query->latest();
-            }
-
-            // Fetch data
-            $data = $query->get()->map(function ($transaction) use ($type) {
-                $commonFields = [
-                    'id',
-                    'user_id',
-                    'category',
-                    'transaction_type',
-                    'transaction_number',
-                    'payment_account_name',
-                    'payment_platform',
-                    'payment_platform_name',
-                    'payment_account_no',
-                    'payment_account_type',
-                    'bank_code',
-                    'amount',
-                    'transaction_charges',
-                    'transaction_amount',
-                    'status',
-                    'remarks',
-                    'created_at',
-                ];
-                // Initialize result array with common fields
-                $result = $transaction->only($commonFields);
-
-                // Add common user fields
-                $result['name'] = $transaction->user ? $transaction->user->name : null;
-                $result['email'] = $transaction->user ? $transaction->user->email : null;
-                $result['role'] = $transaction->user ? $transaction->user->role : null;
-                $result['profile_photo'] = $transaction->user ? $transaction->user->getFirstMediaUrl('profile_photo') : null;
-
-                // Add type-specific fields
-                if ($type === 'deposit') {
-                    $result['from_wallet_address'] = $transaction->from_wallet_address;
-                    $result['to_wallet_address'] = $transaction->to_wallet_address;
-                    $result['to_meta_login'] = $transaction->to_meta_login;
-                    $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
-                    $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->type : null;
-                    $result['payment_gateway_id'] = $transaction->payment_gateway_id ? $transaction->payment_gateway_id : null;
-                    $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
-                    $result['account_type'] = $transaction->toMetaLogin->account_type->name;
-                    $result['trading_platform'] = $transaction->toMetaLogin->account_type->trading_platform->slug;
-                } elseif ($type === 'withdrawal') {
-                    $result['to_wallet_address'] = $transaction->to_wallet_address;
-                    $result['from_meta_login'] = $transaction->from_meta_login;
-                    $result['from_wallet_id'] = $transaction->from_wallet ? $transaction->from_wallet->id : null;
-                    $result['from_wallet_name'] = $transaction->from_wallet ? $transaction->from_wallet->type : null;
-                    $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
-                    $result['to_wallet_name'] = $transaction->payment_account_id ? $transaction->payment_account->payment_account_name : null;
-                    $result['approved_at'] = $transaction->approved_at;
-                    $result['payment_gateway_id'] = $transaction->payment_gateway_id ? $transaction->payment_gateway_id : null;
-                    $result['payment_gateway'] = $transaction->payment_gateway ? $transaction->payment_gateway->name : null;
-                    $result['account_type'] = $transaction->fromMetaLogin?->account_type?->name;
-                    $result['trading_platform'] = $transaction->fromMetaLogin?->account_type?->trading_platform?->slug;
-                } elseif ($type === 'transfer') {
-                    $result['from_meta_login'] = $transaction->from_meta_login;
-                    $result['to_meta_login'] = $transaction->to_meta_login;
-                    $result['from_wallet_id'] = $transaction->from_wallet ? $transaction->from_wallet->id : null;
-                    $result['from_wallet_name'] = $transaction->from_wallet ? $transaction->from_wallet->type : null;
-                    $result['to_wallet_id'] = $transaction->to_wallet ? $transaction->to_wallet->id : null;
-                    $result['to_wallet_name'] = $transaction->to_wallet ? $transaction->to_wallet->type : null;
-                }
-
-                return $result;
-            });
-
-            // Export logic
-            if ($request->has('exportStatus') && $request->exportStatus == true) {
-                if ($type === 'deposit') {
-                    return Excel::download(new DepositTransactionExport($data), now() . '-deposits.xlsx');
-                } elseif ($type === 'withdrawal') {
-                    return Excel::download(new WithdrawalTransactionExport($data), now() . '-withdrawals.xlsx');
-                } elseif ($type === 'transfer') {
-                    return Excel::download(new TransferTransactionExport($data), now() . '-transfers.xlsx');
-                }
-            }
-
-        }
+            return [
+                'user_id'       => $item->upline_user_id,
+                'name'          => $item->upline_user->name ?? null,
+                'email'         => $item->upline_user->email ?? null,
+                'id_number'     => $item->upline_user->id_number ?? null,
+                'profile_photo' => $item->upline_user->getFirstMediaUrl('profile_photo') ?? null,
+                'execute_at'    => $item->execute_date,
+                'volume'        => $item->total_volume,
+                'rebate'        => $item->total_rebate,
+                'details'       => $details,
+            ];
+        });
 
         return response()->json([
-            'transactions' => $data->values(),
+            'success'     => true,
+            'data'        => $transactions,
+            'totalPayout' => $totalPayout,
+            'maxAmount'   => $maxAmount,
         ]);
     }
-
-    public function getTransactionMonths()
-    {
-        $transactionMonths = (new GeneralController())->getTransactionMonths(true);
-
-        return response()->json($transactionMonths);
-    }
-
 }

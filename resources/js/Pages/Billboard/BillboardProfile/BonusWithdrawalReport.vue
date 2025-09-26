@@ -41,7 +41,7 @@ const getStatementData = async (filterDate = null) => {
 
         if (filterDate) {
             const [startDate, endDate] = filterDate;
-            url += `&startDate=${dayjs(startDate).format('YYYY-MM-DD')}&endDate=${dayjs(endDate).format('YYYY-MM-DD')}`;
+            url += `&startDate=${dayjs(startDate).format('YYYY/MM/DD')}&endDate=${dayjs(endDate).format('YYYY/MM/DD')}`;
         }
 
         const response = await axios.get(url);

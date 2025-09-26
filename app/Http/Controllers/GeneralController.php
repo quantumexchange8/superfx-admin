@@ -554,4 +554,19 @@ class GeneralController extends Controller
             'accountTypes' => $accountTypes,
         ]);
     }
+
+
+    public function getUsers(Request $request)
+    {
+        $users = User::whereIn('role', ['ib', 'member'])
+            ->select([
+                'id', 'name', 'email', 'id_number',
+            ])
+            ->get()
+            ->toArray();
+
+        return response()->json([
+            'users' => $users,
+        ]);
+    }
 }

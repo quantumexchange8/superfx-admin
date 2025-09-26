@@ -1,240 +1,380 @@
 <script setup>
-import InputText from 'primevue/inputtext';
-import RadioButton from 'primevue/radiobutton';
-import Dropdown from 'primevue/dropdown';
-import Button from '@/Components/Button.vue';
-import StatusBadge from '@/Components/StatusBadge.vue';
-import { ref, onMounted, watch, watchEffect, computed } from "vue";
-import {usePage} from '@inertiajs/vue3';
-import OverlayPanel from 'primevue/overlaypanel';
-import Dialog from 'primevue/dialog';
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
-import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
+import {ref, watch, onMounted, computed} from "vue";
 import {FilterMatchMode} from "primevue/api";
-import { transactionFormat } from '@/Composables/index.js';
-import dayjs from "dayjs";
-import { trans, wTrans } from "laravel-vue-i18n";
-import Empty from '@/Components/Empty.vue';
 import Loader from "@/Components/Loader.vue";
-import Badge from '@/Components/Badge.vue';
-import {IconSearch, IconCircleXFilled, IconAdjustments, IconX} from '@tabler/icons-vue';
-import Slider from 'primevue/slider';
-import Tag from 'primevue/tag';
-
-const { formatDateTime, formatAmount } = transactionFormat();
+import DefaultProfilePhoto from "@/Components/DefaultProfilePhoto.vue";
+import OverlayPanel from 'primevue/overlaypanel';
+import Dropdown from "primevue/dropdown";
+import MultiSelect from "primevue/multiselect";
+import Empty from "@/Components/Empty.vue";
+import dayjs from "dayjs";
+import Badge from "@/Components/Badge.vue";
+import InputText from "primevue/inputtext";
+import Button from "@/Components/Button.vue";
+import {IconAdjustments, IconCircleXFilled, IconSearch, IconX} from "@tabler/icons-vue";
+import RadioButton from "primevue/radiobutton";
+import {transactionFormat, generalFormat} from "@/Composables/index.js";
+import Dialog from "primevue/dialog";
+import Tag from "primevue/tag";
+import debounce from "lodash/debounce.js";
+import StatusBadge from "@/Components/StatusBadge.vue";
+import Calendar from "primevue/calendar";
 
 const props = defineProps({
-  selectedMonths: Array,
-  selectedType: String,
-  paymentGateways: Array,
-  copyToClipboard: Function,
+    selectedMonths: Array,
+    selectedType: String,
+    tradingPlatforms: Array,
 });
 
-watch(() => props.selectedMonths, () => {
-    getResults(props.selectedType, props.selectedMonths);
-});
-
-const exportStatus = ref(false);
-const visible = ref(false);
-const transactions = ref();
-const dt = ref();
-const loading = ref(false);
-const totalTransaction = ref(null);
-const totalTransactionAmount = ref(null);
-const minFilterAmount = ref(0);
-const maxFilterAmount = ref(0);
-const maxAmount = ref(null);
-const filteredValue = ref();
-const filteredValueCount = ref(0);
-
-onMounted(() => {
-    getResults(props.selectedType, props.selectedMonths);
-})
-
-const getResults = async (type, selectedMonths = []) => {
-    loading.value = true;
-
-    try {
-        let response;
-
-        let url = `/transaction/getTransactionListingData?type=${type}`;
-
-        // Convert the array to a comma-separated string if not empty
-        if (selectedMonths && selectedMonths.length > 0) {
-            const selectedMonthString = selectedMonths.join(',');
-            url += `&selectedMonths=${selectedMonthString}`;
-        }
-
-        response = await axios.get(url);
-        transactions.value = response.data.transactions;
-        totalTransaction.value = transactions.value?.length;
-        totalTransactionAmount.value = transactions.value.filter(item => ['successful'].includes(item.status)).reduce((acc, item) => acc + parseFloat(item.transaction_amount || 0), 0);
-        maxAmount.value = transactions.value?.length ? Math.max(...transactions.value.map(item => parseFloat(item.transaction_amount || 0))) : 0;
-        maxFilterAmount.value = maxAmount.value;
-    } catch (error) {
-        console.error('Error fetching transactions:', error);
-    } finally {
-        loading.value = false;
-    }
-};
+const isLoading = ref(false);
+const dt = ref(null);
+const transactions = ref([]);
+const { formatAmount } = transactionFormat();
+const { formatRgbaColor } = generalFormat()
+const totalRecords = ref(0);
+const first = ref(0);
+const emit = defineEmits(['update-totals'])
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    type: { value: props.selectedType, matchMode: FilterMatchMode.EQUALS },
+    month_range: { value: props.selectedMonths, matchMode: FilterMatchMode.EQUALS },
     role: { value: null, matchMode: FilterMatchMode.EQUALS },
-    transaction_amount: { value: [minFilterAmount.value, maxFilterAmount.value], matchMode: FilterMatchMode.BETWEEN },
+    account_type: { value: null, matchMode: FilterMatchMode.EQUALS },
+    trading_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
+    upline: { value: null, matchMode: FilterMatchMode.EQUALS },
     status: { value: null, matchMode: FilterMatchMode.EQUALS },
-    payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
+    payment_platform: { value: null, matchMode: FilterMatchMode.EQUALS },
+    start_date: { value: null, matchMode: FilterMatchMode.EQUALS },
+    end_date: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
-// Watch minFilterAmount and maxFilterAmount to update the amount filter
-watch([minFilterAmount, maxFilterAmount], ([newMin, newMax]) => {
-    // Convert 0 to null for the amount filter
-    filters.value.transaction_amount.value = [
-        newMin === 0 ? null : newMin,
-        newMax,
-    ];
-});
+const abortController = ref(null)
+const lazyParams = ref({});
 
-// Watch changes to the filters for 'amount'
-watch(() => filters.value.transaction_amount.value, ([newMin, newMax]) => {
-    // console.log(`Slider range updated. min: ${newMin}, max: ${newMax}`);
-    filters.value.transaction_amount.value[0] = newMin === 0 || newMin === minFilterAmount ? null : newMin;
-    filters.value.transaction_amount.value[1] = newMax === 0 || newMax ===  maxFilterAmount ? null : newMax;
-}, { immediate: true });
+const loadLazyData = (event) => {
+    isLoading.value = true;
 
-// overlay panel
-const op = ref();
-const filterCount = ref(0);
+    // Abort previous request if exists
+    if (abortController.value) {
+        abortController.value.abort();
+    }
 
-const toggle = (event) => {
-    op.value.toggle(event);
-}
+    // Create new controller for this request
+    abortController.value = new AbortController();
 
-const recalculateTotals = () => {
-    const filtered = transactions.value.filter(transaction => {
-        return (
-            (!filters.value.name?.value || transaction.name.startsWith(filters.value.name.value)) &&
-            (!filters.value.role?.value || transaction.role === filters.value.role.value) &&
-            (!filters.value.transaction_amount?.value[0] || !filters.value.transaction_amount?.value[1] || (transaction.transaction_amount >= filters.value.transaction_amount.value[0] && transaction.transaction_amount <= filters.value.transaction_amount.value[1])) &&
-            (!filters.value.status?.value || transaction.status === filters.value.status.value) &&
-            (!filters.value.payment_gateway_id?.value || transaction.payment_gateway_id === filters.value.payment_gateway_id.value)
-        );
-    });
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+    lazyParams.value.filters = filters.value;
 
-    totalTransaction.value = filtered.length;
-    totalTransactionAmount.value = filtered.filter(item => ['successful'].includes(item.status)).reduce((acc, item) => acc + parseFloat(item.transaction_amount || 0), 0);
-    maxAmount.value = filtered.length ? Math.max(...filtered.map(item => parseFloat(item.transaction_amount || 0))) : 0;
+    setTimeout(async () => {
+        try {
+            const params = {
+                page: JSON.stringify(event?.page + 1),
+                sortField: event?.sortField,
+                sortOrder: event?.sortOrder,
+                include: [],
+                lazyEvent: JSON.stringify(lazyParams.value)
+            };
+
+            const url = route('transaction.getTransactionListingData', params);
+
+            const response = await fetch(url, {
+                signal: abortController.value.signal
+            });
+
+            const results = await response.json();
+            transactions.value = results?.data?.data;
+            totalRecords.value = results?.data?.total;
+
+            emit('update-totals', {
+                totalTransaction: totalRecords.value,
+                totalTransactionAmount: results?.totalSuccessAmount,
+                maxAmount: results?.maxAmount,
+            });
+
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log('Skip');
+            } else {
+                console.error('Fetch error', e);
+                transactions.value = [];
+                totalRecords.value = 0;
+            }
+        } finally {
+            isLoading.value = false;
+        }
+    }, 100);
 };
 
-watch(filters, () => {
-    recalculateTotals();
-
-    // Check if the amount filter is active by comparing against initial values
-    const isAmountFilterActive = (filters.value.transaction_amount.value[0] !== null && filters.value.transaction_amount.value[0] !== minFilterAmount.value) ||
-                                 (filters.value.transaction_amount.value[1] !== null && filters.value.transaction_amount.value[1] !== maxFilterAmount.value);
-
-    // Count active filters
-    filterCount.value = Object.entries(filters.value).reduce((count, [key, filter]) => {
-        if (filter === filters.value.transaction_amount) {
-            // The amount filter is considered active if it's not covering the full range
-            return isAmountFilterActive ? count + 1 : count;
-        }
-        // Consider a filter active if its value is not null or empty
-        return (filter.value !== null && filter.value !== '' && filter.value != []) ? count + 1 : count;
-    }, 0);
-}, { deep: true });
-
-const clearFilter = () => {
-    filters.value = {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-        role: { value: null, matchMode: FilterMatchMode.EQUALS },
-        transaction_amount: { value: [null, null], matchMode: FilterMatchMode.BETWEEN },
-        status: { value: null, matchMode: FilterMatchMode.EQUALS },
-        payment_gateway_id: { value: null, matchMode: FilterMatchMode.EQUALS },
+onMounted(() => {
+    lazyParams.value = {
+        first: dt.value.first,
+        rows: dt.value.rows,
+        sortField: null,
+        sortOrder: null,
+        filters: filters.value
     };
-    filteredValue.value = null;
+
+    loadLazyData();
+});
+
+// Get users
+const users = ref([])
+const loadingUsers = ref(false);
+
+const getUsers = async () => {
+    loadingUsers.value = true;
+
+    try {
+        const response = await axios.get(route('getUsers'));
+
+        // All groups from API
+        users.value = response.data.users;
+
+    } catch (error) {
+        console.error('Error getting users:', error);
+    } finally {
+        loadingUsers.value = false;
+    }
+};
+
+// Get payment_platforms
+const paymentGateways = ref([])
+const loadingPaymentGateways = ref(false);
+
+const getPaymentGateways = async () => {
+    loadingPaymentGateways.value = true;
+
+    try {
+        const response = await axios.get(route('get_payment_gateways'));
+
+        // All groups from API
+        paymentGateways.value = response.data.paymentGateways;
+
+    } catch (error) {
+        console.error('Error getting users:', error);
+    } finally {
+        loadingPaymentGateways.value = false;
+    }
+};
+
+// Get account types
+const accountTypes = ref([])
+const loadingAccountTypes = ref(false);
+
+const getAccountTypeByPlatform = async () => {
+    loadingAccountTypes.value = true;
+
+    try {
+        const response = await axios.get(
+            `/getAccountTypeByPlatform?trading_platform=${filters.value['trading_platform'].value}`
+        );
+
+        // All groups from API
+        accountTypes.value = response.data.accountTypes;
+
+    } catch (error) {
+        console.error('Error getting account types:', error);
+    } finally {
+        loadingAccountTypes.value = false;
+    }
+};
+
+watch(() => props.selectedMonths, () => {
+    filters.value['month_range'].value = props.selectedMonths;
+    loadLazyData()
+})
+
+watch(
+    filters.value['global'],
+    debounce(() => {
+        loadLazyData();
+    }, 300)
+);
+
+watch(filters.value['trading_platform'], () => {
+    getAccountTypeByPlatform()
+})
+
+watch([filters.value['type'], filters.value['month_range'], filters.value['role'], filters.value['account_type'], filters.value['trading_platform'], filters.value['upline'], filters.value['status'], filters.value['payment_platform']], () => {
+    loadLazyData()
+});
+
+const onPage = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
+const onSort = (event) => {
+    lazyParams.value = event;
+    loadLazyData(event);
+};
+const onFilter = (event) => {
+    lazyParams.value.filters = filters.value ;
+    loadLazyData(event);
+};
+
+const filterCount = computed(() => {
+    return Object.entries(filters.value)
+        .filter(([key, filter]) =>
+            key !== 'global' &&
+            key !== 'type' &&
+            key !== 'month_range' &&
+            filter?.value !== null &&
+            filter?.value !== '' &&
+            filter?.value !== undefined
+        ).length;
+});
+
+const clearAll = () => {
+    filters.value['global'].value = null;
+    filters.value['role'].value = null;
+    filters.value['account_type'].value = null;
+    filters.value['trading_platform'].value = null;
+    filters.value['upline'].value = null;
+    filters.value['status'].value = null;
+    filters.value['payment_platform'].value = null;
+    filters.value['start_date'].value = null;
+    filters.value['end_date'].value = null;
+
+    clearDate()
 };
 
 const clearFilterGlobal = () => {
     filters.value['global'].value = null;
 }
 
-watchEffect(() => {
-    if (usePage().props.toast !== null) {
-        getResults(props.selectedType, props.selectedMonths);
-    }
-});
+const op = ref();
+const toggle = (event) => {
+    op.value.toggle(event);
+    getUsers();
+    getPaymentGateways();
+}
 
+const data = ref([]);
+const visible = ref(false);
 
-// dialog
-const data = ref({});
 const openDialog = (rowData) => {
     visible.value = true;
     data.value = rowData;
-};
+}
 
-// Define emits
-const emit = defineEmits(['update-totals']);
+// compute minDate and maxDate based on selectedMonths
+const minDate = computed(() => {
+    if (!props.selectedMonths?.length) return null;
 
-// Emit the totals whenever they change
-watch([totalTransaction, totalTransactionAmount, maxAmount], () => {
-    emit('update-totals', {
-        totalTransaction: totalTransaction.value,
-        totalTransactionAmount: totalTransactionAmount.value,
-        maxAmount: maxAmount.value,
-  });
+    const first = props.selectedMonths[0];
+    const [year, month] = first.split('/');
+    return new Date(parseInt(year), parseInt(month) - 1, 1);
 });
 
-const handleFilter = (e) => {
-    filteredValue.value = e.filteredValue;
-    filteredValueCount.value = e.filteredValue.length;
+const maxDate = computed(() => {
+    if (!props.selectedMonths?.length) return null;
+
+    const last = props.selectedMonths[props.selectedMonths.length - 1];
+    const [year, month] = last.split('/');
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+    return new Date(parseInt(year), parseInt(month) - 1, lastDay);
+});
+
+const selectedDate = ref([]);
+
+const clearDate = () => {
+    selectedDate.value = [];
+}
+
+watch(selectedDate, (newDateRange) => {
+    if (Array.isArray(newDateRange)) {
+        const [startDate, endDate] = newDateRange;
+        filters.value['start_date'].value = startDate;
+        filters.value['end_date'].value = endDate;
+
+        if (startDate !== null && endDate !== null) {
+            loadLazyData();
+        }
+    } else {
+        console.warn('Invalid date range format:', newDateRange);
+    }
+})
+
+const getProfilePhoto = (user) => {
+    // Find first media in 'profile_photo' collection
+    const mediaItem = user.media?.find(m => m.collection_name === 'profile_photo');
+    return mediaItem?.original_url || null;
 };
 
-const exportDeposit = async () => {
+const exportStatus = ref(false);
+
+const exportReport = () => {
     exportStatus.value = true;
+    isLoading.value = true;
+
+    lazyParams.value = { ...lazyParams.value, first: event?.first || first.value };
+
+    const params = {
+        page: JSON.stringify(event?.page + 1),
+        sortField: event?.sortField,
+        sortOrder: event?.sortOrder,
+        include: [],
+        lazyEvent: JSON.stringify(lazyParams.value),
+        exportStatus: true,
+    };
+
+    const url = route('transaction.getTransactionListingData', params);
 
     try {
-        let url = `/transaction/getTransactionListingData?type=deposit`;
-
-        if (props.selectedMonths && props.selectedMonths.length > 0) {
-            const selectedMonthString = props.selectedMonths.join(',');
-            url += `&selectedMonths=${selectedMonthString}`;
-        }
-
-        if (exportStatus.value === true) {
-            url += `&exportStatus=${exportStatus.value}`;
-        }
-
         window.location.href = url;
-    } catch (error) {
-        console.error('Error occurred during export:', error);
+    } catch (e) {
+        console.error('Error occurred during export:', e);
     } finally {
-        loading.value = false;
+        isLoading.value = false;
         exportStatus.value = false;
     }
 };
+
+const copyToClipboard = (text) => {
+    const textToCopy = text;
+
+    const textArea = document.createElement('textarea');
+    document.body.appendChild(textArea);
+
+    textArea.value = textToCopy;
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+
+    } catch (err) {
+        console.error('Copy to clipboard failed:', err);
+    }
+
+    document.body.removeChild(textArea);
+}
 </script>
 
 <template>
     <DataTable
-        v-model:filters="filters"
         :value="transactions"
-        :paginator="transactions?.length > 0 && filteredValueCount > 0"
-        removableSort
-        :rows="10"
         :rowsPerPageOptions="[10, 20, 50, 100]"
-        tableStyle="md:min-width: 50rem"
+        lazy
+        :paginator="transactions?.length > 0"
+        removableSort
         paginatorTemplate="RowsPerPageDropdown FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-        :globalFilterFields="['name', 'email', 'to_meta_login', 'transaction_number']"
+        :currentPageReportTemplate="$t('public.paginator_caption')"
+        :first="first"
+        :rows="10"
+        v-model:filters="filters"
         ref="dt"
+        dataKey="id"
+        :totalRecords="totalRecords"
+        :loading="isLoading"
+        @page="onPage($event)"
+        @sort="onSort($event)"
+        @filter="onFilter($event)"
         selectionMode="single"
         @row-click="(event) => openDialog(event.data)"
-        :loading="loading"
-        @filter="handleFilter"
+        :globalFilterFields="['name', 'email', 'id_number', 'to_meta_login', 'transaction_number']"
     >
         <template #header>
             <div class="flex flex-col md:flex-row gap-3 items-center self-stretch md:pb-6">
@@ -251,7 +391,7 @@ const exportDeposit = async () => {
                         <IconCircleXFilled size="16" />
                     </div>
                 </div>
-                <div class="w-full grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 w-full gap-3">
                     <Button
                         variant="gray-outlined"
                         @click="toggle"
@@ -269,7 +409,7 @@ const exportDeposit = async () => {
                     <div class="w-full flex justify-end">
                         <Button
                             variant="primary-outlined"
-                            @click="filteredValueCount > 0 && exportDeposit()"
+                            @click="exportReport"
                             class="w-full md:w-auto"
                         >
                             {{ $t('public.export') }}
@@ -278,56 +418,64 @@ const exportDeposit = async () => {
                 </div>
             </div>
         </template>
-        <template #empty><Empty :title="$t('public.empty_deposit_title')" :message="$t('public.empty_deposit_message')"/></template>
+        <template #empty>
+            <Empty :title="$t('public.empty_account_title')" :message="$t('public.empty_account_message')"/>
+        </template>
         <template #loading>
             <div class="flex flex-col gap-2 items-center justify-center">
                 <Loader />
-                <span class="text-sm text-gray-700">{{ $t('public.loading_transactions_caption') }}</span>
+                <span class="text-sm text-gray-700">{{ $t('public.loading_accounts_data') }}</span>
             </div>
         </template>
-        <template v-if="transactions?.length > 0 && filteredValueCount > 0">
+        <template v-if="transactions?.length > 0">
             <Column
                 field="created_at"
                 sortable
-                :header="$t('public.date')"
-                class="hidden md:table-cell"
+                class="hidden md:table-cell w-[15%]"
             >
-                <template #body="slotProps">
-                    {{ formatDateTime(slotProps.data.created_at) }}
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.requested_on') }}</span>
+                </template>
+                <template #body="{data}">
+                    {{ dayjs(data.created_at).format('YYYY/MM/DD') }}
+                    <div class="text-xs text-gray-500">
+                        {{ dayjs(data.created_at).format('HH:mm:ss') }}
+                    </div>
                 </template>
             </Column>
             <Column
-                field="id_number"
+                field="transaction_number"
                 sortable
-                :header="$t('public.id')"
                 class="hidden md:table-cell"
             >
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.id') }}</span>
+                </template>
                 <template #body="slotProps">
-                    {{ slotProps.data.transaction_number }}
+                    <span class="break-all">{{ slotProps.data?.transaction_number }}</span>
                 </template>
             </Column>
             <Column
                 field="name"
-                sortable
                 :header="$t('public.name')"
                 class="hidden md:table-cell"
             >
-                <template #body="slotProps">
-                    <div class="flex items-center gap-3">
+                <template #body="{data}">
+                    <div class="flex items-center gap-3 max-w-full">
                         <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
-                            <template v-if="slotProps.data.profile_photo">
-                                <img :src="slotProps.data.profile_photo" alt="profile_photo">
+                            <template v-if="getProfilePhoto(data?.user)">
+                                <img :src="getProfilePhoto(data?.user)" alt="profile_photo" class="w-7 h-7 object-cover">
                             </template>
                             <template v-else>
                                 <DefaultProfilePhoto />
                             </template>
                         </div>
-                        <div class="flex flex-col items-start">
-                            <div class="font-medium">
-                                {{ slotProps.data.name }}
+                        <div class="grid grid-cols-1 items-start max-w-full">
+                            <div class="font-medium max-w-full truncate">
+                                {{ data?.user.name }}
                             </div>
-                            <div class="text-gray-500 text-xs">
-                                {{ slotProps.data.email }}
+                            <div class="text-gray-500 text-xs max-w-full truncate">
+                                {{ data?.user.email }}
                             </div>
                         </div>
                     </div>
@@ -335,67 +483,94 @@ const exportDeposit = async () => {
             </Column>
             <Column
                 field="to_meta_login"
-                :header="$t('public.account')"
-                class="hidden md:table-cell">
-                <template #body="slotProps"
+                sortable
+                class="hidden md:table-cell"
             >
-                    {{ slotProps.data.to_meta_login }}
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.account') }}</span>
+                </template>
+                <template #body="{data}">
+                    <span class="break-all">{{ data?.to_meta_login }}</span>
+                </template>
+            </Column>
+            <Column
+                field="account_type"
+                class="hidden md:table-cell"
+            >
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.account_type') }}</span>
+                </template>
+                <template #body="{data}">
+                    <div v-if="data.to_login" class="flex gap-2 items-center">
+                        <Tag
+                            :severity="data?.to_login?.account_type.trading_platform.slug === 'mt4' ? 'secondary' : 'info'"
+                            class="uppercase"
+                            :value="data?.to_login?.account_type.trading_platform.slug"
+                        />
+                        <div
+                            class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded w-fit text-nowrap"
+                            :style="{
+                            backgroundColor: formatRgbaColor(data?.to_login?.account_type.color, 0.15),
+                            color: `#${data?.to_login?.account_type.color}`,
+                        }"
+                        >
+                            {{ data?.to_login?.account_type.account_group }}
+                        </div>
+                    </div>
+                    <div v-else>-</div>
                 </template>
             </Column>
             <Column
                 field="transaction_amount"
                 sortable
-                :header="$t('public.amount') + '&nbsp;($)'"
                 class="hidden md:table-cell"
             >
-                <template #body="slotProps">
-                    <div class="flex gap-1 flex-nowrap items-center">
-                        {{ slotProps.data.transaction_amount ? formatAmount(slotProps.data.transaction_amount) : '-' }}
-                        <Tag v-if="slotProps.data.payment_account_type" :severity="slotProps.data.payment_platform === 'bank' ? 'secondary' : 'info'">
-                            <div class="text-xxs">
-                                {{ $t('public.' + slotProps.data.payment_account_type) }}
-                            </div>
-                        </Tag>
-                    </div>
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.amount') }} ($)</span>
+                </template>
+                <template #body="{data}">
+                    <span class="break-all">{{ formatAmount(data?.transaction_amount ?? 0) }}</span>
                 </template>
             </Column>
             <Column
                 field="status"
-                :header="$t('public.status')"
                 class="hidden md:table-cell"
             >
-                <template #body="slotProps">
-                    <StatusBadge class="w-fit text-nowrap" :variant="slotProps.data.status" :value="$t('public.' + slotProps.data.status)"/>
+                <template #header>
+                    <span class="hidden md:block truncate">{{ $t('public.status') }} </span>
+                </template>
+                <template #body="{data}">
+                    <StatusBadge
+                        class="w-fit text-nowrap"
+                        :variant="data.status"
+                        :value="$t(`public.${data.status}`)"
+                    />
                 </template>
             </Column>
+
             <Column class="md:hidden">
-                <template #body="slotProps">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-7 h-7 rounded-full overflow-hidden grow-0 shrink-0">
-                                <template v-if="slotProps.data.profile_photo">
-                                    <img :src="slotProps.data.profile_photo" alt="profile_photo">
-                                </template>
-                                <template v-else>
-                                    <DefaultProfilePhoto />
-                                </template>
-                            </div>
-                            <div class="flex flex-col items-start">
-                                <div class="text-sm font-semibold">
-                                    {{ slotProps.data.name }}
-                                </div>
-                                <div class="text-gray-500 text-xs">
-                                    {{ formatDateTime(slotProps.data.created_at) }}
-                                </div>
+                <template #body="{data}">
+                    <div class="flex items-center gap-2 self-stretch">
+                        <div class="flex flex-col items-start w-full">
+                            <span class="text-sm text-gray-950 font-semibold">{{ data?.transaction_number}}</span>
+                            <div class="flex gap-1 items-center text-xs">
+                                <div class="text-gray-400 font-medium"> {{ dayjs(data?.created_at).format('YYYY/MM/DD HH:mm:ss') }}</div>
+                                <span>|</span>
+                                <div class="text-gray-700 font-medium"> {{ data.to_login ? data.to_meta_login : '-' }}</div>
                             </div>
                         </div>
-                        <div class="overflow-hidden text-right text-ellipsis font-semibold flex flex-col items-end">
-                            {{ slotProps.data.transaction_amount ?  '$&nbsp;' + formatAmount(slotProps.data.transaction_amount) : '-' }}
-                            <Tag v-if="slotProps.data.payment_account_type" :severity="slotProps.data.payment_platform === 'bank' ? 'secondary' : 'info'">
-                                <div class="text-xxs">
-                                    {{ $t('public.' + slotProps.data.payment_account_type) }}
-                                </div>
-                            </Tag>
+
+                        <div
+                            :class="[
+                                'font-semibold',
+                                {
+                                    'text-success-500': data.status === 'successful',
+                                    'text-error-500': data.status === 'failed',
+                                    'text-blue-500': data.status === 'processing',
+                                }
+                            ]"
+                        >
+                            ${{ formatAmount(data.amount) }}
                         </div>
                     </div>
                 </template>
@@ -404,74 +579,209 @@ const exportDeposit = async () => {
     </DataTable>
 
     <OverlayPanel ref="op">
-        <div class="flex flex-col gap-8 w-60 py-5 px-4">
-            <!-- Filter Role-->
+        <div class="flex flex-col gap-5 w-60 py-5 px-4">
+            <!-- Filter date -->
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
-                    {{ $t('public.filter_role') }}
+                    {{ $t('public.filter_date') }}
                 </div>
-                <div class="flex flex-col gap-1 self-stretch">
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['role'].value" inputId="role_member" value="member" class="w-4 h-4" />
-                        <label for="role_member">{{ $t('public.member') }}</label>
-                    </div>
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['role'].value" inputId="role_ib" value="ib" class="w-4 h-4" />
-                        <label for="role_ib">{{ $t('public.ib') }}</label>
+                <div class="relative w-full">
+                    <Calendar
+                        v-model="selectedDate"
+                        selectionMode="range"
+                        :manualInput="false"
+                        :minDate="minDate"
+                        :maxDate="maxDate"
+                        dateFormat="yy/mm/dd"
+                        iconDisplay="input"
+                        placeholder="yyyy/mm/dd - yyyy/mm/dd"
+                        class="w-full font-normal"
+                    />
+                    <div
+                        v-if="selectedDate && selectedDate.length > 0"
+                        class="absolute top-2/4 -mt-2.5 right-4 text-gray-400 select-none cursor-pointer bg-white"
+                        @click="clearDate"
+                    >
+                        <IconX size="20" stroke-width="1.5" />
                     </div>
                 </div>
             </div>
 
-            <!-- Filter Amount-->
+            <!-- Filter platform -->
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
-                    {{ $t('public.filter_amount') }}
+                    {{ $t('public.filter_platform') }}
                 </div>
-                <div class="flex flex-col items-center gap-1 self-stretch">
-                    <div class="h-4 self-stretch">
-                        <Slider v-model="filters['transaction_amount'].value" :min="minFilterAmount" :max="maxFilterAmount" range />
-                    </div>
-                    <div class="flex justify-between items-center self-stretch">
-                        <span class="text-gray-950 text-sm">${{ minFilterAmount }}</span>
-                        <span class="text-gray-950 text-sm">${{ maxFilterAmount }}</span>
+                <div class="flex flex-col self-stretch">
+                    <div
+                        v-for="platform in tradingPlatforms"
+                        class="flex items-center gap-2 text-sm text-gray-950"
+                    >
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                            <RadioButton
+                                v-model="filters['trading_platform'].value"
+                                :inputId="platform.slug"
+                                :value="platform.slug"
+                                class="w-4 h-4"
+                            />
+                        </div>
+                        <label :for="platform.slug" class="uppercase">{{ platform.slug }}</label>
                     </div>
                 </div>
             </div>
 
-            <!-- Filter Status-->
+            <!-- Filter account_type-->
+            <div v-if="filters['trading_platform'].value !== null" class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_account_type') }}
+                </div>
+                <MultiSelect
+                    v-model="filters['account_type'].value"
+                    :options="accountTypes"
+                    :placeholder="$t('public.account_type_placeholder')"
+                    filter
+                    :filterFields="['name']"
+                    :maxSelectedLabels="1"
+                    :selectedItemsLabel="`${filters['account_type']?.length} ${$t('public.account_types_selected')}`"
+                    class="w-full font-normal"
+                    :disabled="filters['trading_platform'].value === null"
+                    :loading="loadingAccountTypes"
+                >
+                    <template #option="{ option }">
+                        <div class="flex items-center gap-2">
+                            <span>{{ option.name }}</span>
+                        </div>
+                    </template>
+
+                    <template #value>
+                        <div v-if="filters['account_type'].value?.length === 1">
+                            <span>{{ filters['account_type'].value[0].name }}</span>
+                        </div>
+                        <span v-else-if="filters['account_type'].value?.length > 1">
+                            {{ filters['account_type'].value?.length }} {{ $t('public.account_types_selected') }}
+                        </span>
+                        <span v-else class="text-gray-400">
+                            {{ $t('public.account_type_placeholder') }}
+                        </span>
+                    </template>
+                </MultiSelect>
+            </div>
+
+            <!-- Filter status -->
             <div class="flex flex-col gap-2 items-center self-stretch">
                 <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_status') }}
                 </div>
-                <div  class="flex flex-col gap-1 self-stretch">
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['status'].value" inputId="status_active" value="successful" class="w-4 h-4" />
-                        <label for="status_active">{{ $t('public.successful') }}</label>
-                    </div>
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['status'].value" inputId="status_processing" value="processing" class="w-4 h-4" />
-                        <label for="status_processing">{{ $t('public.processing') }}</label>
-                    </div>
-                    <div class="flex items-center gap-2 text-sm text-gray-950">
-                        <RadioButton v-model="filters['status'].value" inputId="status_inactive" value="rejected" class="w-4 h-4" />
-                        <label for="status_inactive">{{ $t('public.failed') }}</label>
+                <div class="flex flex-col self-stretch">
+                    <div
+                        v-for="status in ['successful', 'failed', 'processing']"
+                        class="flex items-center gap-2 text-sm text-gray-950"
+                    >
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                            <RadioButton
+                                v-model="filters['status'].value"
+                                :inputId="`status_${status}`"
+                                :value="status"
+                                class="w-4 h-4"
+                            />
+                        </div>
+                        <label :for="`status_${status}`">{{ $t(`public.${status}`) }}</label>
                     </div>
                 </div>
             </div>
 
-            <!-- Filter Payment Platform-->
-            <div class="flex flex-col gap-2 items-start self-stretch">
-                <div class="text-xs text-gray-950 font-semibold">
+            <!-- Filter role -->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_role') }}
+                </div>
+                <div class="flex flex-col self-stretch">
+                    <div
+                        v-for="role in ['ib', 'member']"
+                        class="flex items-center gap-2 text-sm text-gray-950"
+                    >
+                        <div class="flex justify-center items-center rounded-full grow-0 shrink-0 hover:bg-gray-100">
+                            <RadioButton
+                                v-model="filters['role'].value"
+                                :inputId="`role_${role}`"
+                                :value="role"
+                                class="w-4 h-4"
+                            />
+                        </div>
+                        <label :for="`role_${role}`">{{ $t(`public.${role}`) }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter payment gateways -->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
                     {{ $t('public.filter_payment_platform') }}
                 </div>
                 <Dropdown
-                    v-model="filters['payment_gateway_id'].value"
-                    :options="props.paymentGateways"
+                    v-model="filters['payment_platform'].value"
+                    :options="paymentGateways"
+                    filter
+                    :filterFields="['name']"
                     optionLabel="name"
-                    optionValue="id"
                     :placeholder="$t('public.select_payment_platform')"
-                    class="w-full text-sm"
-                />
+                    class="w-full"
+                    scroll-height="236px"
+                    :loading="loadingPaymentGateways"
+                >
+                    <template #option="{option}">
+                        <div class="flex items-center gap-2">
+                            {{ option.name }}
+                            <Tag
+                                severity="secondary"
+                                :value="$t(`public.${option.platform}`)"
+                                class="text-xxs"
+                            />
+                        </div>
+                    </template>
+                    <template #value="{value, placeholder}">
+                        <div v-if="value">
+                            <span>{{ value.name }}</span>
+                        </div>
+                        <span v-else class="text-gray-400">
+                            {{ placeholder }}
+                        </span>
+                    </template>
+                </Dropdown>
+            </div>
+
+            <!-- Filter Upline-->
+            <div class="flex flex-col gap-2 items-center self-stretch">
+                <div class="flex self-stretch text-xs text-gray-950 font-semibold">
+                    {{ $t('public.filter_upline') }}
+                </div>
+                <Dropdown
+                    v-model="filters['upline'].value"
+                    :options="users"
+                    filter
+                    :filterFields="['name', 'email', 'id_number']"
+                    optionLabel="name"
+                    :placeholder="$t('public.filter_upline')"
+                    class="w-full"
+                    scroll-height="236px"
+                    :loading="loadingUsers"
+                    :virtualScrollerOptions="{ itemSize: 56 }"
+                >
+                    <template #option="{option}">
+                        <div class="flex flex-col">
+                            <span>{{ option.name }}</span>
+                            <span class="text-xs text-gray-400 max-w-52 truncate">{{ option.email }}</span>
+                        </div>
+                    </template>
+                    <template #value="{value, placeholder}">
+                        <div v-if="value">
+                            <span>{{ value.name }}</span>
+                        </div>
+                        <span v-else class="text-gray-400">
+                            {{ placeholder }}
+                        </span>
+                    </template>
+                </Dropdown>
             </div>
 
             <div class="flex w-full">
@@ -479,7 +789,7 @@ const exportDeposit = async () => {
                     type="button"
                     variant="primary-outlined"
                     class="flex justify-center w-full"
-                    @click="clearFilter()"
+                    @click="clearAll"
                 >
                     {{ $t('public.clear_all') }}
                 </Button>
@@ -487,17 +797,27 @@ const exportDeposit = async () => {
         </div>
     </OverlayPanel>
 
-    <Dialog v-model:visible="visible" modal :header="$t('public.deposit_details')" class="dialog-xs md:dialog-md">
+    <Dialog
+        v-model:visible="visible"
+        modal
+        :header="$t(`public.${selectedType}_details`)"
+        class="dialog-xs md:dialog-md"
+    >
         <div class="flex flex-col justify-center items-start pb-4 gap-3 self-stretch border-b border-gray-200 md:flex-row md:pt-4 md:justify-between">
             <!-- below md -->
             <span class="md:hidden self-stretch text-gray-950 text-xl font-semibold">${{ formatAmount(data.transaction_amount ?? 0) }}</span>
             <div class="flex items-center gap-3 self-stretch">
                 <div class="w-9 h-9 rounded-full overflow-hidden grow-0 shrink-0">
-                    <DefaultProfilePhoto />
+                    <template v-if="getProfilePhoto(data.user)">
+                        <img :src="getProfilePhoto(data.user)" alt="profile_photo" class="w-7 h-7 object-cover">
+                    </template>
+                    <template v-else>
+                        <DefaultProfilePhoto />
+                    </template>
                 </div>
                 <div class="flex flex-col items-start flex-grow">
-                    <span class="self-stretch overflow-hidden text-gray-950 text-ellipsis text-sm font-medium">{{ data.name }}</span>
-                    <span class="self-stretch overflow-hidden text-gray-500 text-ellipsis text-xs">{{ data.email }}</span>
+                    <span class="self-stretch overflow-hidden text-gray-950 text-ellipsis text-sm font-medium">{{ data.user.name }}</span>
+                    <span class="self-stretch overflow-hidden text-gray-500 text-ellipsis text-xs">{{ data?.user.email }}</span>
                 </div>
             </div>
             <!-- above md -->
@@ -510,8 +830,12 @@ const exportDeposit = async () => {
                 <span class="self-stretch text-gray-950 text-sm font-medium">{{ data.transaction_number }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.requested_date') }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data.created_at).format('YYYY/MM/DD HH:mm:ss') }}</span>
+            </div>
+            <div v-if="data.status !== 'processing'" class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.transaction_date') }}</span>
-                <span class="self-stretch text-gray-950 text-sm font-medium">{{ formatDateTime(data.created_at) }}</span>
+                <span class="self-stretch text-gray-950 text-sm font-medium">{{ dayjs(data.approved_at).format('YYYY/MM/DD HH:mm:ss') }}</span>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.account') }}</span>
@@ -519,14 +843,23 @@ const exportDeposit = async () => {
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.account_type') }}</span>
-                <div class="flex gap-2 items-center">
+                <div v-if="data.to_login" class="flex gap-2 items-center">
                     <Tag
-                        :severity="data.trading_platform === 'mt4' ? 'secondary' : 'info'"
+                        :severity="data.to_login.account_type.trading_platform.slug === 'mt4' ? 'secondary' : 'info'"
                         class="uppercase"
-                        :value="data.trading_platform"
+                        :value="data.to_login.account_type.trading_platform.slug"
                     />
-                    <span class="text-sm font-medium text-gray-950">{{ data.account_type }}</span>
+                    <div
+                        class="break-all flex px-2 py-1 justify-center items-center text-xs font-semibold hover:-translate-y-1 transition-all duration-300 ease-in-out rounded w-fit text-nowrap"
+                        :style="{
+                            backgroundColor: formatRgbaColor(data?.to_login?.account_type.color, 0.15),
+                            color: `#${data?.to_login?.account_type.color}`,
+                        }"
+                    >
+                        {{ data?.to_login?.account_type.account_group }}
+                    </div>
                 </div>
+                <div v-else class="text-gray-950">-</div>
             </div>
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.status') }}</span>
@@ -537,11 +870,17 @@ const exportDeposit = async () => {
         <div class="flex flex-col items-center py-4 gap-3 self-stretch border-b border-gray-200">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="w-full md:max-w-[140px] text-gray-500 text-xs">{{ $t('public.platform') }}</span>
-                <span class="w-full text-gray-950 text-sm font-medium">{{ data.payment_gateway ?? 'Payme' }}</span>
+                <span class="w-full text-gray-950 text-sm font-medium">{{ data.payment_gateway.name ?? 'Payme' }}</span>
             </div>
-            <div v-if="data.status !== 'processing'"  class="flex flex-col md:flex-row items-start gap-1 self-stretch">
-                <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ data.payment_platform === 'bank' ? $t('public.account_no') : $t('public.receiving_address') }}</span>
-                <div class="flex justify-center items-center self-stretch" @click="copyToClipboard(data.to_wallet_address)">
+            <div v-if="data.status !== 'processing' && data.payment_platform_name"  class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="self-stretch md:min-w-[140px] text-gray-500 text-xs">{{ $t('public.bank') }}</span>
+                <div class="flex justify-center items-center self-stretch">
+                    <span class="flex-grow overflow-hidden text-gray-950 text-ellipsis text-sm font-medium break-words">{{ data.payment_platform_name ?? '-' }} <span v-if="data.bank_code" class="text-gray-500">({{ data.bank_code ?? '-' }})</span></span>
+                </div>
+            </div>
+            <div v-if="data.status !== 'processing' && data.to_wallet_address"  class="flex flex-col md:flex-row items-start gap-1 self-stretch">
+                <span class="self-stretch md:min-w-[140px] text-gray-500 text-xs">{{ data.payment_gateway.platform === 'bank' ? $t('public.account_no') : $t('public.receiving_address') }}</span>
+                <div class="flex justify-center items-center self-stretch select-none hover:cursor-pointer" @click="copyToClipboard(data.to_wallet_address)">
                     <span class="flex-grow overflow-hidden text-gray-950 text-ellipsis text-sm font-medium break-words">{{ data.to_wallet_address ?? '-' }}</span>
                 </div>
             </div>
@@ -563,14 +902,11 @@ const exportDeposit = async () => {
             </div>
         </div>
 
-
-        <div v-if="data.status !== 'processing'" class="flex flex-col items-center py-4 gap-3 self-stretch">
+        <div class="flex flex-col items-center py-4 gap-3 self-stretch">
             <div class="flex flex-col md:flex-row items-start gap-1 self-stretch">
                 <span class="self-stretch md:w-[140px] text-gray-500 text-xs">{{ $t('public.remarks') }}</span>
                 <span class="self-stretch text-gray-950 text-sm font-medium">{{ data.remarks ?? '-' }}</span>
             </div>
         </div>
-
     </Dialog>
-
 </template>

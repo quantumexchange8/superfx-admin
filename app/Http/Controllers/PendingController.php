@@ -46,8 +46,8 @@ class PendingController extends Controller
                 'user:id,email,name',
                 'user.media',
                 'payment_account:id,payment_account_name,account_no',
-                'fromMetaLogin:id,account_type_id,meta_login,balance',
-                'fromMetaLogin.account_type.trading_platform',
+                'from_login:id,account_type_id,meta_login,balance',
+                'from_login.account_type.trading_platform',
                 'payment_gateway:id,name'
             ])
                 ->where('transaction_type', 'withdrawal')
@@ -88,7 +88,7 @@ class PendingController extends Controller
 
             $pendingWithdrawals->getCollection()->transform(function ($transaction) {
                 if ($transaction->from_meta_login) {
-                    $trading_platform = TradingPlatform::find($transaction->fromMetaLogin->account_type->trading_platform_id);
+                    $trading_platform = TradingPlatform::find($transaction->from_login->account_type->trading_platform_id);
 
                     $service = TradingPlatformFactory::make($trading_platform->slug);
 
@@ -97,9 +97,9 @@ class PendingController extends Controller
                     } catch (Throwable $e) {
                         Log::error($e->getMessage());
                     }
-                    $transaction->balance = $transaction->fromMetaLogin->balance ?? 0;
-                    $transaction->account_type = $transaction->fromMetaLogin->account_type->name;
-                    $transaction->trading_platform = $transaction->fromMetaLogin->account_type->trading_platform->slug;
+                    $transaction->balance = $transaction->from_login->balance ?? 0;
+                    $transaction->account_type = $transaction->from_login->account_type->name;
+                    $transaction->trading_platform = $transaction->from_login->account_type->trading_platform->slug;
                 } else {
                     $transaction->balance = $transaction->from_wallet->balance ?? 0;
                 }
